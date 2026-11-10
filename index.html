@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#072448">
+<title>EPS OPS — Opérations aéroport</title>
+<style>
+:root{color-scheme:light;--bg:#f4f7fc;--s:#fff;--t:#1e293b;--m:#64748b;--b:#e2e8f0;--p:#0052cc;--pl:#e8f1fc;--n:#072448}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0b1220;--s:#111b2e;--t:#e2e8f0;--m:#94a3b8;--b:#25324a;--p:#5b9bff;--pl:#14284a}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--t);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+#app{flex:1;display:flex;flex-direction:column;min-height:0}
+header{background:var(--n);color:#fff;height:54px;display:flex;align-items:center;gap:10px;padding:0 12px;padding-top:env(safe-area-inset-top);flex-shrink:0}
+.sp{flex:1}.hb{background:#ffffff1a;color:#fff;border:1px solid #ffffff33;border-radius:8px;padding:5px 9px;cursor:pointer;font:inherit;position:relative}
+#bc{position:absolute;top:-6px;right:-6px;background:#e11d48;color:#fff;border-radius:9px;font:700 10px system-ui;padding:1px 5px;font-style:normal}
+#un{font-weight:700}
+select,input,textarea{font:inherit;color:var(--t);background:var(--bg);border:1px solid var(--b);border-radius:8px;padding:7px 9px;width:100%}
+.wrap{flex:1;display:flex;min-height:0}
+nav{width:58px;background:var(--s);border-right:1px solid var(--b);padding:8px 6px;display:flex;flex-direction:column;gap:4px;overflow:hidden;transition:width .2s;flex-shrink:0}
+nav:hover,nav.open{width:210px}
+nav button{display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--m);padding:9px 11px;border-radius:10px;cursor:pointer;font:600 13px system-ui;white-space:nowrap;text-align:left}
+nav button.on{background:var(--pl);color:var(--p)}nav .i{font-size:18px;width:20px;text-align:center}
+nav .l{opacity:0;transition:opacity .15s}nav:hover .l,nav.open .l{opacity:1}
+main{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--s);border:1px solid var(--b);border-radius:14px;padding:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.g{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.btn{border:1px solid var(--b);background:var(--bg);color:var(--t);border-radius:8px;padding:6px 11px;font:600 13px system-ui;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.p{background:var(--p);border-color:var(--p);color:#fff}.btn.d{background:#e11d48;border-color:#e11d48;color:#fff}.btn.w{background:#16a34a;border-color:#16a34a;color:#fff}
+.bd{display:inline-block;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.ok{background:#10b9811f;color:#0f9f6e}.warn{background:#f59e0b26;color:#b7791f}.bad{background:#e11d4824;color:#e11d48}.info{background:var(--pl);color:var(--p)}
+h1{margin:0 0 4px;font-size:22px}h2{margin:0;font-size:15px}.m{color:var(--m);font-size:12px}.k{font-size:24px;font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--m);font-size:11px;text-transform:uppercase}td,th{padding:8px;border-bottom:1px solid var(--b);vertical-align:top}.sc{overflow-x:auto}
+.li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--b)}
+pre{white-space:pre-wrap;font:inherit;background:var(--bg);border-radius:8px;padding:10px;margin:10px 0}
+.al{background:#e11d4818;border:1px solid #e11d4866;color:#e11d48;border-radius:12px;padding:10px 14px;font-weight:700}
+.lg{margin:auto;width:100%;max-width:380px;padding:16px}.lg .card{display:flex;flex-direction:column;gap:8px}
+label{font-size:12px;font-weight:600;display:block;margin-bottom:3px}
+#md{position:fixed;inset:0;background:#072448a6;display:none;align-items:center;justify-content:center;padding:14px;z-index:9}#md.on{display:flex}
+#mf{background:var(--s);border-radius:14px;padding:16px;width:100%;max-width:440px;max-height:92%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#ts{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));right:16px;background:var(--n);color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(20px);transition:.3s;z-index:10;max-width:320px;pointer-events:none}#ts.on{opacity:1;transform:none}
+@media(max-width:700px){.wrap{flex-direction:column-reverse}nav{width:100%!important;flex-direction:row;border-right:0;border-top:1px solid var(--b);overflow-x:auto}nav .l,#tg,#un{display:none}main{padding:12px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="md"><form id="mf"></form></div><div id="ts" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = supabase.createClient("https://gkvavxjwcdyicvqgqzut.supabase.co", "sb_publishable_zrClb2fGhN8rmOp4w3a9kw_LN9t2eqU");
+const $ = s => document.querySelector(s);
+const E = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const N = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const H = 36e5, p2 = n => String(n).padStart(2, "0");
+const T = s => /[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : String(s).replace(" ", "T") + "Z";
+const hm = d => { d = new Date(d); return p2(d.getUTCHours()) + "h" + p2(d.getUTCMinutes()); };
+const dmy = d => { d = new Date(d); return p2(d.getUTCDate()) + "/" + p2(d.getUTCMonth() + 1); };
+const ymd = d => new Date(d).toISOString().slice(0, 10);
+const dg = t => String(t).replace(/\D/g, "").slice(-8);
+
+const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
+const ALL = ["shift", "alertes", "vols", "eff", "pres"];
+const OPS = ["shift", "alertes", "vols", "eff"];
+const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres"], assistante_rh: ["shift", "eff", "pres"], approvisionnement: ["shift"] };
+const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"] };
+const SL = { p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
+const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
+let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
+
+const toast = m => { const t = $("#ts"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.i); toast.i = setTimeout(() => t.classList.remove("on"), 3200); };
+const head = (t, s, b) => `<div class="row"><div><h2 style="font-size:17px">${t}</h2><div class="m">${s || ""}</div></div>${b || ""}</div>`;
+function ask(title, fs, ok) {
+  const f = $("#mf");
+  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}">${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="3" ${x.r ? "required" : ""}></textarea>` : `<input name="${x.k}" type="${x.t || "text"}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
+  $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
+  f.onsubmit = e => { e.preventDefault(); const v = Object.fromEntries(new FormData(f)); $("#md").classList.remove("on"); ok(v); };
+}
+
+/* ---------- Shift ---------- */
+const ROT = [3, 1, 2];
+function shiftStart(now = new Date()) { const s = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8)); if (now < s) s.setUTCDate(s.getUTCDate() - 1); return s; }
+function garde(s) { const k = Math.round((Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate()) - Date.UTC(2026, 10, 3)) / 864e5); return ROT[((k % 3) + 3) % 3]; }
+const today = () => ymd(new Date());
+
+/* ---------- Authentification ---------- */
+function pageLogin(err) {
+  $("#app").innerHTML = `<div class="lg"><form id="lf" class="card"><h1>EPS OPS</h1><p class="m" style="margin:0 0 6px">Opérations aéroport de Nouakchott</p>${err ? `<div class="al">${E(err)}</div>` : ""}<label>Numéro de téléphone</label><input id="t" inputmode="numeric" autocomplete="username" required><label>Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required><button class="btn p" style="width:100%;margin-top:8px">Se connecter</button></form></div>`;
+  $("#lf").onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: dg($("#t").value) + "@eps-ops.mr", password: $("#pw").value });
+    if (error) return pageLogin("Numéro ou mot de passe incorrect.");
+    start();
+  };
+}
+function pageChange(err) {
+  $("#app").innerHTML = `<div class="lg"><form id="cf" class="card"><h1>Nouveau mot de passe</h1><p class="m" style="margin:0 0 6px">Bonjour ${E(ME.nom)}. Pour votre sécurité, choisissez un mot de passe personnel (8 caractères minimum, différent de votre numéro).</p>${err ? `<div class="al">${E(err)}</div>` : ""}<label>Nouveau mot de passe</label><input id="n1" type="password" autocomplete="new-password" required><label>Confirmer</label><input id="n2" type="password" autocomplete="new-password" required><button class="btn p" style="width:100%;margin-top:8px">Enregistrer</button></form></div>`;
+  $("#cf").onsubmit = async e => {
+    e.preventDefault();
+    const a = $("#n1").value;
+    if (a.length < 8) return pageChange("8 caractères minimum.");
+    if (a.includes(ME.tel)) return pageChange("Le mot de passe ne doit pas contenir votre numéro.");
+    if (a !== $("#n2").value) return pageChange("Les deux mots de passe sont différents.");
+    const { error } = await sb.auth.updateUser({ password: a });
+    if (error) return pageChange("Échec : " + error.message);
+    await sb.rpc("mdp_change");
+    ME.must_change = false; shell();
+  };
+}
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return pageLogin();
+  const { data: p } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+  if (!p || !p.actif) { await sb.auth.signOut(); return pageLogin("Compte non autorisé."); }
+  ME = p;
+  if (p.must_change) return pageChange();
+  shell();
+}
+
+/* ---------- Données ---------- */
+async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; }
+async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", today()); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); }
+async function loadAL() { const { data } = await sb.from("alertes").select("*").gte("creee_le", new Date(Date.now() - 3 * 864e5).toISOString()).order("creee_le", { ascending: false }); AL = data || []; const n = AL.filter(a => a.statut == "ouverte").length; const b = $("#bc"); if (b) b.textContent = n || ""; }
+const team = e => { const L = AG.filter(a => a.equipe == e), c = { p: 0, nj: 0, j: 0, c: 0, mp: 0 }, l = { j: [], c: [], mp: [] }; L.forEach(a => { const s = ST[a.matricule]?.statut || "p"; c[s]++; if (l[s]) l[s].push(a.nom + (ST[a.matricule]?.justification ? ` (${ST[a.matricule].justification})` : "")); }); return { tot: L.length, c, l, chefs: L.filter(a => a.fonction).map(a => a.nom).join(", ") || "—" }; };
+
+/* ---------- Vues ---------- */
+const V = {};
+V.shift = async () => {
+  const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
+  const since = new Date(s.getTime() - 3 * H).toISOString().slice(0, 19).replace("T", " ");
+  const { data: rp } = await sb.from("rapports_detail").select("*").gte("cree_le", since).order("cree_le", { ascending: false }).limit(60);
+  const last = (sv, gr) => (rp || []).find(r => r.service == sv && r.groupe == gr);
+  const rn = last("nettoyage", "Groupe " + g), rb = last("bagages", "Groupe " + g), ref = rn || rb;
+  const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])];
+  const card = e => {
+    const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0, r = last("nettoyage", "Groupe " + e.slice(-1));
+    return `<div class="card"><div class="row"><h2>${e}</h2><span class="bd info">${e == "Équipe 4" ? "08h–16h" : "24 h"}</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">Chefs : ${E(t.chefs)}</div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${["j", "c", "mp"].filter(k => t.l[k].length).map(k => `<div class="m">${SL[k]} : ${E(t.l[k].join(", "))}</div>`).join("")}${r ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(r.cree_le))} : ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renforts : ${r.renforts || 0}${r.renforts_detail ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : ""}</div>`;
+  };
+  const open = AL.filter(a => a.statut == "ouverte" || a.statut == "prise_en_charge");
+  return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
+<div class="card"><h2>Shift en cours</h2><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.join(" + ")}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${h4 ? "(en service)" : "(hors service)"}</div></div></div>
+<div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
+<div class="g">${teams.map(card).join("")}${rb ? `<div class="card"><div class="row"><h2>Manutention — Groupe ${g}</h2><span class="bd info">24 h</span></div><div class="k">${rb.present ?? "?"}${rb.effectif ? " / " + rb.effectif : ""}</div><div class="m">Présents selon le dernier rapport (${hm(T(rb.cree_le))}) · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div></div>` : ""}</div>
+<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>
+<div class="card m">Modules à migrer prochainement : tâches du jour, lieux, Help Desk, discipline, magasin, observations du shift.</div>`;
+};
+
+V.alertes = async () => {
+  await loadAL();
+  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
+};
+
+V.vols = async () => {
+  const d = new Date(shiftStart().getTime() + VD * 24 * H), f = new Date(d.getTime() + 24 * H);
+  const [{ data: vs }, { data: ov }] = await Promise.all([
+    sb.from("vols").select("*").gte("heure_prevue", new Date(d.getTime() - 12 * H).toISOString()).lt("heure_prevue", new Date(f.getTime() + 12 * H).toISOString()),
+    sb.rpc("analyser_chevauchements", { p_debut: d.toISOString(), p_fin: f.toISOString() })]);
+  const t = v => new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue);
+  let L = (vs || []).filter(v => t(v) >= d && t(v) < f && v.statut != "annule");
+  const real = new Set(L.filter(v => v.source != "prevision").map(v => v.numero + v.sens + ymd(t(v))));
+  L = L.filter(v => v.source != "prevision" || !real.has(v.numero + v.sens + ymd(t(v)))).sort((a, b) => t(a) - t(b));
+  const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
+  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button>` : ""}</div>`)
+    + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
+<div class="card sc"><h2>Programme (${L.length} vols)</h2><table><tr><th>Heure</th><th>Vol</th><th>Sens</th><th>Appareil</th><th>Origine / destination</th><th>Source</th></tr>${L.map(v => `<tr><td><b>${hm(t(v))}</b></td><td>${E(v.numero)}</td><td>${v.sens == "A" ? "Arrivée" : "Départ"}</td><td>${E(v.type_appareil) || "—"}</td><td>${E(v.provenance_destination) || "—"}</td><td><span class="bd ${v.source == "prevision" ? "warn" : v.source == "manuel" ? "info" : "ok"}">${v.source == "prevision" ? "Prévu" : v.source == "manuel" ? "Saisi" : "Réel"}</span></td></tr>`).join("") || `<tr><td colspan="6" class="m">Aucun vol.</td></tr>`}</table></div>
+<div class="m">« Prévu » = estimation d’après les mêmes jours des semaines précédentes ; remplacé par le vol réel dès qu’il est confirmé.</div>`;
+};
+
+const flt = () => { const T0 = N(F.q).split(/\s+/).filter(Boolean); return AG.filter(a => { const h = N([a.matricule, a.badge, a.tel, (a.tel || "").replace(/\s/g, ""), a.nom, a.equipe, a.service, a.fonction, a.zone].join(" ")); return T0.every(x => h.includes(x)) && (!F.eq || a.equipe == F.eq) && (!F.sv || a.service == F.sv) && (!F.st || (F.st == "a") == !!ST[a.matricule]) && (!F.bd || (F.bd == "a") == !!a.badge); }); };
+function eT() {
+  const L = flt(), W = WR.includes(ME.role), ab = L.filter(a => ST[a.matricule]).length;
+  return `<div class="m"><b>${L.length}</b> résultat(s) · ${L.length - ab} présents · ${ab} absents</div><div class="card sc"><table><tr><th>Matricule</th><th>Badge</th><th>Nom & prénom</th><th>Téléphone</th><th>Équipe</th><th>Service</th><th>Présence</th></tr>${L.map(a => { const s = ST[a.matricule]?.statut || "p"; return `<tr><td><b>${E(a.matricule)}</b></td><td>${E(a.badge) || "—"}</td><td>${E(a.nom)}${a.fonction ? ` <span class="bd info">${E(a.fonction)}</span>` : ""}</td><td style="white-space:nowrap">${a.tel ? `<a href="tel:${a.tel.replace(/\s/g, "")}" style="color:var(--p)">${E(a.tel)}</a>` : "—"}</td><td>${E(a.equipe)}</td><td>${E(a.service)}</td><td>${W ? `<select data-s="${E(a.matricule)}" style="min-width:150px">${Object.entries(SL).map(([k, v]) => `<option value="${k}" ${s == k ? "selected" : ""}>${v}</option>`).join("")}</select>` : `<span class="bd ${s == "p" ? "ok" : "bad"}">${SL[s]}</span>`}${ST[a.matricule]?.justification ? `<div class="m">${E(ST[a.matricule].justification)}</div>` : ""}</td></tr>`; }).join("")}</table></div>`;
+}
+V.eff = async () => {
+  const o = (k, l, key) => `<select data-f="${k}"><option value="">${l}</option>${[...new Set(AG.map(a => a[key]))].map(x => `<option ${F[k] == x ? "selected" : ""}>${E(x)}</option>`).join("")}</select>`;
+  return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`) + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
+};
+
+V.pres = async () => {
+  const since = ymd(Date.now() - 30 * 864e5);
+  const [{ data: hs }, { data: rp }] = await Promise.all([
+    sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since).order("jour", { ascending: false }),
+    sb.from("situation_staff").select("*").order("cree_le", { ascending: false }).limit(40)]);
+  const TM = ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4", "Chauffeurs"], hist = {}, rec = {};
+  (hs || []).forEach(r => { (hist[r.jour] = hist[r.jour] || { nj: 0, j: 0, c: 0, mp: 0 })[r.statut]++; if (r.statut == "nj") rec[r.matricule] = (rec[r.matricule] || 0) + 1; });
+  const cd = e => { const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; return `<div class="card"><b>${e}</b><div class="k">${t.c.p} / ${t.tot}</div><div class="m">${p} % · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c} · MAP ${t.c.mp}</div></div>`; };
+  const ab = AG.filter(a => ST[a.matricule]), nm = Object.fromEntries(AG.map(a => [a.matricule, a]));
+  const top = Object.entries(rec).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  return head("Suivi présence", `Situation en temps réel — ${dmy(new Date())} ${hm(new Date())}`, `<button class="btn p" data-p="eff">Mettre à jour (annuaire)</button>`)
+    + `<div class="g">${TM.map(cd).join("")}</div>
+<div class="card sc"><h2>Absents du jour</h2><table><tr><th>Agent</th><th>Équipe</th><th>Statut</th><th>Justification</th></tr>${ab.map(a => `<tr><td><b>${E(a.nom)}</b> <span class="m">${E(a.matricule)}</span></td><td>${E(a.equipe)}</td><td><span class="bd ${ST[a.matricule].statut == "nj" ? "bad" : "info"}">${SL[ST[a.matricule].statut]}</span></td><td>${E(ST[a.matricule].justification) || "—"}</td></tr>`).join("") || `<tr><td colspan="4" class="m">Aucune absence saisie aujourd’hui.</td></tr>`}</table></div>
+<div class="card sc"><h2>Historique des journées saisies (30 jours)</h2><table><tr><th>Date</th><th>Non justifiées</th><th>Justifiées</th><th>Congés</th><th>Mises à pied</th></tr>${Object.entries(hist).map(([d, c]) => `<tr><td>${dmy(d)}</td><td>${c.nj}</td><td>${c.j}</td><td>${c.c}</td><td>${c.mp}</td></tr>`).join("") || `<tr><td colspan="5" class="m">L’historique se constitue au fil des saisies.</td></tr>`}</table></div>
+<div class="card sc"><h2>Absences non justifiées récurrentes (30 jours)</h2><table><tr><th>Agent</th><th>Équipe</th><th>Nb</th></tr>${top.map(([m, n]) => `<tr><td>${E(nm[m]?.nom || m)}</td><td>${E(nm[m]?.equipe || "")}</td><td><span class="bd ${n > 1 ? "bad" : "info"}">${n}</span></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune.</td></tr>`}</table></div>
+<div class="card sc"><h2>Rapports « Situation du staff » reçus</h2><table><tr><th>Date</th><th>Service</th><th>Groupe</th><th>Présents</th><th>Renforts</th></tr>${(rp || []).map(r => `<tr><td>${dmy(T(r.cree_le))} ${hm(T(r.cree_le))}</td><td>${r.service == "bagages" ? "Manutention" : "Nettoyage"}</td><td>${E(r.groupe)}</td><td>${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""}</td><td>${r.renforts || 0}${r.renforts_detail ? " — " + E(r.renforts_detail) : ""}</td></tr>`).join("")}</table></div>`;
+};
+
+/* ---------- Actions ---------- */
+async function setSt(mat, v) {
+  const a = AG.find(x => x.matricule == mat);
+  const done = async j => {
+    const uid = (await sb.auth.getUser()).data.user.id;
+    const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", today()).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: today(), matricule: mat, statut: v, justification: j || null, saisi_par: uid, maj: new Date().toISOString() });
+    const { error } = await q; if (error) toast("Refusé : " + error.message); else toast(a.nom + " : " + SL[v]);
+    await loadST(); if ($("#el")) $("#el").innerHTML = eT();
+  };
+  if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
+}
+const ACT = {
+  vd(b) { VD = +b.dataset.i; draw(); },
+  vol() { ask("Ajouter un vol (programme manuel)", [{ k: "n", l: "N° de vol", r: 1 }, { k: "s", l: "Sens", o: [["A", "Arrivée"], ["D", "Départ"]] }, { k: "t", l: "Type d’appareil (ex. B738, A332)" }, { k: "h", l: "Heure prévue (UTC = heure de Nouakchott)", t: "datetime-local", r: 1 }], async v => { const { error } = await sb.from("vols").insert({ source: "manuel", numero: v.n.toUpperCase(), sens: v.s, type_appareil: v.t ? v.t.toUpperCase() : null, heure_prevue: new Date(v.h + ":00Z").toISOString() }); toast(error ? "Refusé : " + error.message : "Vol ajouté"); draw(); }); },
+  async pec(b) { await sb.rpc("alerte_action", { p_alerte: b.dataset.i, p_action: "prise_en_charge", p_commentaire: ME.nom }); toast("Alerte prise en charge"); await loadAL(); draw(); },
+  async clo(b) { await sb.rpc("alerte_action", { p_alerte: b.dataset.i, p_action: "close", p_commentaire: ME.nom }); toast("Alerte clôturée"); await loadAL(); draw(); },
+  async cop(b) { const a = AL.find(x => x.id == b.dataset.i); try { await navigator.clipboard.writeText(`${a.titre}\n${a.message}\n${location.origin}`); toast("Message copié"); } catch (e) { toast("Copie impossible : sélectionnez le texte"); } },
+  async dst(b) {
+    const a = AL.find(x => x.id == b.dataset.i), box = $("#d" + a.id), msg = encodeURIComponent(`${a.titre}\n${a.message}\n${location.origin}`);
+    const [{ data: ds }, { data: sv }] = await Promise.all([sb.rpc("equipe_alerte", { p_service: a.service }), sb.from("alertes_suivi").select("action,commentaire,fait_le").eq("alerte_id", a.id).order("fait_le")]);
+    box.innerHTML = `<div class="li" style="flex-wrap:wrap">${(ds || []).map(d => `<a class="btn w" target="_blank" rel="noopener" href="https://wa.me/222${dg(d.tel)}?text=${msg}">WhatsApp · ${E(d.nom)}</a>`).join(" ")}</div>${(sv || []).map(s => `<div class="m">${dmy(s.fait_le)} ${hm(s.fait_le)} — ${s.action == "prise_en_charge" ? "prise en charge" : s.action == "decision" ? "décision / clôture" : "vue"} par ${E(s.commentaire)}</div>`).join("")}`;
+  }
+};
+
+/* ---------- Interface ---------- */
+async function draw() {
+  const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
+  $("#nv").innerHTML = ok.map(p => `<button data-p="${p}" class="${p == NAV ? "on" : ""}"><span class="i">${P[p][0]}</span><span class="l">${P[p][1]}</span></button>`).join("");
+  const ref = NAV; let h;
+  try { h = await V[NAV](); } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
+  if (ref == NAV) $("#mn").innerHTML = h;
+}
+async function shell() {
+  $("#app").innerHTML = `<header><button id="tg" class="hb">☰</button><b>EPS OPS</b><span class="sp"></span><button id="bl" class="hb" title="Alertes">🔔<i id="bc"></i></button><span id="un">${E(ME.nom)}</span><button id="lo" class="hb">Quitter</button></header><div class="wrap"><nav id="nv"></nav><main id="mn"><div class="m">Chargement…</div></main></div>`;
+  $("#tg").onclick = () => $("#nv").classList.toggle("open");
+  $("#bl").onclick = () => { if ((ACC[ME.role] || []).includes("alertes")) { NAV = "alertes"; draw(); } };
+  $("#lo").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  await Promise.all([loadAG(), loadST(), loadAL()]);
+  sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) $("#el").innerHTML = eT(); }).subscribe();
+  draw();
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
+document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; $("#el").innerHTML = eT(); } });
+document.addEventListener("change", e => { const s = e.target.dataset.s; if (s) return setSt(s, e.target.value); const k = e.target.dataset.f; if (k) { F[k] = e.target.value; $("#el").innerHTML = eT(); } });
+$("#md").onclick = e => { if (e.target.id == "md") e.target.classList.remove("on"); };
+document.addEventListener("keydown", e => { if (e.key == "Escape") $("#md").classList.remove("on"); });
+start();
+</script>
+</body>
+</html>
