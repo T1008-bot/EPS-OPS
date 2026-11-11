@@ -82,12 +82,12 @@ const ymd = d => new Date(d).toISOString().slice(0, 10);
 const dg = t => String(t).replace(/\D/g, "").slice(-8);
 
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
-const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag", "tach"];
-const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag", "tach"];
+const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag", "tach", "sig", "ir"];
+const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag", "tach", "sig"];
 const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres", "disc"], assistante_rh: ["shift", "eff", "pres", "disc"], approvisionnement: ["shift", "mag"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"] };
 const SL = { p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -170,7 +170,7 @@ V.shift = async () => {
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
 <div class="g">${teams.map(card).join("")}${rb ? `<div class="card"><div class="row"><h2>Manutention — Groupe ${g}</h2><span class="bd info">24 h</span></div><div class="k">${rb.present ?? "?"}${rb.effectif ? " / " + rb.effectif : ""}</div><div class="m">Présents selon le dernier rapport (${hm(T(rb.cree_le))}) · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div></div>` : ""}</div>
 <div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>
-<div class="card m">Modules à migrer prochainement : tâches du jour, lieux, Help Desk, observations du shift.</div>`;
+<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>`;
 };
 
 V.alertes = async () => {
@@ -305,6 +305,196 @@ V.tach = async () => {
     + (L.map(t => `<div class="card"><div class="row"><b>${E(t.titre)}</b><div><span class="bd ${t.priorite == "haute" ? "bad" : "info"}" ${t.priorite == "haute" ? "" : 'style="display:none"'}>Priorité</span> <span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></div></div>${t.description ? `<div style="margin-top:4px">${E(t.description)}</div>` : ""}<div class="m" style="margin-top:4px">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}créée par ${E(t.cree_nom)}${t.maj_nom ? " · " + TS[t.statut].toLowerCase() + " par " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button><button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>`}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`).join("") || `<div class="card m">Aucune tâche ce jour-là.</div>`);
 };
 
+/* ---------- Help Desk / Signalements ---------- */
+const SG_ST = { brouillon: "Brouillon", envoye: "Envoyé", repondu: "Réponse reçue", bdm_attribue: "BDM attribué", en_cours: "En cours", intervention_terminee: "Intervention terminée", verifie: "Vérifié", cloture: "Clôturé" };
+const SG_B = { brouillon: "info", envoye: "warn", repondu: "warn", bdm_attribue: "info", en_cours: "info", intervention_terminee: "ok", verifie: "ok", cloture: "ok" };
+const SG_EV = { constat: "Constat", envoi: "Envoi au Help Desk", reponse: "Réponse Help Desk", bdm: "Numéro BDM communiqué", intervention_annoncee: "Intervention annoncée", intervention_programmee: "Intervention programmée", intervention_commencee: "Intervention commencée", intervention_terminee: "Intervention terminée", verification: "Vérification EPS", relance: "Relance", commentaire: "Commentaire", cloture: "Clôture", reouverture: "Réouverture" };
+const SG_CAT = ["Électricité", "Climatisation", "Plomberie", "Sanitaires", "Nettoyage / Déchets", "Équipement / Matériel", "Sûreté / Accès", "Infrastructure", "Autre"];
+const SG_PR = { basse: "#94a3b8", normale: "#0052cc", haute: "#f59e0b", urgente: "#e11d48" };
+const SGM = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+let SG = [], SGE = {}, SQ = "", SGF = { st: "", bdm: "", rep: "" }, SO = 0;
+const dt = d => { d = new Date(d); return dmy(d) + " " + hm(d); };
+const nowL = () => new Date().toISOString().slice(0, 16);
+const fromL = v => new Date(v + ":00Z").toISOString();
+const evs = id => (SGE[id] || []).slice().sort((a, b) => new Date(a.quand) - new Date(b.quand));
+const firstEv = (id, t) => evs(id).find(e => e.type == t);
+function dur(a, b) { if (!a || !b) return "—"; let m = Math.round((new Date(b) - new Date(a)) / 6e4); if (m < 0) return "—"; const d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60); m = m % 60; return (d ? d + " j " : "") + (h ? h + " h " : "") + m + " min"; }
+function sigLate(s) { if (s.statut == "cloture" || s.statut == "brouillon") return ""; const e = firstEv(s.id, "envoi"); if (!e) return ""; const age = Date.now() - new Date(e.quand); if (!firstEv(s.id, "reponse") && !firstEv(s.id, "bdm") && age > 24 * H) return "Sans réponse > 24 h"; if (age > 72 * H) return "Ouvert > 72 h"; return ""; }
+function sigFlt() { const q = N(SQ); return SG.filter(s => (!q || N([s.ref, s.objet, s.zone, s.categorie, s.sous_categorie, s.bdm, s.description].join(" ")).includes(q)) && (!SGF.st || s.statut == SGF.st) && (!SGF.bdm || (SGF.bdm == "m") == !s.bdm) && (!SGF.rep || (SGF.rep == "a") == !firstEv(s.id, "reponse"))); }
+function sigList() { const L = sigFlt(); $("#sl").innerHTML = `<div class="m"><b>${L.length}</b> signalement(s)</div><div class="card sc"><table><tr><th>Réf.</th><th>Constat</th><th>Objet / Zone</th><th>Catégorie</th><th>BDM</th><th>Statut</th></tr>${L.map(s => { const late = sigLate(s); return `<tr data-a="sigo" data-i="${s.id}" style="cursor:pointer"><td><b>${E(s.ref.replace("EPS/OPS/SIG/", ""))}</b></td><td>${s.constat_le ? dt(s.constat_le) : "—"}</td><td><span title="Priorité ${s.priorite}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SG_PR[s.priorite]};margin-right:5px"></span><b>${E(s.objet)}</b>${(SPJ[s.id] || []).length ? ` <span class="m">📎${SPJ[s.id].length}</span>` : ""}${s.zone ? `<div class="m">${E(s.zone)}</div>` : ""}${late ? `<div><span class="bd bad">⏱ ${late}</span></div>` : ""}</td><td>${E(s.categorie)}</td><td>${s.bdm ? E(s.bdm) : '<span class="m">—</span>'}</td><td><span class="bd ${SG_B[s.statut]}">${SG_ST[s.statut]}</span></td></tr>`; }).join("") || `<tr><td colspan="6" class="m">Aucun signalement.</td></tr>`}</table></div>`; lab($("#sl")); }
+V.sig = async () => {
+  const [a, b] = await Promise.all([sb.from("signalements").select("*").order("created_at", { ascending: false }).limit(500), sb.from("signalement_events").select("*").order("quand").limit(3000), pjLoadAll()]);
+  if (a.error) throw a.error; SG = a.data || []; SGE = {}; (b.data || []).forEach(e => (SGE[e.signalement_id] = SGE[e.signalement_id] || []).push(e));
+  const o = (k, l, opts) => `<select data-g="${k}"><option value="">${l}</option>${opts.map(([v, t]) => `<option value="${v}" ${SGF[k] == v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+  return head("Help Desk", "Signalements externes — suivi jusqu’à la clôture", `<button class="btn w" data-a="signew">+ Signalement</button>`)
+    + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="sq" placeholder="Rechercher (réf., BDM, objet, zone…)" value="${E(SQ)}">${o("st", "Statut : tous", Object.entries(SG_ST))}${o("bdm", "BDM : tous", [["m", "BDM manquant"], ["p", "BDM renseigné"]])}${o("rep", "Réponse : toutes", [["a", "Réponse absente"], ["r", "Réponse reçue"]])}</div><div id="sl"></div><div class="m">● priorité : gris basse · bleu normale · orange haute · rouge urgente. Touchez une ligne pour ouvrir la fiche.</div>`;
+};
+function sigF(id) {
+  const s = SG.find(x => x.id == id); if (!s) return; SO = id; const mg = SGM.includes(ME.role), E0 = evs(id), cl = s.statut == "cloture";
+  const ce = firstEv(id, "constat"), tl = [...(s.constat_le && !ce ? [{ type: "constat", quand: s.constat_le, source: s.constat_source, auteur_nom: s.constat_auteur, contenu: "" }] : []), ...E0].sort((a, b) => new Date(a.quand) - new Date(b.quand));
+  const t = n => firstEv(id, n)?.quand, env = t("envoi"), fin = t("intervention_terminee") || t("cloture");
+  const row = (l, v) => v ? `<div class="m"><b>${l}</b> ${E(v)}</div>` : "";
+  $("#mf").innerHTML = `<div class="row"><h2>${E(s.objet)}</h2><span class="bd ${SG_B[s.statut]}">${SG_ST[s.statut]}</span></div>
+<div class="m">${E(s.ref)} · BDM : <b>${s.bdm ? E(s.bdm) : "—"}</b> · ${E(s.categorie)}${s.sous_categorie ? " / " + E(s.sous_categorie) : ""} · ${E(s.zone) || "zone ?"} · priorité <b style="color:${SG_PR[s.priorite]}">${s.priorite}</b></div>
+${row("Problème :", s.description)}${row("Conséquences :", s.consequences)}${row("Mesures conservatoires :", s.mesures)}${row("Intervention demandée :", s.intervention_demandee)}
+<h2 style="margin-top:6px">Chronologie</h2>${tl.map(e => `<div class="li" style="align-items:flex-start"><div><b>${SG_EV[e.type]}</b>${e.type == "envoi" && !e.confirme_manuel ? "" : ""}<div class="m">${e.contenu ? E(e.contenu) + " · " : ""}${e.canal ? E(e.canal) + " · " : ""}${e.destinataire ? "à " + E(e.destinataire) + " · " : ""}${e.type == "envoi" ? "envoi déclaré manuellement · " : ""}${e.source ? "source : " + E(e.source) + " · " : ""}${E(e.auteur_nom) || ""}</div></div><div class="m" style="white-space:nowrap">${dt(e.quand)}</div></div>`).join("") || '<div class="m">Aucun événement.</div>'}
+<h2 style="margin-top:6px">Délais</h2><div class="m">Constat → envoi : <b>${dur(s.constat_le, env)}</b><br>Envoi → 1re réponse : <b>${dur(env, t("reponse"))}</b><br>Envoi → BDM : <b>${dur(env, t("bdm"))}</b><br>Envoi → début d’intervention : <b>${dur(env, t("intervention_commencee"))}</b><br>Envoi → résolution : <b>${dur(env, t("intervention_terminee"))}</b><br>Constat → clôture : <b>${dur(s.constat_le, t("cloture"))}</b><br><i>Un délai n’est calculé que si les deux heures sont renseignées.</i></div>
+${pjBlock(id)}
+<div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button type="button" class="btn p" data-a="sigmsg" data-i="${id}">Message / WhatsApp</button><button type="button" class="btn" data-a="sigev" data-i="${id}" data-t="retour">+ Retour Help Desk</button><button type="button" class="btn" data-a="sigev" data-i="${id}" data-t="commentaire">+ Commentaire</button><button type="button" class="btn" data-a="sigev" data-i="${id}" data-t="relance">+ Relance</button>${!s.constat_le ? `<button type="button" class="btn" data-a="sigev" data-i="${id}" data-t="constat">Renseigner le constat</button>` : ""}${mg && !cl ? `<button type="button" class="btn w" data-a="sigev" data-i="${id}" data-t="verification">Vérifier</button><button type="button" class="btn d" data-a="sigev" data-i="${id}" data-t="cloture">Clôturer</button>` : ""}${mg && cl ? `<button type="button" class="btn" data-a="sigev" data-i="${id}" data-t="reouverture">Rouvrir</button>` : ""}${mg ? `<button type="button" class="btn" data-a="sig2ir" data-i="${id}">Générer un Incident Report</button>` : ""}</div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
+  $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on"); pjDraw(id);
+}
+function sigMsg(s) { return `HELP DESK — Signalement ${s.ref}\nObjet : ${s.objet}\nZone : ${s.zone || "—"}\nCatégorie : ${s.categorie}${s.sous_categorie ? " / " + s.sous_categorie : ""}\nPriorité : ${s.priorite}\n${s.constat_le ? "Constaté le " + dt(s.constat_le) + "\n" : ""}Problème : ${s.description || "—"}\n${s.consequences ? "Conséquences : " + s.consequences + "\n" : ""}${s.mesures ? "Mesures conservatoires : " + s.mesures + "\n" : ""}Intervention demandée : ${s.intervention_demandee || "—"}\nMerci de nous communiquer le numéro de ticket (BDM) et l’heure d’intervention prévue.\nEPS — ${ME.nom}`; }
+async function sigEvent(id, type, quand, contenu, source, canal, dest, conf) { const { error } = await sb.rpc("sig_event", { p_id: id, p_type: type, p_quand: quand || new Date().toISOString(), p_contenu: contenu || null, p_source: source || null, p_canal: canal || null, p_dest: dest || null, p_confirme: !!conf }); toast(error ? "Refusé : " + error.message : "Enregistré"); await draw(); if (!error || SG.find(x => x.id == id)) sigF(id); }
+
+/* ---------- Rapports d'incident ---------- */
+const LG_AFRO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGoAAABQCAMAAADGHhBuAAAAwFBMVEUbLC8TKFbRqFMYMWUaHBcjSHgvtdgQKEQrlamymlNda1AkVWdPRzCMajUkTlBMpKVEOiRnYTZGxN0ebYgex++jgjc4QzUjaoZamI3KlDdFu8mUekmDe0Slh07xwFoCEz47SzUsgphoXUVUiXqTp4LxwTnGwYAAAAD2qzgDCRQmQ4wJFzIXN3bxs0v0q0MXNG4bOoX1sTgJFCcTJ1QRJUskPIkQK2gaRIkPFhYyxOwEDSIJGTkkOnoEDBwSNWdPSSx35co/AAAAQHRSTlNWpe/QLeX+cuXcnJ9fmHPdVJD/p/+yYNK11/WnwLH/oYO7fKTW//sA/i78bez//tP4/lGskPvO+Sn/TIbuR7RqT/wpUQAABHlJREFUeNrtmYdu4zgQhqlmucVO2ZSt149mMykWWXZc3v+tdoZygDscsE4CybgFzACRpUj89P8z4owVQs82yAV1QV1QF9TPjspvpv2j8oY20/vqr/veUdfpMl0qVS0+9o3K02oBQy2Wy/sc9qfjQ9MPKk+XiziWMNIDpSP1Lb26GqXTzlGfjyRAwa/q4/2iWlRKqY/XXaOIWlRVpRDTMqsKWQt11bmBX1X1bxTCMHhL0jEqj6Li3K2DuFULBUkyyrtFXbWk6kVQFAcgBN50i0rVP/VEVrvzpmiR1/kHD1ScvQUoHG0uqjTvEnUdOQoRmHpqdDgcbkZRqlq+XtZrUL8fUSgKvbvODw95cxh9i9KWVx2ixuqY3iqmuzqQ8dPTrGluUoU3oEaku1ihV1WbeSgvPTz8MZ/PZ3n+JVUqHY0eusvAKa7oR9Yyssj40+B2SCj5ckOguOTdrRZTsGqh2sRTKGRMJuv1+lNBaEMmk+F81uHK/jVNP08JuT4cxmma/v0nobPBGn6Gw8Hg9vZ23vTQWzTk1/F4TEhDhusPH0DaejD4bZb30Fs05Gk+LB4fQQyCBsO7Wd5Xx0QAEq0Dzh3Je23OJrfoGWDiHiOTsjcUyBrelU00c/9YFAXrr+XMCSlLkkz2+2K1Kl4t6l3drS2T/QqG3nvB+m2kmdda7/elZZQ1PmF99uy2JIix5b7QnNtevx40VnivObrIe1XFiN9LHkLQ2lvWa6yEliuzzSAnGLOk37RIIPU2u43wsvD9qqKsLBMHCcG56/tbo8944NxwHrK+UbUJmH0c0q9vVPQOYW+I1DtRLkSWefXT+36UkEgKfNs/itYrA5q2z2d4b+EDksQ5XpEwt906Rs/zNmbD6E/24oexc6F2UmbiPChIr6DfWsHYu1A1rAVyE2d4hgECjxs8IlzS9i67xCfO2WP94jLZ4UEhoLrgaXGwEygbAjyfcR21EkZNGW4k1ouNlsYYWQNBhLg6iegCPGUBlg7mdA3D001dS6k1OYFypraa1xFleCI2dGe0KDOYlWmjPTQVUjP6zMMvAuZDZnDPjnPNWM2T0kuwRDgJZ54wkKEiZ4xoVdlIBPAejsDUeFhkktDnsN2wPczveLDodYB7qeFaUI6ipbanYuVDSKg3xkWUqZ2gudFWyMzSpPUV7sRRwYMQcpWw4liKMyhecIL1EtcRgcpPoDKkeG4kQzkQF/AN4gMeUpipnRVne4kVK0J7sOYecLrWdVR+GmXhSugm/RYDvjErbL4ABUHC603dqpKeCc5r55AfMhazCa5wRmvp2zojTxmYtT0QI1jLrZExfFK3UWJoGNyH1BD4oDdt8YKssExkIWzAeFfWbTzbsP4ABc4XWwiE3G7BALs6oiQTsobnJYHcT2qJZlpe7I6tGufbooDQwQMIcr1ElURK8mOULQqcaAf5nGFyxzCwDBT6+LnUMpNoG91lL1UEKgqw4lom4E87l0HJtFlm372yt4swrAP2P4syHNy1e9H8+Llhl39UXFAX1AX1v0d9Bw1GCA8FWxzvAAAAAElFTkSuQmCC", LG_EPS = "data:image/png;base64,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";
+const IRS = { brouillon: "Brouillon", en_preparation: "En préparation", attente_verification: "En attente de vérification", attente_approbation: "En attente d’approbation", approuve: "Approuvé", emis: "Émis", annule: "Annulé", archive: "Archivé" };
+const IRB = { brouillon: "info", en_preparation: "info", attente_verification: "warn", attente_approbation: "warn", approuve: "ok", emis: "ok", annule: "bad", archive: "info" };
+const IRSEC = [["sec_a", "A: Introduction", "Présentation de l’incident et de son contexte."], ["sec_b", "B: Technical Details", "Location, Time and Date, Detected By, Concerned Area, Findings (une ligne par rubrique : « - Location: … »)."], ["sec_c", "C: Breakdown / Incident History", "Historique chronologique des faits, observations, interventions."], ["sec_d", "D: Root Causes", "Causes probables et facteurs contributifs (« 1- Titre: explication »). Distinguer faits confirmés et hypothèses."], ["sec_e", "E: Risks & Potential Impact", "« Risque: conséquence » (une ligne par risque)."], ["sec_f", "F: Immediate Actions Taken", "Uniquement les mesures réellement prises."], ["sec_g", "G: Recommendations", "Une recommandation par ligne (« • … »)."]];
+const IRA = ["direction", "responsable_ops"], IRV = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"];
+const RLE = { direction: "EPS - Operations Director", responsable_ops: "EPS - Operations Manager", coordinateur_ops: "EPS - Operations Coordinator", superviseur_principal: "EPS – Principal Supervisor", superviseur_nettoyage: "EPS – Cleaning Supervisor", superviseur_bagages: "EPS – Baggage Handling Supervisor" };
+let IRL = [], IRQ = "", IRFS = "", IRP = [];
+const fdm = d => d ? String(d).slice(8, 10) + "-" + String(d).slice(5, 7) + "-" + String(d).slice(0, 4) : "";
+const irNum = r => r.numero || ("Brouillon #" + r.id);
+const irEd = r => r.statut == "brouillon" || r.statut == "en_preparation";
+function irList() { const q = N(IRQ), L = IRL.filter(r => (!q || N([r.numero, r.objet, r.sig?.ref, r.sig?.bdm, r.prepare_nom].join(" ")).includes(q)) && (!IRFS || r.statut == IRFS)); $("#irl").innerHTML = `<div class="m"><b>${L.length}</b> rapport(s)</div><div class="card sc"><table><tr><th>N° IR</th><th>Date</th><th>Objet</th><th>Priorité</th><th>Statut</th><th>Signalement / BDM</th></tr>${L.map(r => `<tr data-a="iro" data-i="${r.id}" style="cursor:pointer"><td><b>${E(irNum(r))}</b></td><td>${fdm(r.date_incident) || "—"}</td><td>${E(r.objet)}<div class="m">${E(r.prepare_nom)}</div></td><td><span class="bd ${r.priorite == "HIGH" ? "bad" : r.priorite == "MEDIUM" ? "warn" : "info"}">${r.priorite}</span></td><td><span class="bd ${IRB[r.statut]}">${IRS[r.statut]}</span></td><td>${r.sig ? E(r.sig.ref.replace("EPS/OPS/SIG/", "")) + (r.sig.bdm ? " · " + E(r.sig.bdm) : "") : "—"}</td></tr>`).join("") || `<tr><td colspan="6" class="m">Aucun rapport.</td></tr>`}</table></div>`; lab($("#irl")); }
+V.ir = async () => {
+  const { data, error } = await sb.from("incident_reports").select("id,numero,statut,objet,date_incident,priorite,prepare_nom,signalement_id,signalements(ref,bdm)").order("created_at", { ascending: false }).limit(500);
+  if (error) throw error; IRL = (data || []).map(r => ({ ...r, sig: r.signalements }));
+  return head("Rapports d’incident", "Registre des Incident Reports (modèle EPS / AFROPORT)", `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn w" data-a="irnew">+ Nouveau rapport</button>${IRA.includes(ME.role) ? `<button class="btn" data-a="irseq">Numérotation</button>` : ""}</div>`)
+    + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><input id="irq" placeholder="Rechercher (n°, objet, réf., BDM…)" value="${E(IRQ)}"><select data-h="1"><option value="">Statut : tous</option>${Object.entries(IRS).map(([k, v]) => `<option value="${k}" ${IRFS == k ? "selected" : ""}>${v}</option>`).join("")}</select></div><div id="irl"></div><div class="m">Le numéro officiel est attribué à l’approbation et ne change plus ensuite. Un numéro attribué n’est jamais réutilisé, même si le rapport est annulé.</div>`;
+};
+const boldL = (s, b) => String(s || "").split(/\n/).filter(x => x.trim()).map(x => { let h = E(x.trim()); if (b) h = h.replace(/^((?:\d+-\s*|[-•]\s*)?)([^:<]{2,70}?):(\s|$)/, (m, a, l, z) => a + "<b>" + l + "</b>:" + z); return "<p>" + h + "</p>"; }).join("");
+function irDoc(r) {
+  const draft = !["approuve", "emis", "archive"].includes(r.statut), ok = r.approuve_nom;
+  const sec = (k, t, b) => `<tr><td class="sh">${t}</td></tr><tr><td class="sb">${boldL(r[k], b) || "&nbsp;"}</td></tr>`;
+  const ph = (r.photos || []).map(u => `<img src="${u}">`).join("");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${E(irNum(r))}</title><style>
+@page{size:A4;margin:12mm}body{font:12px/1.4 Calibri,Arial,sans-serif;color:#000;max-width:780px;margin:0 auto;padding:10px;position:relative}
+table{width:100%;border-collapse:collapse}td{border:1px solid #000;padding:4px 6px;vertical-align:top}
+.hd td{text-align:center;vertical-align:middle;height:80px}.hd img{max-height:64px;max-width:100%}.hd .t1{color:#2f5597;font-style:italic;font-weight:700;font-size:17px}.hd .t2{font-weight:700;font-size:17px;margin-top:14px}
+.sp{height:10px;border:0}.in td{border-color:#000}.in .bl{background:#c6d9f0}.in .l{width:14%}.in .l2{width:14%;font-weight:700}
+.sh{background:#95b3d7;font-weight:700;padding:4px 6px}.sb{padding:4px 6px}.sb p{margin:0 0 6px}
+.ph{display:flex;flex-wrap:wrap;gap:8px;padding:4px}.ph img{width:48%;max-height:300px;object-fit:cover}
+.sg td{text-align:center}.sg .bh{background:#95b3d7;font-weight:700;font-style:italic;font-size:13px}.sg .lb{text-align:left;width:15%}.sg .tall{height:70px}
+.wm{position:fixed;top:40%;left:14%;font-size:90px;color:#e11d4818;transform:rotate(-25deg);font-weight:800;pointer-events:none}.pb{position:fixed;top:6px;right:6px}@media print{.pb{display:none}}.nb{page-break-inside:avoid}
+</style></head><body>${draft ? '<div class="wm">DRAFT</div>' : ""}<button class="pb" onclick="print()">Print / PDF</button>
+<table class="hd"><tr><td style="width:30%"><img src="${LG_AFRO}"></td><td><div class="t1">EPS Prestation Services</div><div class="t2">Incident Report</div></td><td style="width:30%"><img src="${LG_EPS}"></td></tr></table><div class="sp"></div>
+<table class="in"><tr><td class="bl" style="font-weight:700;height:36px" colspan="1">Incident Report No.:</td><td class="bl" colspan="3" style="font-weight:700">${E(r.numero || "(number assigned on approval)")}</td></tr>
+<tr><td class="l">INC</td><td style="font-weight:700">${E(r.site)}</td><td class="l2">Date</td><td style="font-weight:700">${fdm(r.date_incident)}</td></tr>
+<tr><td class="l">System</td><td style="font-weight:700">${E(r.systeme)}</td><td class="l2">Time</td><td style="font-weight:700">${E(r.heure_incident)}</td></tr>
+<tr><td class="l">Subject</td><td colspan="3">${E(r.objet)}</td></tr>
+<tr><td class="l">Priority</td><td colspan="3" style="font-weight:700;color:${r.priorite == "HIGH" ? "#e11d1d" : "#000"}">${E(r.priorite)}</td></tr></table><div class="sp"></div>
+<table>${sec("sec_a", "A: Introduction:", 0)}${sec("sec_b", "B: Technical Details", 1)}${sec("sec_c", "C: Breakdown / Incident History", 0)}${sec("sec_d", "D: Root Causes", 1)}${sec("sec_e", "E: Risks & Potential Impact", 1)}${sec("sec_f", "F: Immediate Actions Taken", 0)}${sec("sec_g", "G: Recommendations", 0)}<tr><td class="sh">H: Photo</td></tr><tr><td><div class="ph">${ph || "&nbsp;"}</div></td></tr></table><div class="sp"></div>
+<table class="sg nb"><tr><td class="bh" colspan="3">EPS Prestation Services</td></tr><tr><td class="lb"></td><td><b>Prepared By</b></td><td><b>Verified and Approved By</b></td></tr><tr><td class="lb tall">Signature</td><td></td><td></td></tr><tr><td class="lb">Name</td><td>${E(r.prepare_nom)}<br>${E(r.prepare_fonction)}</td><td>${ok ? E(r.approuve_nom) + "<br>" + E(r.approuve_fonction) : "&nbsp;"}</td></tr><tr><td class="lb">Date</td><td>${fdm(r.prepare_le || String(r.created_at).slice(0, 10))}</td><td>${ok ? fdm(String(r.approuve_le).slice(0, 10)) : "&nbsp;"}</td></tr>
+<tr><td class="bh" colspan="3">AFROPORT-FM Department</td></tr><tr><td class="lb"></td><td><b>Verified by</b></td><td><b>Approved By</b></td></tr><tr><td class="lb tall">Signature</td><td></td><td></td></tr><tr><td class="lb">Name</td><td>&nbsp;</td><td></td></tr><tr><td class="lb">Date</td><td>&nbsp;</td><td></td></tr></table></body></html>`;
+}
+let DXP = null;
+function dxLoad() { return DXP || (DXP = window.docx ? Promise.resolve() : new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/docx@9.8.1/dist/index.umd.js"; s.onload = ok; s.onerror = () => { DXP = null; ko(new Error("Bibliothèque Word indisponible (connexion ?)")); }; document.head.appendChild(s); })); }
+function dxImg(u) { return new Promise(ok => { const i = new Image(); i.onload = () => ok({ w: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => ok({ w: 4, h: 3 }); i.src = u; }); }
+const dxBin = u => { const b = atob(u.split(",")[1]), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; };
+async function irDocx(r) {
+  await dxLoad(); const D = window.docx;
+  const draft = !["approuve", "emis", "archive"].includes(r.statut), ok = r.approuve_nom;
+  const F = "Calibri", SZ = 22, BL = "95B3D7", LB = "C6D9F0", W = 10466;
+  const line = { style: D.BorderStyle.SINGLE, size: 4, color: "000000" }, bd = { top: line, bottom: line, left: line, right: line };
+  const none = { style: D.BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const tr = (t, o = {}) => new D.TextRun({ text: String(t ?? ""), font: F, size: o.size || SZ, bold: o.b, italics: o.i, color: o.c });
+  const par = (kids, o = {}) => new D.Paragraph({ children: kids, alignment: o.al, spacing: { before: o.before || 0, after: o.after ?? 60 }, keepNext: o.keep });
+  const cell = (kids, o = {}) => new D.TableCell({ children: kids.length ? kids : [par([])], borders: o.nob ? { top: none, bottom: none, left: none, right: none } : bd, width: { size: o.w || 1000, type: D.WidthType.DXA }, columnSpan: o.span, shading: o.fill ? { type: D.ShadingType.CLEAR, fill: o.fill, color: "auto" } : undefined, verticalAlign: o.va || D.VerticalAlign.TOP, margins: { top: 50, bottom: 50, left: 100, right: 100 } });
+  const tbl = (rows, widths) => new D.Table({ rows, width: { size: widths.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: widths, layout: D.TableLayoutType.FIXED });
+  const gap = () => par([], { after: 0, before: 0 });
+  const txt = s => String(s ?? "").replace(/&nbsp;/g, " ");
+  // lignes avec libellé en gras (sections B, D, E)
+  const lines = (s, b) => String(s || "").split(/\n/).filter(x => x.trim()).map(x => {
+    x = x.trim(); const m = b && x.match(/^((?:\d+-\s*|[-•]\s*)?)([^:]{2,70}?):(\s|$)(.*)$/);
+    return m ? par([tr(m[1]), tr(m[2], { b: 1 }), tr(":" + (m[4] ? " " + m[4] : ""))], { after: 80 }) : par([tr(x)], { after: 80 });
+  });
+  const sec = (k, t, b) => [new D.TableRow({ cantSplit: true, children: [cell([par([tr(t, { b: 1 })], { after: 0, keep: 1 })], { w: W, fill: BL })] }),
+  new D.TableRow({ children: [cell(lines(r[k], b), { w: W })] })];
+  // en-tête
+  const logo = (u, h) => par([new D.ImageRun({ type: "png", data: dxBin(u), transformation: h, altText: { title: "logo", description: "logo", name: "logo" } })], { al: D.AlignmentType.CENTER, after: 0 });
+  const head = tbl([new D.TableRow({ height: { value: 1500, rule: D.HeightRule.ATLEAST }, children: [
+    cell([logo(LG_AFRO, { width: 110, height: 80 })], { w: 3000, va: D.VerticalAlign.CENTER }),
+    cell([par([tr("EPS Prestation Services", { b: 1, i: 1, size: 34, c: "2F5597" })], { al: D.AlignmentType.CENTER, after: 200 }), par([tr("Incident Report", { b: 1, size: 34 })], { al: D.AlignmentType.CENTER, after: 0 })], { w: 4466, va: D.VerticalAlign.CENTER }),
+    cell([logo(LG_EPS, { width: 110, height: 80 })], { w: 3000, va: D.VerticalAlign.CENTER })] })], [3000, 4466, 3000]);
+  const R = (a, b, c, d, o = {}) => new D.TableRow({ children: [cell([par([tr(a)], { after: 0 })], { w: 1500, fill: o.f1 }), cell([par([tr(b, { b: 1 })], { after: 0 })], { w: 3733, span: o.s }), ...(c === undefined ? [] : [cell([par([tr(c, { b: 1 })], { after: 0 })], { w: 1500 }), cell([par([tr(d, { b: 1 })], { after: 0 })], { w: 3733 })])] });
+  const info = tbl([
+    new D.TableRow({ height: { value: 560, rule: D.HeightRule.ATLEAST }, children: [cell([par([tr("Incident Report No.:", { b: 1 })], { after: 0 })], { w: 2200, fill: LB, va: D.VerticalAlign.CENTER }), cell([par([tr(r.numero || "(number assigned on approval)", { b: 1 })], { after: 0 })], { w: 8266, span: 3, fill: LB, va: D.VerticalAlign.CENTER })] }),
+    new D.TableRow({ children: [cell([par([tr("INC")], { after: 0 })], { w: 2200 }), cell([par([tr(r.site, { b: 1 })], { after: 0 })], { w: 3533 }), cell([par([tr("Date", { b: 1 })], { after: 0 })], { w: 1500 }), cell([par([tr(fdm(r.date_incident), { b: 1 })], { after: 0 })], { w: 3233 })] }),
+    new D.TableRow({ children: [cell([par([tr("System")], { after: 0 })], { w: 2200 }), cell([par([tr(r.systeme, { b: 1 })], { after: 0 })], { w: 3533 }), cell([par([tr("Time", { b: 1 })], { after: 0 })], { w: 1500 }), cell([par([tr(r.heure_incident, { b: 1 })], { after: 0 })], { w: 3233 })] }),
+    new D.TableRow({ children: [cell([par([tr("Subject")], { after: 0 })], { w: 2200 }), cell([par([tr(r.objet)], { after: 0 })], { w: 8266, span: 3 })] }),
+    new D.TableRow({ children: [cell([par([tr("Priority")], { after: 0 })], { w: 2200 }), cell([par([tr(r.priorite, { b: 1, c: r.priorite == "HIGH" ? "E11D1D" : "000000" })], { after: 0 })], { w: 8266, span: 3 })] })
+  ], [2200, 3533, 1500, 3233]);
+  // photos : 2 par ligne, nombre illimité
+  const photos = r.photos || [], prow = [];
+  for (let i = 0; i < photos.length; i += 2) {
+    const cs = [];
+    for (let j = i; j < i + 2; j++) {
+      if (j >= photos.length) { cs.push(cell([], { w: 5233, nob: 1 })); continue; }
+      const d = await dxImg(photos[j]), k = Math.min(1, 330 / d.w, 300 / d.h), w = Math.round(d.w * k), h = Math.round(d.h * k);
+      cs.push(cell([par([new D.ImageRun({ type: "jpg", data: dxBin(photos[j]), transformation: { width: w, height: h }, altText: { title: "photo " + (j + 1), description: "photo " + (j + 1), name: "photo" + (j + 1) } })], { al: D.AlignmentType.CENTER, after: 40 }), par([tr("Photo " + (j + 1), { size: 18, i: 1 })], { al: D.AlignmentType.CENTER, after: 0 })], { w: 5233, nob: 1 }));
+    }
+    prow.push(new D.TableRow({ cantSplit: true, children: cs }));
+  }
+  const phTbl = prow.length ? new D.Table({ rows: prow, width: { size: 10466, type: D.WidthType.DXA }, columnWidths: [5233, 5233], layout: D.TableLayoutType.FIXED, borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none } }) : null;
+  const body = tbl([...sec("sec_a", "A: Introduction:", 0), ...sec("sec_b", "B: Technical Details", 1), ...sec("sec_c", "C: Breakdown / Incident History", 0), ...sec("sec_d", "D: Root Causes", 1), ...sec("sec_e", "E: Risks & Potential Impact", 1), ...sec("sec_f", "F: Immediate Actions Taken", 0), ...sec("sec_g", "G: Recommendations", 0),
+  new D.TableRow({ cantSplit: true, children: [cell([par([tr("H: Photo", { b: 1 })], { after: 0, keep: 1 })], { w: W, fill: BL })] }),
+  ...(phTbl ? [] : [new D.TableRow({ children: [cell([], { w: W })] })])], [W]);
+  // signatures
+  const sw = [1500, 4483, 4483];
+  const sr = (a, b, c, o = {}) => new D.TableRow({ cantSplit: true, height: o.h ? { value: o.h, rule: D.HeightRule.ATLEAST } : undefined, children: [cell([par([tr(a, { b: o.lb })], { after: 0 })], { w: 1500 }), cell(b, { w: 4483 }), cell(c, { w: 4483 })] });
+  const C = (t, o = {}) => [par([tr(t, o)], { al: D.AlignmentType.CENTER, after: 0 })];
+  const band = t => new D.TableRow({ cantSplit: true, children: [cell([par([tr(t, { b: 1, i: 1, size: 26 })], { al: D.AlignmentType.CENTER, after: 0, keep: 1 })], { w: 10466, span: 3, fill: BL })] });
+  const sig = tbl([band("EPS Prestation Services"), sr("", C("Prepared By", { b: 1 }), C("Verified and Approved By", { b: 1 })), sr("Signature", [], [], { h: 1100 }),
+  sr("Name", [...C(r.prepare_nom), ...C(r.prepare_fonction)], ok ? [...C(r.approuve_nom), ...C(r.approuve_fonction)] : []),
+  sr("Date", C(fdm(r.prepare_le || String(r.created_at).slice(0, 10))), ok ? C(fdm(String(r.approuve_le).slice(0, 10))) : []),
+  band("AFROPORT-FM Department"), sr("", C("Verified by", { b: 1 }), C("Approved By", { b: 1 })), sr("Signature", [], [], { h: 1100 }), sr("Name", [], []), sr("Date", [], [])], sw);
+  const kids = [head, gap(), info, gap(), body, ...(phTbl ? [phTbl] : []), gap(), par([], { after: 120 }), sig];
+  const doc = new D.Document({
+    creator: "EPS OPS", title: "Incident Report " + (r.numero || ""), styles: { default: { document: { run: { font: F, size: SZ } } } },
+    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 700, bottom: 700, left: 720, right: 720 } } },
+      headers: { default: new D.Header({ children: [par(draft ? [tr("DRAFT – not approved", { b: 1, c: "E11D48", size: 20 })] : [], { al: D.AlignmentType.RIGHT, after: 0 })] }) },
+      footers: { default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [tr((r.numero || "Draft") + " – Page ", { size: 16 }), new D.TextRun({ children: [D.PageNumber.CURRENT], font: F, size: 16 }), tr(" / ", { size: 16 }), new D.TextRun({ children: [D.PageNumber.TOTAL_PAGES], font: F, size: 16 })] })] }) },
+      children: kids }]
+  });
+  return D.Packer.toBlob(doc);
+}
+async function irFull(id) { const { data, error } = await sb.from("incident_reports").select("*, signalements(ref,bdm)").eq("id", id).single(); if (error) { toast("Erreur : " + error.message); return null; } return data; }
+async function irOpen(id) {
+  const r = await irFull(id); if (!r) return; const [v] = await Promise.all([sb.from("ir_versions").select("id,version,statut,par_nom,created_at").eq("ir_id", id).order("created_at", { ascending: false }).limit(10)]);
+  const mg = IRV.includes(ME.role), ap = IRA.includes(ME.role), b = (a, l, c = "", x = "") => `<button type="button" class="btn ${c}" data-a="irst" data-w="${a}" data-i="${id}">${l}</button>`;
+  $("#mf").innerHTML = `<div class="row"><h2>${E(irNum(r))}</h2><span class="bd ${IRB[r.statut]}">${IRS[r.statut]}</span></div>
+<div><b>${E(r.objet)}</b></div><div class="m">${fdm(r.date_incident) || "date ?"} ${E(r.heure_incident)} · priorité <b>${r.priorite}</b> · préparé par ${E(r.prepare_nom)}${r.signalements ? " · signalement " + E(r.signalements.ref) + (r.signalements.bdm ? " (BDM " + E(r.signalements.bdm) + ")" : "") : ""}</div>
+${r.verifie_nom ? `<div class="m">Vérifié par ${E(r.verifie_nom)} le ${dt(r.verifie_le)}</div>` : ""}${r.approuve_nom ? `<div class="m">Approuvé par ${E(r.approuve_nom)} le ${dt(r.approuve_le)}</div>` : ""}${r.motif ? `<div class="m">Motif / retour : ${E(r.motif)}</div>` : ""}
+<div class="m">Photos : ${(r.photos || []).length} · version ${r.version} · ${(v.data || []).length} état(s) conservé(s) dans l’historique</div>
+<div class="row" style="justify-content:flex-start;gap:6px">${irEd(r) ? `<button type="button" class="btn p" data-a="iredit" data-i="${id}">Modifier</button>${b("soumettre", "Soumettre pour vérification", "w")}` : ""}${r.statut == "attente_verification" && mg ? b("verifier", "Vérifier", "w") + b("retour", "Renvoyer", "") : ""}${r.statut == "attente_approbation" && ap ? b("approuver", "Approuver (attribue le n°)", "w") + b("retour", "Renvoyer", "") : ""}${r.statut == "approuve" && mg ? b("emettre", "Marquer comme émis", "p") : ""}${(r.statut == "emis" || r.statut == "annule") && mg ? b("archiver", "Archiver") : ""}${ap && !["annule", "archive"].includes(r.statut) ? b("annuler", "Annuler", "d") : ""}</div>
+<div class="row" style="justify-content:flex-start;gap:6px"><button type="button" class="btn" data-a="irdoc" data-i="${id}">Document / PDF</button><button type="button" class="btn" data-a="irword" data-i="${id}">Word (.doc)</button></div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
+  $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on");
+}
+async function irEdit(id) {
+  const r = await irFull(id); if (!r) return; if (!irEd(r)) return toast("Ce rapport n’est plus modifiable"); IRP = (r.photos || []).slice();
+  const f = (k, l, v, t = "text") => `<div><label>${l}</label><input name="${k}" type="${t}" value="${E(v || "")}"></div>`;
+  $("#mf").innerHTML = `<h2>Rapport ${E(irNum(r))}</h2>${f("objet", "Subject", r.objet)}${f("site", "Site (INC)", r.site)}${f("systeme", "System", r.systeme)}${f("date_incident", "Date", r.date_incident, "date")}${f("heure_incident", "Time (ex. 14:00 LT)", r.heure_incident)}<div><label>Priority</label><select name="priorite">${["HIGH", "MEDIUM", "LOW"].map(x => `<option ${r.priorite == x ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+${IRSEC.map(([k, t, h]) => `<div><label>${t}</label><textarea name="${k}" rows="6">${E(r[k] || "")}</textarea><div class="m">${h}</div></div>`).join("")}
+<div><label>H: Photo (6 maximum, réduites automatiquement)</label><input id="irf" type="file" accept="image/*" multiple><div id="irth" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>${f("prepare_nom", "Prepared by — nom", r.prepare_nom)}${f("prepare_fonction", "Prepared by — fonction", r.prepare_fonction)}
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-a="iropen" data-i="${id}">Annuler</button><button class="btn p">Enregistrer</button></div>`;
+  irThumbs(); $("#md").classList.add("on");
+  $("#mf").onsubmit = async e => { e.preventDefault(); const v = Object.fromEntries(new FormData($("#mf"))); delete v.undefined; const { error } = await sb.from("incident_reports").update({ objet: v.objet.trim(), site: v.site.trim(), systeme: v.systeme.trim(), date_incident: v.date_incident || null, heure_incident: v.heure_incident.trim() || null, priorite: v.priorite, sec_a: v.sec_a, sec_b: v.sec_b, sec_c: v.sec_c, sec_d: v.sec_d, sec_e: v.sec_e, sec_f: v.sec_f, sec_g: v.sec_g, photos: IRP, prepare_nom: v.prepare_nom.trim(), prepare_fonction: v.prepare_fonction.trim() }).eq("id", id); toast(error ? "Refusé : " + error.message : "Rapport enregistré"); if (!error) { if (NAV == "ir") await draw(); irOpen(id); } };
+}
+function irThumbs() { const t = $("#irth"); if (t) t.innerHTML = IRP.map((u, i) => `<div style="position:relative"><img src="${u}" style="width:84px;height:64px;object-fit:cover;border-radius:6px"><button type="button" class="btn d" data-a="irpx" data-i="${i}" style="position:absolute;top:2px;right:2px;padding:0 6px;min-height:0">×</button></div>`).join(""); }
+function irShrink(file) { return new Promise((ok, ko) => { const im = new Image(), u = URL.createObjectURL(file); im.onload = () => { const k = Math.min(1, 1100 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL("image/jpeg", 0.72)); }; im.onerror = ko; im.src = u; }); }
+function irFromSig(s) {
+  const E0 = evs(s.id), c = s.constat_le, hhmm = d => p2(new Date(d).getUTCHours()) + ":" + p2(new Date(d).getUTCMinutes()), dd = d => fdm(new Date(d).toISOString().slice(0, 10)) + " " + hhmm(d) + " LT";
+  const lines = [...(c && !firstEv(s.id, "constat") ? [{ quand: c, type: "constat", contenu: s.constat_auteur ? "by " + s.constat_auteur : "" }] : []), ...E0.filter(e => e.type != "relance" && e.type != "commentaire")].sort((a, b) => new Date(a.quand) - new Date(b.quand)).map(e => dd(e.quand) + " — " + SG_EV[e.type] + (e.contenu && e.type != "envoi" ? ": " + e.contenu : "")).join("\n");
+  return { objet: s.objet, date_incident: c ? new Date(c).toISOString().slice(0, 10) : null, heure_incident: c ? hhmm(c) + " LT" : null, priorite: s.priorite == "urgente" || s.priorite == "haute" ? "HIGH" : s.priorite == "basse" ? "LOW" : "MEDIUM", signalement_id: s.id,
+    sec_b: `- Location: ${s.zone || ""}\n- Time and Date: ${c ? dd(c) : ""}\n- Detected By: ${s.constat_auteur || ""}\n- Concerned Area: ${s.zone || ""}\n- EPS Ref: ${s.ref}${s.bdm ? " / BDM " + s.bdm : ""}\n- Findings: ${s.description || ""}`,
+    sec_c: lines, sec_e: s.consequences || "", sec_f: s.mesures ? "1- " + s.mesures : "", sec_g: s.intervention_demandee ? "• " + s.intervention_demandee : "" };
+}
+async function irCreate(vals) { const { data, error } = await sb.from("incident_reports").insert({ prepare_nom: ME.nom, prepare_fonction: RLE[ME.role] || "EPS", ...vals }).select("id").single(); if (error) { toast("Refusé : " + error.message); return null; } toast("Brouillon créé"); if (NAV == "ir") await draw(); irEdit(data.id); return data.id; }
+
 /* ---------- Fiche agent ---------- */
 async function fiche(mat) {
   const a = AG.find(x => x.matricule == mat); if (!a) return;
@@ -341,6 +531,53 @@ async function setSt(mat, v) {
   if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
 }
 const ACT = {
+  async irnew() { ask("Nouveau rapport d’incident", [{ k: "ob", l: "Subject (objet)", r: 1 }], v => irCreate({ objet: v.ob.trim() })); },
+  async iro(b) { irOpen(+b.dataset.i); },
+  iropen(b) { irOpen(+b.dataset.i); },
+  iredit(b) { irEdit(+b.dataset.i); },
+  irpx(b) { IRP.splice(+b.dataset.i, 1); irThumbs(); },
+  async irdoc(b) { const r = await irFull(+b.dataset.i); if (!r) return; const w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(irDoc(r)); w.document.close(); },
+  async irword(b) { const r = await irFull(+b.dataset.i); if (!r) return; toast("Création du document Word…"); try { const bl = await irDocx(r); const a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = (r.numero || "IR_draft_" + r.id) + ".docx"; document.body.appendChild(a); a.click(); a.remove(); } catch (x) { toast("Word : " + x.message); } },
+  irst(b) { const id = +b.dataset.i, w = b.dataset.w, go = async c => { const { data, error } = await sb.rpc("ir_statut", { p_id: id, p_action: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Statut : " + IRS[data]); if (NAV == "ir") await draw(); irOpen(id); }; if (w == "retour" || w == "annuler") ask(w == "retour" ? "Motif du renvoi" : "Motif de l’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else if (w == "approuver") { if (confirm("Approuver ? Le numéro officiel sera attribué définitivement et le rapport ne sera plus modifiable.")) go(); } else go(); },
+  async irseq() {
+    const [c, k, n] = await Promise.all([sb.from("ir_config").select("*").single(), sb.from("ir_compteur").select("*").order("periode", { ascending: false }), sb.from("ir_numeros").select("*").order("attribue_le", { ascending: false }).limit(12)]);
+    const per = new Date().toISOString().slice(2, 7).replace("-", "_"), cfg = c.data || {};
+    $("#mf").innerHTML = `<h2>Numérotation des rapports</h2><div class="m">Format : <b>${E(cfg.prefixe)}_AA_MM_NNN</b> (remise à zéro ${E(cfg.remise_a_zero)}). Les numéros sont attribués à l’approbation, sans doublon possible.</div>
+<div class="m"><b>Compteurs :</b> ${(k.data || []).map(x => E(x.periode) + " → dernier n° " + x.dernier).join(" · ") || "aucun (le prochain sera 001)"}</div><div class="m"><b>Derniers numéros attribués :</b></div>${(n.data || []).map(x => `<div class="m">${E(x.numero)} · ${dt(x.attribue_le)} · ${E(x.par_nom)}</div>`).join("") || '<div class="m">Aucun.</div>'}
+<div class="row" style="justify-content:flex-start"><button type="button" class="btn p" data-a="irset" data-pe="${per}">Reprendre la suite des rapports déjà émis</button><button type="button" class="btn" id="no">Fermer</button></div>`;
+    $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on");
+  },
+  irset(b) { ask("Dernier numéro officiellement émis", [{ k: "p", l: "Période (AA_MM, ex. 26_11)", v: b.dataset.pe, r: 1 }, { k: "n", l: "Dernier numéro déjà émis sur cette période (0 si aucun)", t: "number", r: 1, v: "0" }], async v => { const { error } = await sb.rpc("ir_regler_compteur", { p_periode: v.p.trim(), p_dernier: +v.n }); toast(error ? "Refusé : " + error.message : "Séquence réglée : le prochain numéro sera " + (+v.n + 1)); }); },
+  async pjdel(b) { if (!confirm("Supprimer cette pièce jointe ?")) return; const p = Object.values(SPJ).flat().find(x => x.id == b.dataset.i); if (!p) return; const d = await sb.from("signalement_pj").delete().eq("id", p.id); if (d.error) return toast("Refusé : " + d.error.message); await sb.storage.from("signalements-pj").remove([p.chemin]); await pjLoadAll(); if (SO) sigF(SO); toast("Supprimée"); },
+  async sig2ir(b) { const s = SG.find(x => x.id == b.dataset.i); if (!s) return; const { data } = await sb.from("incident_reports").select("numero,id").eq("signalement_id", s.id); if (data && data.length && !confirm("Ce signalement a déjà " + data.length + " rapport(s) d’incident. En créer un autre ?")) return; $("#md").classList.remove("on"); NAV = "ir"; const ph = await pjImages(s.id); await irCreate({ ...irFromSig(s), ...(ph.length ? { photos: ph } : {}) }); },
+  sigo(b) { sigF(+b.dataset.i); },
+  signew() {
+    ask("Nouveau signalement", [
+      { k: "ob", l: "Objet", r: 1 }, { k: "zo", l: "Zone / lieu précis" },
+      { k: "ca", l: "Catégorie", o: SG_CAT }, { k: "sc", l: "Sous-catégorie (facultatif)" },
+      { k: "pr", l: "Priorité", o: [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]] },
+      { k: "de", l: "Problème constaté", t: "ta", r: 1 }, { k: "co", l: "Conséquences (facultatif)", t: "ta" },
+      { k: "me", l: "Mesures conservatoires (facultatif)", t: "ta" }, { k: "iv", l: "Intervention demandée", t: "ta" },
+      { k: "cl", l: "Date et heure du constat (laisser vide si inconnue)", t: "datetime-local", v: nowL() },
+      { k: "ca2", l: "Constat fait par", v: ME.nom }, { k: "so", l: "Source de l’information (facultatif)" }
+    ], async v => {
+      const { data, error } = await sb.from("signalements").insert({ objet: v.ob.trim(), zone: v.zo.trim() || null, categorie: v.ca, sous_categorie: v.sc.trim() || null, priorite: v.pr, description: v.de.trim(), consequences: v.co.trim() || null, mesures: v.me.trim() || null, intervention_demandee: v.iv.trim() || null, constat_le: v.cl ? fromL(v.cl) : null, constat_auteur: v.ca2.trim() || null, constat_source: v.so.trim() || null }).select("id,ref").single();
+      toast(error ? "Refusé : " + error.message : "Créé : " + data.ref + " — ajoutez vos photos et documents dans la fiche"); await draw(); if (data) sigF(data.id);
+    });
+  },
+  sigmsg(b) {
+    const s = SG.find(x => x.id == b.dataset.i);
+    $("#mf").innerHTML = `<h2>Message au Help Desk</h2><textarea id="sgt" rows="12">${E(sigMsg(s).replace(/\\n/g, "\n"))}</textarea><div class="m">Ouvrir WhatsApp ne prouve pas l’envoi : après avoir envoyé le message, confirmez-le ci-dessous.</div><div class="row" style="justify-content:flex-start;gap:6px"><button type="button" class="btn" data-a="sigcp">Copier</button><button type="button" class="btn w" data-a="sigwa">Ouvrir WhatsApp</button><button type="button" class="btn p" data-a="sigenv" data-i="${s.id}">J’ai envoyé : confirmer</button><button type="button" class="btn" data-a="sigo" data-i="${s.id}">Retour</button></div>`;
+  },
+  async sigcp() { try { await navigator.clipboard.writeText($("#sgt").value); toast("Message copié"); } catch (e) { $("#sgt").select(); toast("Sélectionné : copiez manuellement"); } },
+  sigwa() { window.open("https://wa.me/?text=" + encodeURIComponent($("#sgt").value), "_blank"); },
+  sigenv(b) { const id = +b.dataset.i, t = $("#sgt").value; ask("Confirmer l’envoi", [{ k: "q", l: "Date et heure de l’envoi", t: "datetime-local", v: nowL(), r: 1 }, { k: "ca", l: "Canal", o: ["WhatsApp", "Téléphone", "E-mail", "Autre"] }, { k: "de", l: "Destinataire (nom / numéro)", r: 1 }], v => sigEvent(id, "envoi", fromL(v.q), t, null, v.ca, v.de, true)); },
+  sigev(b) {
+    const id = +b.dataset.i, ty = b.dataset.t, q = { k: "q", l: "Date et heure (de l’événement)", t: "datetime-local", v: nowL(), r: 1 };
+    if (ty == "retour") return ask("Retour du Help Desk", [{ k: "t", l: "Nature du retour", o: [["reponse", "Réponse du Help Desk"], ["bdm", "Numéro de ticket (BDM) communiqué"], ["intervention_annoncee", "Intervention annoncée"], ["intervention_programmee", "Intervention programmée"], ["intervention_commencee", "Intervention commencée"], ["intervention_terminee", "Intervention terminée"]] }, q, { k: "c", l: "Contenu / numéro BDM / précisions", t: "ta", r: 1 }, { k: "s", l: "Source (qui l’a communiqué, comment)" }], v => sigEvent(id, v.t, fromL(v.q), v.c, v.s));
+    const T = { commentaire: "Commentaire", relance: "Relance envoyée", verification: "Vérification EPS", cloture: "Clôture", reouverture: "Réouverture", constat: "Date et heure du constat" };
+    ask(T[ty], [q, { k: "c", l: ty == "cloture" || ty == "verification" ? "Constat / résultat" : "Contenu", t: "ta", r: ty != "constat" }, { k: "s", l: "Source / canal (facultatif)" }], v => sigEvent(id, ty, fromL(v.q), v.c, v.s));
+  },
   fiche(b) { fiche(b.dataset.m); },
   tday(b) { TD = +b.dataset.i; draw(); },
   tfl(b) { TFL = b.dataset.v; draw(); },
@@ -414,7 +651,7 @@ async function draw() {
   $("#nv").innerHTML = ok.map(p => `<button data-p="${p}" class="${p == NAV ? "on" : ""}"><span class="i">${P[p][0]}</span><span class="l">${P[p][1]}</span></button>`).join("");
   const ref = NAV; let h;
   try { h = await V[NAV](); } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
-  if (ref == NAV) { $("#mn").innerHTML = h; lab($("#mn")); }
+  if (ref == NAV) { $("#mn").innerHTML = h; lab($("#mn")); if (NAV == "sig" && $("#sl")) sigList(); if (NAV == "ir" && $("#irl")) irList(); }
 }
 async function shell() {
   $("#app").innerHTML = `<header><button id="tg" class="hb">☰</button><b>EPS OPS</b><span class="sp"></span><button id="bl" class="hb" title="Alertes">🔔<i id="bc"></i></button><span id="un">${E(ME.nom)}</span><button id="lo" class="hb">Quitter</button></header><div class="wrap"><nav id="nv"></nav><main id="mn"><div class="m">Chargement…</div></main></div>`;
@@ -427,8 +664,76 @@ async function shell() {
   draw();
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
-document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } });
-document.addEventListener("change", e => { const s = e.target.dataset.s; if (s) return setSt(s, e.target.value); const k = e.target.dataset.f; if (k) { F[k] = e.target.value; setEl(); } });
+document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } if (e.target.id == "sq") { SQ = e.target.value; sigList(); } if (e.target.id == "irq") { IRQ = e.target.value; irList(); } });
+/* ===== Dictée vocale + correction IA (champs texte longs) ===== */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let VX = null, VLANG = (() => { try { return localStorage.getItem("vlang") || "fr-FR"; } catch (e) { return "fr-FR"; } })();
+const VL = { "fr-FR": "FR", "en-US": "EN", "ar-SA": "AR" };
+function vxBar(ta) {
+  if (ta.dataset.vx || ta.closest("#mf") == null) return; ta.dataset.vx = 1;
+  const en = /^sec_/.test(ta.name), d = document.createElement("div"); d.className = "row vxb"; d.style.cssText = "justify-content:flex-start;gap:6px;margin:4px 0;flex-wrap:wrap";
+  d.innerHTML = `<button type="button" class="btn" data-vx="mic">🎤 Dicter</button><button type="button" class="btn" data-vx="lang" title="Langue de la dictée">${VL[VLANG]}</button><button type="button" class="btn" data-vx="fix">✨ Corriger (IA)</button>${en ? `<button type="button" class="btn" data-vx="en">🌐 Traduire en anglais (IA)</button>` : ""}<span class="m vxs"></span>`;
+  ta.parentNode.insertBefore(d, ta);
+}
+function vxStop() { if (VX) { try { VX.stop(); } catch (e) { } VX = null; } document.querySelectorAll('[data-vx="mic"]').forEach(b => b.textContent = "🎤 Dicter"); }
+new MutationObserver(() => document.querySelectorAll("#mf textarea").forEach(vxBar)).observe(document.body, { childList: true, subtree: true });
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-vx]"); if (!b || b.dataset.vx == "undo") return; e.preventDefault(); e.stopPropagation();
+  const bar = b.closest(".vxb"), ta = bar.nextElementSibling, st = bar.querySelector(".vxs"), k = b.dataset.vx; if (k == "undo") return;
+  if (k == "lang") { const ks = Object.keys(VL); VLANG = ks[(ks.indexOf(VLANG) + 1) % ks.length]; try { localStorage.setItem("vlang", VLANG); } catch (x) { } b.textContent = VL[VLANG]; if (VX) { vxStop(); } return; }
+  if (k == "mic") {
+    if (VX) return vxStop();
+    if (!SR) { st.textContent = "Dictée non prise en charge par ce navigateur : utilisez le micro du clavier du téléphone, ou écrivez."; return; }
+    const r = new SR(); r.lang = VLANG; r.continuous = true; r.interimResults = true; VX = r; let base = ta.value + (ta.value && !/\s$/.test(ta.value) ? " " : "");
+    r.onresult = ev => { let fin = "", tmp = ""; for (let i = 0; i < ev.results.length; i++) { const t = ev.results[i][0].transcript; if (ev.results[i].isFinal) fin += t + " "; else tmp += t; } ta.value = base + fin + tmp; };
+    r.onerror = ev => { st.textContent = ev.error == "not-allowed" ? "Micro refusé : autorisez-le dans le navigateur." : "Dictée interrompue (" + ev.error + ")."; vxStop(); };
+    r.onend = () => { if (VX == r) { base = ta.value; try { r.start(); } catch (x) { vxStop(); } } };
+    try { r.start(); b.textContent = "⏹ Arrêter"; st.textContent = "Je vous écoute… parlez, puis appuyez sur Arrêter."; } catch (x) { VX = null; st.textContent = "Impossible de démarrer le micro."; }
+    return;
+  }
+  vxStop(); const t = ta.value.trim(); if (!t) { st.textContent = "Rien à traiter."; return; }
+  b.disabled = true; st.textContent = "Correction en cours…";
+  try {
+    const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: k == "en" ? "anglais" : "corriger" } });
+    if (error) throw error;
+    if (data.erreur == "ia_non_configuree") st.textContent = "La correction IA n’est pas encore activée (clé à configurer par l’administrateur).";
+    else if (data.erreur) st.textContent = "IA indisponible, réessayez (" + data.erreur + ").";
+    else { ta.dataset.avant = t; ta.value = data.texte; st.innerHTML = `Texte corrigé. <a href="#" data-vx="undo">Annuler</a>`; }
+  } catch (x) { st.textContent = "IA indisponible : " + (x.message || x); }
+  b.disabled = false;
+}, true);
+document.addEventListener("click", e => { const u = e.target.closest('[data-vx="undo"]'); if (!u) return; e.preventDefault(); e.stopPropagation(); const bar = u.closest(".vxb"), ta = bar.nextElementSibling; ta.value = ta.dataset.avant || ta.value; bar.querySelector(".vxs").textContent = "Texte d’origine rétabli."; }, true);
+/* ===== Pièces jointes des signalements (Supabase Storage privé) ===== */
+let SPJ = {};
+async function pjLoadAll() { const { data } = await sb.from("signalement_pj").select("*").order("created_at").limit(3000); SPJ = {}; (data || []).forEach(p => (SPJ[p.signalement_id] = SPJ[p.signalement_id] || []).push(p)); }
+const pjSz = n => n > 1048576 ? (n / 1048576).toFixed(1) + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko";
+const pjBlock = id => `<h2 style="margin-top:6px">Photos et pièces jointes (${(SPJ[id] || []).length})</h2><div id="pjl" class="m">Chargement…</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:4px"><label class="btn">📷 Prendre une photo<input type="file" id="pjc" accept="image/*" capture="environment" hidden></label><label class="btn">🖼 Photos (galerie)<input type="file" id="pjg" accept="image/*" multiple hidden></label><label class="btn">📎 Documents<input type="file" id="pjf" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip" multiple hidden></label></div><div class="m" id="pjs">Photos réduites automatiquement. Documents : 15 Mo maximum chacun.</div>`;
+async function pjDraw(id) {
+  const box = $("#pjl"); if (!box) return; const L = SPJ[id] || []; if (!L.length) { box.textContent = "Aucune pièce jointe."; return; }
+  const { data } = await sb.storage.from("signalements-pj").createSignedUrls(L.map(p => p.chemin), 3600); const U = {}; (data || []).forEach(x => U[x.path] = x.signedUrl);
+  const can = p => p.auteur == ME.id || ["direction", "responsable_ops", "coordinateur_ops"].includes(ME.role);
+  if (!$("#pjl")) return;
+  $("#pjl").innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px">${L.map(p => { const u = U[p.chemin] || "#", x = can(p) ? `<button type="button" class="btn d" style="padding:1px 6px" data-a="pjdel" data-i="${p.id}" title="Supprimer">🗑</button>` : ""; return /^image\//.test(p.mime || "") ? `<div style="width:96px"><a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="width:96px;height:96px;object-fit:cover;border-radius:6px;display:block"></a><div class="m" style="font-size:10px">${E(p.auteur_nom || "")} ${x}</div></div>` : `<div style="min-width:150px"><a href="${u}" target="_blank" rel="noopener">📄 ${E(p.nom)}</a><div class="m" style="font-size:10px">${pjSz(p.taille || 0)} · ${E(p.auteur_nom || "")} ${x}</div></div>`; }).join("")}</div>`;
+}
+async function pjUpload(files) {
+  const id = SO, st = $("#pjs"); if (!id) return; let n = 0;
+  for (const f of files) {
+    try {
+      let body = f, nom = f.name, mime = f.type || "application/octet-stream";
+      if (/^image\//.test(mime)) { if (st) st.textContent = "Préparation de la photo…"; const d = await irShrink(f); body = await (await fetch(d)).blob(); mime = "image/jpeg"; nom = nom.replace(/\.[^.]+$/, "") + ".jpg"; }
+      else if (f.size > 15728640) { toast(nom + " : plus de 15 Mo"); continue; }
+      if (st) st.textContent = "Envoi de " + nom + "…";
+      const chemin = id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 7) + "-" + nom.replace(/[^\w.\-]+/g, "_");
+      const up = await sb.storage.from("signalements-pj").upload(chemin, body, { contentType: mime }); if (up.error) throw up.error;
+      const ins = await sb.from("signalement_pj").insert({ signalement_id: id, nom, mime, taille: body.size, chemin, auteur_nom: ME.nom }); if (ins.error) { await sb.storage.from("signalements-pj").remove([chemin]); throw ins.error; }
+      n++;
+    } catch (x) { toast("Échec : " + (x.message || x)); }
+  }
+  await pjLoadAll(); if (SO == id) { sigF(id); } if (n) toast(n + " pièce(s) jointe(s) ajoutée(s)");
+}
+async function pjImages(id) { const L = (SPJ[id] || []).filter(p => /^image\//.test(p.mime || "")); if (!L.length) return []; const { data } = await sb.storage.from("signalements-pj").createSignedUrls(L.map(p => p.chemin), 300); const out = []; for (const x of data || []) { try { const b = await (await fetch(x.signedUrl)).blob(); out.push(await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); })); } catch (e) { } } return out; }
+document.addEventListener("change", e => { if (["pjc", "pjg", "pjf"].includes(e.target.id)) { const fs = [...e.target.files]; e.target.value = ""; pjUpload(fs); } }, true);
+document.addEventListener("change", async e => { if (e.target.id == "irf") { for (const f of [...e.target.files]) { try { IRP.push(await irShrink(f)); } catch (x) { toast("Image illisible"); } } e.target.value = ""; return irThumbs(); } if (e.target.dataset.h) { IRFS = e.target.value; return irList(); } const s = e.target.dataset.s; if (s) return setSt(s, e.target.value); const g = e.target.dataset.g; if (g) { SGF[g] = e.target.value; return sigList(); } const k = e.target.dataset.f; if (k) { F[k] = e.target.value; setEl(); } });
 $("#md").onclick = e => { if (e.target.id == "md") e.target.classList.remove("on"); };
 document.addEventListener("keydown", e => { if (e.key == "Escape") $("#md").classList.remove("on"); });
 start();
