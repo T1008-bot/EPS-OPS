@@ -60,12 +60,12 @@ const ymd = d => new Date(d).toISOString().slice(0, 10);
 const dg = t => String(t).replace(/\D/g, "").slice(-8);
 
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
-const ALL = ["shift", "alertes", "vols", "eff", "pres"];
-const OPS = ["shift", "alertes", "vols", "eff"];
-const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres"], assistante_rh: ["shift", "eff", "pres"], approvisionnement: ["shift"] };
+const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag"];
+const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag"];
+const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres", "disc"], assistante_rh: ["shift", "eff", "pres", "disc"], approvisionnement: ["shift", "mag"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"] };
 const SL = { p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -74,7 +74,7 @@ const toast = m => { const t = $("#ts"); t.textContent = m; t.classList.add("on"
 const head = (t, s, b) => `<div class="row"><div><h2 style="font-size:17px">${t}</h2><div class="m">${s || ""}</div></div>${b || ""}</div>`;
 function ask(title, fs, ok) {
   const f = $("#mf");
-  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}">${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="3" ${x.r ? "required" : ""}></textarea>` : `<input name="${x.k}" type="${x.t || "text"}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
+  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}">${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="4" ${x.r ? "required" : ""}>${E(x.v || "")}</textarea>` : `<input name="${x.k}" type="${x.t || "text"}" value="${E(x.v || "")}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
   $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
   f.onsubmit = e => { e.preventDefault(); const v = Object.fromEntries(new FormData(f)); $("#md").classList.remove("on"); ok(v); };
 }
@@ -146,7 +146,7 @@ V.shift = async () => {
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
 <div class="g">${teams.map(card).join("")}${rb ? `<div class="card"><div class="row"><h2>Manutention — Groupe ${g}</h2><span class="bd info">24 h</span></div><div class="k">${rb.present ?? "?"}${rb.effectif ? " / " + rb.effectif : ""}</div><div class="m">Présents selon le dernier rapport (${hm(T(rb.cree_le))}) · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div></div>` : ""}</div>
 <div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>
-<div class="card m">Modules à migrer prochainement : tâches du jour, lieux, Help Desk, discipline, magasin, observations du shift.</div>`;
+<div class="card m">Modules à migrer prochainement : tâches du jour, lieux, Help Desk, observations du shift.</div>`;
 };
 
 V.alertes = async () => {
@@ -198,7 +198,75 @@ V.pres = async () => {
 <div class="card sc"><h2>Rapports « Situation du staff » reçus</h2><table><tr><th>Date</th><th>Service</th><th>Groupe</th><th>Présents</th><th>Renforts</th></tr>${(rp || []).map(r => `<tr><td>${dmy(T(r.cree_le))} ${hm(T(r.cree_le))}</td><td>${r.service == "bagages" ? "Manutention" : "Nettoyage"}</td><td>${E(r.groupe)}</td><td>${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""}</td><td>${r.renforts || 0}${r.renforts_detail ? " — " + E(r.renforts_detail) : ""}</td></tr>`).join("")}</table></div>`;
 };
 
+/* ---------- Discipline ---------- */
+const DS = { propose: "À valider", valide: "Validé", refuse: "Refusé", notifie: "Notifié" };
+const DB = { propose: "warn", valide: "ok", refuse: "bad", notifie: "info" };
+const DV = ["direction", "responsable_ops", "responsable_rh"];
+const JW = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf", "vingt", "vingt et un", "vingt-deux", "vingt-trois", "vingt-quatre", "vingt-cinq", "vingt-six", "vingt-sept", "vingt-huit", "vingt-neuf", "trente"];
+let DL = [], DF = { st: "", ty: "" };
+const fd = d => d ? String(d).slice(8, 10) + "/" + String(d).slice(5, 7) + "/" + String(d).slice(0, 4) : "";
+function findAg(q) { q = String(q).trim(); const m = AG.find(a => a.matricule == q); if (m) return [m]; const t = N(q).split(/\s+/).filter(Boolean); return t.length ? AG.filter(a => t.every(x => N(a.nom).includes(x))) : []; }
+const paras = s => String(s || "").split(/\n+/).filter(x => x.trim()).map(x => `<p>${E(x.trim())}</p>`).join("");
+function docHTML(d) {
+  const a = d.agents || {}, fem = d.civilite == "Mme", cv = fem ? "Madame" : "Monsieur", map = d.type == "MAP", draft = d.statut == "propose" || d.statut == "refuse";
+  const fonc = a.fonction || ((a.service || "").includes("Manutention") ? "Agent" + (fem ? "e" : "") + " de manutention" : "Agent" + (fem ? "e" : "") + " de nettoyage");
+  const eq = String(a.equipe || "").replace("Manutention ", "Équipe ");
+  const dt = fd(String(d.decide_le || d.created_at).slice(0, 10)), nj = d.mp_jours || d.mp_jours_propose;
+  const mots = nj ? (JW[nj] || nj) + " (" + nj + ") jour" + (nj > 1 ? "s" : "") : "[durée à fixer]";
+  const sanction = `<p>Au regard de ces faits, ${d.de_ref ? "également visés par la demande d’explication " + E(d.de_ref) + ", " : ""}il a été décidé de prononcer à votre encontre une mise à pied disciplinaire de ${mots}, à compter du ${d.mp_debut ? fd(d.mp_debut) : "[date à fixer]"} et jusqu’au ${d.mp_fin ? fd(d.mp_fin) : "[date à fixer]"} inclus. Votre reprise est fixée au ${d.reprise ? fd(d.reprise) : "[date à fixer]"}, selon votre horaire de service.</p><p>Durant cette période, vous ne devrez pas vous présenter à votre poste ni exercer vos fonctions. ${E(d.consignes || "")} Toute récidive pourra entraîner une mesure disciplinaire plus sévère, conformément au règlement intérieur de l’entreprise.</p>`;
+  const corps = map ? `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}${sanction}<p>Veuillez agréer, ${cv}, l’expression de nos salutations distinguées.</p>`
+    : `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}<p>À défaut de réponse ou si les éléments fournis ne permettent pas de justifier ce manquement, une mesure disciplinaire pourra être prise conformément au règlement intérieur de l’entreprise.</p>`;
+  const sig = `<div class="sg"><b>ÉTABLIE PAR</b><br>El Moustapha A. Dedda<br>Responsable des Opérations<br><br>Signature : ____________________</div>`;
+  const fin = map ? `<table class="two"><tr><td>${sig}</td><td><b>ACCUSÉ DE RÉCEPTION ET DÉCHARGE</b><br>Je soussigné${fem ? "e" : ""} ${E(a.nom)}, reconnais avoir reçu un exemplaire de la présente notification.<br>Mention : « Lu et reçu, pour décharge »<br>Date : ____ / ____ / ________<br><br>Signature : ____________________</td></tr></table>`
+    : `<div class="bx"><b>RÉPONSE DE L’AGENT${fem ? "E" : ""}</b></div><div class="bx"><b>AVIS DU SUPERVISEUR PRINCIPAL</b></div><table class="two"><tr><td>${sig}</td><td><b>REMISE À L’AGENT${fem ? "E" : ""}</b><br><br>Date : ____ / ____ / ________<br><br>Signature : ____________________</td></tr></table>`;
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${E(d.ref)}</title><style>
+@page{size:A4;margin:16mm}body{font:12.5px/1.5 Arial,Helvetica,sans-serif;color:#111;max-width:760px;margin:0 auto;padding:16px;position:relative}
+.hd{display:flex;justify-content:space-between;border-bottom:3px solid #072448;padding-bottom:8px;margin-bottom:14px}.hd b{font-size:16px;color:#072448}.hd span{font-size:11px;color:#444;text-align:right}
+h1{text-align:center;font-size:16px;margin:14px 0 4px;color:#072448}.ob{text-align:center;font-weight:700;margin-bottom:14px}.dt{text-align:right}
+table.in{width:100%;border-collapse:collapse;margin:8px 0 14px}table.in td{border:1px solid #bbb;padding:5px 8px}table.in td:first-child{width:28%;background:#f1f4f9;font-weight:700}
+p{margin:0 0 10px;text-align:justify}.bx{border:1px solid #888;min-height:70px;padding:6px 8px;margin:10px 0}table.two{width:100%;border-collapse:collapse;margin-top:14px}table.two td{width:50%;vertical-align:top;border:1px solid #bbb;padding:8px}
+.ft{margin-top:14px;font-size:10.5px;color:#555;border-top:1px solid #ccc;padding-top:6px}.wm{position:fixed;top:40%;left:12%;font-size:90px;color:#e11d4818;transform:rotate(-25deg);font-weight:800;pointer-events:none}
+.pb{position:fixed;top:8px;right:8px}@media print{.pb{display:none}}</style></head><body>${draft ? '<div class="wm">PROJET</div>' : ""}<button class="pb" onclick="print()">Imprimer / PDF</button>
+<div class="hd"><b>EPS.SARL | OPÉRATIONS</b><span>DOCUMENT DISCIPLINAIRE<br>${E(d.ref)}</span></div>
+<div class="dt">Fait à Nouakchott, le ${dt}</div><h1>${map ? "NOTIFICATION DE MISE À PIED DISCIPLINAIRE" : "DEMANDE D’EXPLICATION"}</h1><div class="ob">${E(d.objet)}</div>
+<table class="in"><tr><td>À</td><td>${E(d.civilite)} ${E(a.nom)} - Badge n° ${E(a.badge || "—")} - ID ${E(d.matricule)}</td></tr><tr><td>Fonction</td><td>${E(fonc)} - ${E(eq)}</td></tr><tr><td>Affectation</td><td>${E(d.affectation || a.service || "")}</td></tr><tr><td>Référence</td><td>${E(d.ref)}</td></tr></table>
+${corps}${fin}<div class="ft">Document interne RH | Copie : dossier personnel &nbsp; ${E(d.ref)}</div></body></html>`;
+}
+V.disc = async () => {
+  const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").order("created_at", { ascending: false });
+  if (error) throw error;
+  DL = data || [];
+  const L = DL.filter(d => (!DF.st || d.statut == DF.st) && (!DF.ty || d.type == DF.ty)), val = DV.includes(ME.role);
+  const fb = (k, v, l) => `<button class="btn ${DF[k] == v ? "p" : ""}" data-a="df" data-k="${k}" data-v="${v}">${l}</button>`;
+  return head("Discipline", `${DL.length} dossier(s) · ${DL.filter(d => d.statut == "propose").length} à valider`, `<button class="btn w" data-a="dnew">+ Nouveau dossier</button>`)
+    + `<div class="card row" style="justify-content:flex-start;gap:6px">${fb("st", "", "Tous")}${fb("st", "propose", "À valider")}${fb("st", "valide", "Validés")}${fb("st", "notifie", "Notifiés")}${fb("st", "refuse", "Refusés")} <span class="m">|</span> ${fb("ty", "", "DE + MAP")}${fb("ty", "DE", "Demandes d’explication")}${fb("ty", "MAP", "Mises à pied")}</div>`
+    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><b>${E(a.nom)}</b> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${d.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[d.statut]}">${DS[d.statut]}</span></div></div>
+<div style="margin-top:6px"><b>${E(d.objet)}</b></div><div class="m">Faits du ${fd(d.date_faits)} · proposé par ${E(d.propose_nom)} le ${fd(String(d.created_at).slice(0, 10))}${d.decide_nom ? " · décision : " + E(d.decide_nom) : ""}${d.mp_debut ? " · MAP du " + fd(d.mp_debut) + " au " + fd(d.mp_fin) + " (" + d.mp_jours + " j), reprise le " + fd(d.reprise) : ""}${d.commentaire ? " · « " + E(d.commentaire) + " »" : ""}</div>
+<div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><button class="btn" data-a="ddoc" data-i="${d.id}">${d.statut == "propose" ? "Aperçu du document" : "Document / PDF"}</button>${val && d.statut == "propose" ? `<button class="btn p" data-a="dval" data-i="${d.id}">Valider</button><button class="btn d" data-a="dref" data-i="${d.id}">Refuser</button>` : ""}${val && d.statut == "valide" ? `<button class="btn p" data-a="dnot" data-i="${d.id}">Marquer comme remis à l’agent</button>` : ""}</div></div>`; }).join("") || `<div class="card m">Aucun dossier.</div>`)
+    + `<div class="m">Les documents suivent le modèle EPS (références EPS/OPS/DISC/DE-ou-MAP-ID/année). La sanction, la durée et les dates sont toujours saisies et validées par une personne. À la validation d’une mise à pied, les jours concernés apparaissent automatiquement comme « Mise à pied » dans le suivi de présence.</div>`;
+};
+
+
+/* ---------- Magasin ---------- */
+const MGR = ["direction", "responsable_ops", "approvisionnement"], MVR = ["direction", "responsable_ops", "coordinateur_ops", "approvisionnement"], BA = { demande: "À approuver", approuve: "Approuvé", refuse: "Refusé", servi: "Servi" }, BB = { demande: "warn", approuve: "info", refuse: "bad", servi: "ok" };
+let MG = [], AR = [], BL = [], MF = 0;
+V.mag = async () => {
+  const seeStock = MVR.includes(ME.role);
+  const [m, a, st, bs, mv] = await Promise.all([sb.from("magasins").select("*").order("id"), sb.from("articles").select("*").eq("actif", true).order("nom"), seeStock ? sb.from("stock_actuel").select("*") : { data: [] }, sb.from("besoins").select("*, articles(nom,unite), magasins(nom)").order("created_at", { ascending: false }).limit(60), seeStock ? sb.from("mouvements_stock").select("*, articles(nom,unite), magasins(nom)").order("created_at", { ascending: false }).limit(25) : { data: [] }]);
+  MG = m.data || []; AR = a.data || []; BL = bs.data || [];
+  const rows = (st.data || []).filter(x => !MF || x.magasin_id == MF).sort((x, y) => x.magasin_id - y.magasin_id || x.article.localeCompare(y.article));
+  const mb = (i, l) => `<button class="btn ${MF == i ? "p" : ""}" data-a="mf" data-i="${i}">${E(l)}</button>`;
+  return head("Magasin", "Stock, mouvements et expressions de besoin", `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn w" data-a="bnew">+ Expression de besoin</button>${MGR.includes(ME.role) ? `<button class="btn p" data-a="mnew">+ Entrée / sortie</button><button class="btn" data-a="anew">+ Article</button>` : ""}</div>`)
+    + (seeStock ? `<div class="card row" style="justify-content:flex-start;gap:6px">${mb(0, "Tous")}${MG.map(x => mb(x.id, x.nom)).join("")}</div><div class="card sc"><h2>Stock actuel</h2><table><tr><th>Magasin</th><th>Article</th><th>Stock</th><th>Seuil</th></tr>${rows.map(r => `<tr><td>${E(r.magasin)}</td><td>${E(r.article)}</td><td><b>${r.stock}</b> ${E(r.unite)} ${r.seuil > 0 && r.stock <= r.seuil ? '<span class="bd bad">Bas</span>' : ""}</td><td>${r.seuil || "—"}</td></tr>`).join("") || `<tr><td colspan="4" class="m">Aucun article. Ajoutez-en avec « + Article ».</td></tr>`}</table></div>` : "")
+    + `<div class="card"><h2>Expressions de besoin</h2>${BL.map(b => `<div class="li" style="flex-wrap:wrap"><div><b>${E(b.articles?.nom || b.article_libre)}</b> × ${b.quantite} ${E(b.articles?.unite || "")} ${b.urgence == "urgente" ? '<span class="bd bad">Urgent</span>' : ""} <span class="bd ${BB[b.statut]}">${BA[b.statut]}</span><div class="m">${E(b.demandeur_nom)} · ${fd(String(b.created_at).slice(0, 10))}${b.magasins ? " · " + E(b.magasins.nom) : ""}${b.motif ? " · " + E(b.motif) : ""}${b.decide_nom ? " · décision : " + E(b.decide_nom) : ""}${b.commentaire ? " · « " + E(b.commentaire) + " »" : ""}</div></div><div>${["direction", "responsable_ops"].includes(ME.role) && b.statut == "demande" ? `<button class="btn p" data-a="bdec" data-w="approuver" data-i="${b.id}">Approuver</button> <button class="btn d" data-a="bdec" data-w="refuser" data-i="${b.id}">Refuser</button>` : ""}${MGR.includes(ME.role) && b.statut == "approuve" ? `<button class="btn w" data-a="bdec" data-w="servir" data-i="${b.id}">Marquer servi</button>` : ""}</div></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune expression de besoin.</div>`}</div>`
+    + (seeStock ? `<div class="card sc"><h2>Derniers mouvements</h2><table><tr><th>Date</th><th>Type</th><th>Magasin</th><th>Article</th><th>Qté</th><th>Tiers</th><th>Saisi par</th></tr>${(mv.data || []).map(x => `<tr><td>${fd(x.jour)}</td><td><span class="bd ${x.type == "entree" ? "ok" : "warn"}">${x.type == "entree" ? "Entrée" : "Sortie"}</span></td><td>${E(x.magasins?.nom)}</td><td>${E(x.articles?.nom)}</td><td>${x.quantite} ${E(x.articles?.unite)}</td><td>${E(x.tiers) || "—"}${x.note ? `<div class="m">${E(x.note)}</div>` : ""}</td><td>${E(x.saisi_nom)}</td></tr>`).join("") || `<tr><td colspan="7" class="m">Aucun mouvement.</td></tr>`}</table></div>` : "");
+};
+
 /* ---------- Actions ---------- */
+async function decide(id, action, debut, jours, comm) {
+  const { error } = await sb.rpc("disc_decider", { p_id: id, p_action: action, p_debut: debut || null, p_jours: jours || null, p_comm: comm || null });
+  toast(error ? "Refusé : " + error.message : "Dossier mis à jour"); await loadST(); draw();
+}
 async function setSt(mat, v) {
   const a = AG.find(x => x.matricule == mat);
   const done = async j => {
@@ -210,7 +278,41 @@ async function setSt(mat, v) {
   if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
 }
 const ACT = {
+  mf(b) { MF = +b.dataset.i; draw(); },
+  anew() { ask("Nouvel article", [{ k: "n", l: "Nom de l’article", r: 1 }, { k: "u", l: "Unité (pièce, carton, litre…)", v: "pièce" }, { k: "s", l: "Seuil d’alerte stock bas", t: "number", v: "0" }], async v => { const { error } = await sb.from("articles").insert({ nom: v.n.trim(), unite: v.u.trim() || "pièce", seuil: +v.s || 0 }); toast(error ? "Refusé : " + error.message : "Article ajouté"); draw(); }); },
+  mnew() { ask("Entrée / sortie de stock", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article", o: AR.map(x => [x.id, x.nom + " (" + x.unite + ")"]) }, { k: "t", l: "Type", o: [["entree", "Entrée"], ["sortie", "Sortie"]] }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "j", l: "Date", t: "date", v: today() }, { k: "x", l: "Fournisseur (entrée) / bénéficiaire (sortie)" }, { k: "o", l: "Note" }], async v => { const { error } = await sb.from("mouvements_stock").insert({ magasin_id: +v.m, article_id: +v.a, type: v.t, quantite: +v.q, jour: v.j, tiers: v.x || null, note: v.o || null }); toast(error ? "Refusé : " + error.message : "Mouvement enregistré"); draw(); }); },
+  bnew() { ask("Expression de besoin", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article du catalogue", o: [["", "— Autre (saisir ci-dessous) —"], ...AR.map(x => [x.id, x.nom + " (" + x.unite + ")"])] }, { k: "l", l: "Si autre : désignation" }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "u", l: "Urgence", o: [["normale", "Normale"], ["urgente", "Urgente"]] }, { k: "o", l: "Motif" }], async v => { if (!v.a && !v.l.trim()) return toast("Choisissez un article ou saisissez une désignation"); const { error } = await sb.from("besoins").insert({ magasin_id: +v.m, article_id: v.a ? +v.a : null, article_libre: v.a ? null : v.l.trim(), quantite: +v.q, urgence: v.u, motif: v.o || null }); toast(error ? "Refusé : " + error.message : "Besoin enregistré"); draw(); }); },
+  bdec(b) { const w = b.dataset.w, id = +b.dataset.i, go = async c => { const { error } = await sb.rpc("besoin_decider", { p_id: id, p_action: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Besoin mis à jour"); draw(); }; if (w == "refuser") ask("Motif du refus", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
   vd(b) { VD = +b.dataset.i; draw(); },
+  df(b) { DF[b.dataset.k] = b.dataset.v; draw(); },
+  ddoc(b) { const d = DL.find(x => x.id == b.dataset.i), w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(docHTML(d)); w.document.close(); },
+  dnew() {
+    ask("Nouveau dossier disciplinaire", [
+      { k: "q", l: "Agent (ID ou nom)", r: 1 },
+      { k: "ty", l: "Document", o: [["DE", "Demande d’explication"], ["MAP", "Mise à pied disciplinaire"]] },
+      { k: "cv", l: "Civilité", o: ["M.", "Mme"] },
+      { k: "df", l: "Date des faits", t: "date", r: 1 },
+      { k: "ob", l: "Objet (ex. Retard de dix heures et absence injustifiée - Shift du 24/09/2026)", r: 1 },
+      { k: "fa", l: "Faits constatés", t: "ta", r: 1, v: "Il a été constaté que, " },
+      { k: "qu", l: "Qualification / explication demandée (DE) ou qualification (MAP)", t: "ta", v: "Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur …, accompagnée de tout justificatif utile." },
+      { k: "af", l: "Affectation (ex. Manutention bagages - AINO)" },
+      { k: "dr", l: "MAP seulement : référence de la demande d’explication visée" },
+      { k: "co", l: "MAP seulement : consignes à la reprise", t: "ta" },
+      { k: "nj", l: "MAP seulement : nombre de jours proposé", t: "number" }
+    ], async v => {
+      const r = findAg(v.q);
+      if (r.length != 1) return toast(r.length ? "Plusieurs agents correspondent : précisez avec l’ID" : "Agent introuvable");
+      const { data, error } = await sb.from("discipline").insert({ type: v.ty, matricule: r[0].matricule, civilite: v.cv, date_faits: v.df, objet: v.ob.trim(), faits: v.fa.trim(), qualification: (v.qu || "").trim() || null, affectation: v.af || null, de_ref: v.ty == "MAP" ? (v.dr || null) : null, consignes: v.ty == "MAP" ? (v.co || null) : null, mp_jours_propose: v.ty == "MAP" && v.nj ? +v.nj : null }).select("ref").single();
+      toast(error ? "Refusé : " + error.message : "Dossier créé : " + data.ref); draw();
+    });
+  },
+  dval(b) {
+    const d = DL.find(x => x.id == b.dataset.i);
+    if (d.type == "MAP") ask("Valider la mise à pied — " + d.ref, [{ k: "db", l: "Début de la mise à pied", t: "date", r: 1 }, { k: "nj", l: "Durée (jours)", t: "number", r: 1, v: d.mp_jours_propose || "" }, { k: "c", l: "Commentaire (facultatif)" }], v => decide(d.id, "valider", v.db, +v.nj, v.c));
+    else ask("Valider la demande d’explication — " + d.ref, [{ k: "c", l: "Commentaire (facultatif)" }], v => decide(d.id, "valider", null, null, v.c));
+  },
+  dref(b) { const d = DL.find(x => x.id == b.dataset.i); ask("Refuser le dossier — " + d.ref, [{ k: "c", l: "Motif du refus", r: 1 }], v => decide(d.id, "refuser", null, null, v.c)); },
+  dnot(b) { decide(+b.dataset.i, "notifier"); },
   vol() { ask("Ajouter un vol (programme manuel)", [{ k: "n", l: "N° de vol", r: 1 }, { k: "s", l: "Sens", o: [["A", "Arrivée"], ["D", "Départ"]] }, { k: "t", l: "Type d’appareil (ex. B738, A332)" }, { k: "h", l: "Heure prévue (UTC = heure de Nouakchott)", t: "datetime-local", r: 1 }], async v => { const { error } = await sb.from("vols").insert({ source: "manuel", numero: v.n.toUpperCase(), sens: v.s, type_appareil: v.t ? v.t.toUpperCase() : null, heure_prevue: new Date(v.h + ":00Z").toISOString() }); toast(error ? "Refusé : " + error.message : "Vol ajouté"); draw(); }); },
   async pec(b) { await sb.rpc("alerte_action", { p_alerte: b.dataset.i, p_action: "prise_en_charge", p_commentaire: ME.nom }); toast("Alerte prise en charge"); await loadAL(); draw(); },
   async clo(b) { await sb.rpc("alerte_action", { p_alerte: b.dataset.i, p_action: "close", p_commentaire: ME.nom }); toast("Alerte clôturée"); await loadAL(); draw(); },
