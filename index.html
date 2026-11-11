@@ -40,7 +40,29 @@ label{font-size:12px;font-weight:600;display:block;margin-bottom:3px}
 #md{position:fixed;inset:0;background:#072448a6;display:none;align-items:center;justify-content:center;padding:14px;z-index:9}#md.on{display:flex}
 #mf{background:var(--s);border-radius:14px;padding:16px;width:100%;max-width:440px;max-height:92%;overflow:auto;display:flex;flex-direction:column;gap:10px}
 #ts{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));right:16px;background:var(--n);color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(20px);transition:.3s;z-index:10;max-width:320px;pointer-events:none}#ts.on{opacity:1;transform:none}
-@media(max-width:700px){.wrap{flex-direction:column-reverse}nav{width:100%!important;flex-direction:row;border-right:0;border-top:1px solid var(--b);overflow-x:auto}nav .l,#tg,#un{display:none}main{padding:12px}}
+.lk{color:var(--p);font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+.dys{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.dys::-webkit-scrollbar{display:none}
+.dy{flex:0 0 auto;min-width:56px;border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:12px;padding:6px 8px;text-align:center;font:600 12px system-ui;cursor:pointer;position:relative}
+.dy b{display:block;font-size:17px}.dy.on{background:var(--p);border-color:var(--p);color:#fff}.dy i{position:absolute;top:-5px;right:-4px;background:#e11d48;color:#fff;border-radius:9px;font:700 10px system-ui;padding:1px 5px;font-style:normal}
+@media(max-width:700px){
+.wrap{flex-direction:column-reverse}body{padding-bottom:0}
+nav{width:100%!important;flex-direction:row;border-right:0;border-top:1px solid var(--b);overflow-x:auto;padding:4px 4px calc(4px + env(safe-area-inset-bottom));gap:2px;transition:none;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex-direction:column;gap:1px;padding:6px 8px;min-width:64px;flex:1 0 auto;align-items:center;justify-content:center;font-size:10px;white-space:normal;text-align:center;line-height:1.15}
+nav .l{opacity:1;font-size:10px}nav .i{font-size:20px}
+#tg{display:none}header{height:50px;gap:8px}#un{display:block;max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+main{padding:10px;gap:10px}.card{padding:12px;border-radius:12px}h1{font-size:20px}
+input,select,textarea{font-size:16px;padding:10px}.btn{padding:9px 12px;min-height:40px}
+.row{gap:8px}.k{font-size:22px}
+.sc{overflow:visible;padding:6px 10px}.sc table,.sc tbody{display:block}.sc tr:has(th){display:none}
+.sc tr{display:block;border:1px solid var(--b);border-radius:10px;padding:6px 10px;margin:8px 0;background:var(--bg)}
+.sc td{display:flex;justify-content:space-between;gap:12px;border:0;padding:4px 0;text-align:right;align-items:flex-start;word-break:break-word}
+.sc td::before{content:attr(data-l);color:var(--m);font-size:11px;text-transform:uppercase;text-align:left;flex-shrink:0;padding-top:2px}
+.sc td[colspan]{display:block;text-align:left}.sc td[colspan]::before{content:none}
+.sc td select{width:auto;min-width:0!important;max-width:62%}
+#md{align-items:flex-end;padding:0}#mf{max-width:none;border-radius:16px 16px 0 0;max-height:92%;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+#ts{left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));max-width:none}
+}
 </style>
 </head>
 <body>
@@ -60,16 +82,18 @@ const ymd = d => new Date(d).toISOString().slice(0, 10);
 const dg = t => String(t).replace(/\D/g, "").slice(-8);
 
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
-const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag"];
-const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag"];
+const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag", "tach"];
+const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag", "tach"];
 const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres", "disc"], assistante_rh: ["shift", "eff", "pres", "disc"], approvisionnement: ["shift", "mag"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"] };
 const SL = { p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
 
+function lab(root = document) { root.querySelectorAll(".sc table").forEach(t => { const hs = [...t.querySelectorAll("tr:first-child th")].map(x => x.textContent); t.querySelectorAll("tr").forEach(r => { if (r.querySelector("th")) return; [...r.children].forEach((c, i) => { if (c.colSpan < 2 && hs[i]) c.dataset.l = hs[i]; }); }); }); }
+const setEl = () => { $("#el").innerHTML = eT(); lab($("#el")); };
 const toast = m => { const t = $("#ts"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.i); toast.i = setTimeout(() => t.classList.remove("on"), 3200); };
 const head = (t, s, b) => `<div class="row"><div><h2 style="font-size:17px">${t}</h2><div class="m">${s || ""}</div></div>${b || ""}</div>`;
 function ask(title, fs, ok) {
@@ -173,11 +197,11 @@ V.vols = async () => {
 const flt = () => { const T0 = N(F.q).split(/\s+/).filter(Boolean); return AG.filter(a => { const h = N([a.matricule, a.badge, a.tel, (a.tel || "").replace(/\s/g, ""), a.nom, a.equipe, a.service, a.fonction, a.zone].join(" ")); return T0.every(x => h.includes(x)) && (!F.eq || a.equipe == F.eq) && (!F.sv || a.service == F.sv) && (!F.st || (F.st == "a") == !!ST[a.matricule]) && (!F.bd || (F.bd == "a") == !!a.badge); }); };
 function eT() {
   const L = flt(), W = WR.includes(ME.role), NH = NNIR.includes(ME.role), ab = L.filter(a => ST[a.matricule]).length;
-  return `<div class="m"><b>${L.length}</b> résultat(s) · ${L.length - ab} présents · ${ab} absents</div><div class="card sc"><table><tr><th>Matricule</th><th>Badge</th><th>Nom & prénom</th><th>Téléphone</th>${NH ? "<th>NNI</th>" : ""}<th>Équipe</th><th>Service</th><th>Présence</th></tr>${L.map(a => { const s = ST[a.matricule]?.statut || "p", nn = NNI[a.matricule]; return `<tr><td><b>${E(a.matricule)}</b></td><td>${E(a.badge) || "—"}</td><td>${E(a.nom)}${a.fonction ? ` <span class="bd info">${E(a.fonction)}</span>` : ""}</td><td style="white-space:nowrap">${a.tel ? `<a href="tel:${a.tel.replace(/\s/g, "")}" style="color:var(--p)">${E(a.tel)}</a>` : "—"}</td>${NH ? `<td style="white-space:nowrap">${nn ? `<span ${nn.a_confirmer ? 'style="color:#e11d48;font-weight:700"' : ""}>${E(nn.nni)}</span>${nn.a_confirmer ? ' <span class="bd bad">À confirmer (RH)</span>' : ""}` : "—"}</td>` : ""}<td>${E(a.equipe)}</td><td>${E(a.service)}</td><td>${W ? `<select data-s="${E(a.matricule)}" style="min-width:150px">${Object.entries(SL).map(([k, v]) => `<option value="${k}" ${s == k ? "selected" : ""}>${v}</option>`).join("")}</select>` : `<span class="bd ${s == "p" ? "ok" : "bad"}">${SL[s]}</span>`}${ST[a.matricule]?.justification ? `<div class="m">${E(ST[a.matricule].justification)}</div>` : ""}</td></tr>`; }).join("")}</table></div>`;
+  return `<div class="m"><b>${L.length}</b> résultat(s) · ${L.length - ab} présents · ${ab} absents</div><div class="card sc"><table><tr><th>Matricule</th><th>Badge</th><th>Nom & prénom</th><th>Téléphone</th>${NH ? "<th>NNI</th>" : ""}<th>Équipe</th><th>Service</th><th>Présence</th></tr>${L.map(a => { const s = ST[a.matricule]?.statut || "p", nn = NNI[a.matricule]; return `<tr><td><b>${E(a.matricule)}</b></td><td>${E(a.badge) || "—"}</td><td><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span>${a.fonction ? ` <span class="bd info">${E(a.fonction)}</span>` : ""}</td><td style="white-space:nowrap">${a.tel ? `<a href="tel:${a.tel.replace(/\s/g, "")}" style="color:var(--p)">${E(a.tel)}</a>` : "—"}</td>${NH ? `<td style="white-space:nowrap">${nn ? `<span ${nn.a_confirmer ? 'style="color:#e11d48;font-weight:700"' : ""}>${E(nn.nni)}</span>${nn.a_confirmer ? ' <span class="bd bad">À confirmer (RH)</span>' : ""}` : "—"}</td>` : ""}<td>${E(a.equipe)}</td><td>${E(a.service)}</td><td>${W ? `<select data-s="${E(a.matricule)}" style="min-width:150px">${Object.entries(SL).map(([k, v]) => `<option value="${k}" ${s == k ? "selected" : ""}>${v}</option>`).join("")}</select>` : `<span class="bd ${s == "p" ? "ok" : "bad"}">${SL[s]}</span>`}${ST[a.matricule]?.justification ? `<div class="m">${E(ST[a.matricule].justification)}</div>` : ""}</td></tr>`; }).join("")}</table></div>`;
 }
 V.eff = async () => {
   const o = (k, l, key) => `<select data-f="${k}"><option value="">${l}</option>${[...new Set(AG.map(a => a[key]))].map(x => `<option ${F[k] == x ? "selected" : ""}>${E(x)}</option>`).join("")}</select>`;
-  return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`) + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
+  return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`) + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
 };
 
 V.pres = async () => {
@@ -240,7 +264,7 @@ V.disc = async () => {
   const fb = (k, v, l) => `<button class="btn ${DF[k] == v ? "p" : ""}" data-a="df" data-k="${k}" data-v="${v}">${l}</button>`;
   return head("Discipline", `${DL.length} dossier(s) · ${DL.filter(d => d.statut == "propose").length} à valider`, `<button class="btn w" data-a="dnew">+ Nouveau dossier</button>`)
     + `<div class="card row" style="justify-content:flex-start;gap:6px">${fb("st", "", "Tous")}${fb("st", "propose", "À valider")}${fb("st", "valide", "Validés")}${fb("st", "notifie", "Notifiés")}${fb("st", "refuse", "Refusés")} <span class="m">|</span> ${fb("ty", "", "DE + MAP")}${fb("ty", "DE", "Demandes d’explication")}${fb("ty", "MAP", "Mises à pied")}</div>`
-    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><b>${E(a.nom)}</b> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${d.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[d.statut]}">${DS[d.statut]}</span></div></div>
+    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><span class="lk" data-a="fiche" data-m="${E(d.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${d.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[d.statut]}">${DS[d.statut]}</span></div></div>
 <div style="margin-top:6px"><b>${E(d.objet)}</b></div><div class="m">Faits du ${fd(d.date_faits)} · proposé par ${E(d.propose_nom)} le ${fd(String(d.created_at).slice(0, 10))}${d.decide_nom ? " · décision : " + E(d.decide_nom) : ""}${d.mp_debut ? " · MAP du " + fd(d.mp_debut) + " au " + fd(d.mp_fin) + " (" + d.mp_jours + " j), reprise le " + fd(d.reprise) : ""}${d.commentaire ? " · « " + E(d.commentaire) + " »" : ""}</div>
 <div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><button class="btn" data-a="ddoc" data-i="${d.id}">${d.statut == "propose" ? "Aperçu du document" : "Document / PDF"}</button>${val && d.statut == "propose" ? `<button class="btn p" data-a="dval" data-i="${d.id}">Valider</button><button class="btn d" data-a="dref" data-i="${d.id}">Refuser</button>` : ""}${val && d.statut == "valide" ? `<button class="btn p" data-a="dnot" data-i="${d.id}">Marquer comme remis à l’agent</button>` : ""}</div></div>`; }).join("") || `<div class="card m">Aucun dossier.</div>`)
     + `<div class="m">Les documents suivent le modèle EPS (références EPS/OPS/DISC/DE-ou-MAP-ID/année). La sanction, la durée et les dates sont toujours saisies et validées par une personne. À la validation d’une mise à pied, les jours concernés apparaissent automatiquement comme « Mise à pied » dans le suivi de présence.</div>`;
@@ -262,6 +286,45 @@ V.mag = async () => {
     + (seeStock ? `<div class="card sc"><h2>Derniers mouvements</h2><table><tr><th>Date</th><th>Type</th><th>Magasin</th><th>Article</th><th>Qté</th><th>Tiers</th><th>Saisi par</th></tr>${(mv.data || []).map(x => `<tr><td>${fd(x.jour)}</td><td><span class="bd ${x.type == "entree" ? "ok" : "warn"}">${x.type == "entree" ? "Entrée" : "Sortie"}</span></td><td>${E(x.magasins?.nom)}</td><td>${E(x.articles?.nom)}</td><td>${x.quantite} ${E(x.articles?.unite)}</td><td>${E(x.tiers) || "—"}${x.note ? `<div class="m">${E(x.note)}</div>` : ""}</td><td>${E(x.saisi_nom)}</td></tr>`).join("") || `<tr><td colspan="7" class="m">Aucun mouvement.</td></tr>`}</table></div>` : "");
 };
 
+/* ---------- Tâches & planning ---------- */
+let TK = [], TD = 0, TFL = "";
+const dstr = o => ymd(Date.now() + o * 864e5), WD = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const TS = { a_faire: "À faire", en_cours: "En cours", fait: "Fait", annule: "Annulé" }, TB = { a_faire: "warn", en_cours: "info", fait: "ok", annule: "bad" };
+const TMG = ["direction", "responsable_ops", "coordinateur_ops"];
+V.tach = async () => {
+  const { data, error } = await sb.from("taches").select("*, agents(nom)").gte("jour", dstr(-1)).lte("jour", dstr(6)).order("heure", { nullsFirst: false }).order("created_at");
+  if (error) throw error; TK = data || [];
+  const sel = dstr(TD), cnt = {}; TK.forEach(t => { if (t.statut == "a_faire" || t.statut == "en_cours") cnt[t.jour] = (cnt[t.jour] || 0) + 1; });
+  const dys = [-1, 0, 1, 2, 3, 4, 5, 6].map(o => { const d = dstr(o); return `<button class="dy ${o == TD ? "on" : ""}" data-a="tday" data-i="${o}">${o == 0 ? "Auj." : WD[new Date(d + "T00:00:00Z").getUTCDay()]}<b>${d.slice(8)}</b>${cnt[d] ? `<i>${cnt[d]}</i>` : ""}</button>`; }).join("");
+  const ord = { en_cours: 0, a_faire: 1, fait: 2, annule: 3 };
+  const L = TK.filter(t => t.jour == sel && (!TFL || t.statut == TFL)).sort((a, b) => ord[a.statut] - ord[b.statut] || (a.priorite == "haute" ? -1 : 0) - (b.priorite == "haute" ? -1 : 0));
+  const fb = (v, l) => `<button class="btn ${TFL == v ? "p" : ""}" data-a="tfl" data-v="${v}">${l}</button>`;
+  const all = TK.filter(t => t.jour == sel), fait = all.filter(t => t.statut == "fait").length;
+  return head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} faites`, `<button class="btn w" data-a="tnew">+ Tâche</button>`)
+    + `<div class="dys">${dys}</div><div class="card row" style="justify-content:flex-start;gap:6px">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}</div>`
+    + (L.map(t => `<div class="card"><div class="row"><b>${E(t.titre)}</b><div><span class="bd ${t.priorite == "haute" ? "bad" : "info"}" ${t.priorite == "haute" ? "" : 'style="display:none"'}>Priorité</span> <span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></div></div>${t.description ? `<div style="margin-top:4px">${E(t.description)}</div>` : ""}<div class="m" style="margin-top:4px">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}créée par ${E(t.cree_nom)}${t.maj_nom ? " · " + TS[t.statut].toLowerCase() + " par " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button><button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>`}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`).join("") || `<div class="card m">Aucune tâche ce jour-là.</div>`);
+};
+
+/* ---------- Fiche agent ---------- */
+async function fiche(mat) {
+  const a = AG.find(x => x.matricule == mat); if (!a) return;
+  const since = ymd(Date.now() - 90 * 864e5), dOk = (ACC[ME.role] || []).includes("disc");
+  const [d, s] = await Promise.all([dOk ? sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("matricule", mat).order("created_at", { ascending: false }) : { data: null }, sb.from("statuts_jour").select("jour,statut,justification").eq("matricule", mat).gte("jour", since).order("jour", { ascending: false })]);
+  const dd = d.error ? null : d.data; if (dd) DL = dd;
+  const ab = s.data || [], c = { nj: 0, j: 0, c: 0, mp: 0 }; ab.forEach(x => { if (c[x.statut] != null) c[x.statut]++; });
+  const nn = NNI[mat];
+  $("#mf").innerHTML = `<div class="row"><h2>${E(a.nom)}${a.fonction ? ` <span class="bd info">${E(a.fonction)}</span>` : ""}</h2></div>
+<div class="m">ID <b>${E(a.matricule)}</b> · Badge <b>${E(a.badge) || "—"}</b> · ${E(a.equipe)} · ${E(a.service)}</div>
+<div>${a.tel ? `📞 <a href="tel:${a.tel.replace(/\s/g, "")}" style="color:var(--p)">${E(a.tel)}</a>` : '<span class="m">Pas de téléphone</span>'}${nn ? `<div class="m">NNI : <span ${nn.a_confirmer ? 'style="color:#e11d48;font-weight:700"' : ""}>${E(nn.nni)}</span>${nn.a_confirmer ? " (à confirmer par la RH)" : ""}</div>` : ""}</div>
+<div class="m">90 derniers jours : abs. non justifiées <b>${c.nj}</b> · justifiées <b>${c.j}</b> · congés <b>${c.c}</b> · mises à pied <b>${c.mp}</b></div>
+${dd ? `<h2 style="margin-top:6px">Dossiers disciplinaires (${dd.length})</h2>${dd.map(x => `<div class="li" style="flex-wrap:wrap"><div><span class="bd info">${x.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[x.statut]}">${DS[x.statut]}</span><div><b>${E(x.objet)}</b></div><div class="m">${E(x.ref)} · ${fd(String(x.created_at).slice(0, 10))}${x.mp_debut ? " · du " + fd(x.mp_debut) + " au " + fd(x.mp_fin) : ""}</div></div><button type="button" class="btn" data-a="ddoc" data-i="${x.id}">Document</button></div>`).join("") || '<div class="m">Aucun dossier.</div>'}` : ""}
+<h2 style="margin-top:6px">Absences et statuts saisis</h2>${ab.slice(0, 15).map(x => `<div class="li"><div>${fd(x.jour)} · <span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut]}</span>${x.justification ? `<div class="m">${E(x.justification)}</div>` : ""}</div></div>`).join("") || '<div class="m">Aucune sur 90 jours.</div>'}
+<div class="row" style="justify-content:flex-end">${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no">Fermer</button></div>`;
+  $("#no").onclick = () => $("#md").classList.remove("on");
+  $("#mf").onsubmit = e => e.preventDefault();
+  $("#md").classList.add("on");
+}
+
 /* ---------- Actions ---------- */
 async function decide(id, action, debut, jours, comm) {
   const { error } = await sb.rpc("disc_decider", { p_id: id, p_action: action, p_debut: debut || null, p_jours: jours || null, p_comm: comm || null });
@@ -273,11 +336,32 @@ async function setSt(mat, v) {
     const uid = (await sb.auth.getUser()).data.user.id;
     const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", today()).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: today(), matricule: mat, statut: v, justification: j || null, saisi_par: uid, maj: new Date().toISOString() });
     const { error } = await q; if (error) toast("Refusé : " + error.message); else toast(a.nom + " : " + SL[v]);
-    await loadST(); if ($("#el")) $("#el").innerHTML = eT();
+    await loadST(); if ($("#el")) setEl();
   };
   if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
 }
 const ACT = {
+  fiche(b) { fiche(b.dataset.m); },
+  tday(b) { TD = +b.dataset.i; draw(); },
+  tfl(b) { TFL = b.dataset.v; draw(); },
+  async tst(b) { const w = b.dataset.w, go = async c => { const { error } = await sb.rpc("tache_statut", { p_id: +b.dataset.i, p_statut: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Tâche : " + TS[w]); draw(); }; if (w == "annule") ask("Motif d’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
+  async tdel(b) { if (!confirm("Supprimer cette tâche ?")) return; const { error } = await sb.from("taches").delete().eq("id", +b.dataset.i); toast(error ? "Refusé : " + error.message : "Tâche supprimée"); draw(); },
+  tnew() {
+    const eqs = [...new Set(AG.map(a => a.equipe))].filter(Boolean).sort();
+    ask("Nouvelle tâche", [
+      { k: "ti", l: "Tâche", r: 1 }, { k: "de", l: "Détails (facultatif)", t: "ta" },
+      { k: "j", l: "Date", t: "date", v: dstr(TD), r: 1 }, { k: "h", l: "Heure (ex. 14h30)" },
+      { k: "ci", l: "Équipe concernée", o: [["", "— Toutes / non précisée —"], ...eqs] },
+      { k: "q", l: "Agent précis (ID ou nom, facultatif)" }, { k: "li", l: "Lieu" },
+      { k: "pr", l: "Priorité", o: [["normale", "Normale"], ["haute", "Haute"]] },
+      { k: "n", l: "Répéter sur … jours (1 = une seule fois)", t: "number", v: "1" }
+    ], async v => {
+      let m = null; if (v.q.trim()) { const r = findAg(v.q); if (r.length != 1) return toast(r.length ? "Plusieurs agents : précisez avec l’ID" : "Agent introuvable"); m = r[0].matricule; }
+      const n = Math.min(Math.max(+v.n || 1, 1), 31), rows = [];
+      for (let i = 0; i < n; i++) rows.push({ titre: v.ti.trim(), description: v.de.trim() || null, jour: ymd(new Date(v.j + "T00:00:00Z").getTime() + i * 864e5), heure: v.h.trim() || null, cible: v.ci || null, assigne_matricule: m, lieu: v.li.trim() || null, priorite: v.pr });
+      const { error } = await sb.from("taches").insert(rows); toast(error ? "Refusé : " + error.message : n > 1 ? n + " tâches créées" : "Tâche créée"); draw();
+    });
+  },
   mf(b) { MF = +b.dataset.i; draw(); },
   anew() { ask("Nouvel article", [{ k: "n", l: "Nom de l’article", r: 1 }, { k: "u", l: "Unité (pièce, carton, litre…)", v: "pièce" }, { k: "s", l: "Seuil d’alerte stock bas", t: "number", v: "0" }], async v => { const { error } = await sb.from("articles").insert({ nom: v.n.trim(), unite: v.u.trim() || "pièce", seuil: +v.s || 0 }); toast(error ? "Refusé : " + error.message : "Article ajouté"); draw(); }); },
   mnew() { ask("Entrée / sortie de stock", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article", o: AR.map(x => [x.id, x.nom + " (" + x.unite + ")"]) }, { k: "t", l: "Type", o: [["entree", "Entrée"], ["sortie", "Sortie"]] }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "j", l: "Date", t: "date", v: today() }, { k: "x", l: "Fournisseur (entrée) / bénéficiaire (sortie)" }, { k: "o", l: "Note" }], async v => { const { error } = await sb.from("mouvements_stock").insert({ magasin_id: +v.m, article_id: +v.a, type: v.t, quantite: +v.q, jour: v.j, tiers: v.x || null, note: v.o || null }); toast(error ? "Refusé : " + error.message : "Mouvement enregistré"); draw(); }); },
@@ -286,9 +370,9 @@ const ACT = {
   vd(b) { VD = +b.dataset.i; draw(); },
   df(b) { DF[b.dataset.k] = b.dataset.v; draw(); },
   ddoc(b) { const d = DL.find(x => x.id == b.dataset.i), w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(docHTML(d)); w.document.close(); },
-  dnew() {
+  dnew(b) {
     ask("Nouveau dossier disciplinaire", [
-      { k: "q", l: "Agent (ID ou nom)", r: 1 },
+      { k: "q", l: "Agent (ID ou nom)", r: 1, v: b?.dataset?.m || "" },
       { k: "ty", l: "Document", o: [["DE", "Demande d’explication"], ["MAP", "Mise à pied disciplinaire"]] },
       { k: "cv", l: "Civilité", o: ["M.", "Mme"] },
       { k: "df", l: "Date des faits", t: "date", r: 1 },
@@ -330,7 +414,7 @@ async function draw() {
   $("#nv").innerHTML = ok.map(p => `<button data-p="${p}" class="${p == NAV ? "on" : ""}"><span class="i">${P[p][0]}</span><span class="l">${P[p][1]}</span></button>`).join("");
   const ref = NAV; let h;
   try { h = await V[NAV](); } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
-  if (ref == NAV) $("#mn").innerHTML = h;
+  if (ref == NAV) { $("#mn").innerHTML = h; lab($("#mn")); }
 }
 async function shell() {
   $("#app").innerHTML = `<header><button id="tg" class="hb">☰</button><b>EPS OPS</b><span class="sp"></span><button id="bl" class="hb" title="Alertes">🔔<i id="bc"></i></button><span id="un">${E(ME.nom)}</span><button id="lo" class="hb">Quitter</button></header><div class="wrap"><nav id="nv"></nav><main id="mn"><div class="m">Chargement…</div></main></div>`;
@@ -339,12 +423,12 @@ async function shell() {
   $("#lo").onclick = async () => { await sb.auth.signOut(); location.reload(); };
   await Promise.all([loadAG(), loadST(), loadAL()]);
   sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(); })
-    .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) $("#el").innerHTML = eT(); }).subscribe();
+    .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
   draw();
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
-document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; $("#el").innerHTML = eT(); } });
-document.addEventListener("change", e => { const s = e.target.dataset.s; if (s) return setSt(s, e.target.value); const k = e.target.dataset.f; if (k) { F[k] = e.target.value; $("#el").innerHTML = eT(); } });
+document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } });
+document.addEventListener("change", e => { const s = e.target.dataset.s; if (s) return setSt(s, e.target.value); const k = e.target.dataset.f; if (k) { F[k] = e.target.value; setEl(); } });
 $("#md").onclick = e => { if (e.target.id == "md") e.target.classList.remove("on"); };
 document.addEventListener("keydown", e => { if (e.key == "Escape") $("#md").classList.remove("on"); });
 start();
