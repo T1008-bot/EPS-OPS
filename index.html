@@ -168,7 +168,7 @@ async function start() {
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh"];
 let NNI = {};
 async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
-async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", today()); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); }
+async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); }
 async function loadAL() { const { data } = await sb.from("alertes").select("*").gte("creee_le", new Date(Date.now() - 3 * 864e5).toISOString()).order("creee_le", { ascending: false }); AL = data || []; const n = AL.filter(a => a.statut == "ouverte").length; const b = $("#bc"); if (b) b.textContent = n || ""; }
 const team = e => { const L = AG.filter(a => a.equipe == e), c = { p: 0, nj: 0, j: 0, c: 0, mp: 0 }, l = { j: [], c: [], mp: [] }; L.forEach(a => { const s = ST[a.matricule]?.statut || "p"; c[s]++; if (l[s]) l[s].push(a.nom + (ST[a.matricule]?.justification ? ` (${ST[a.matricule].justification})` : "")); }); return { tot: L.length, c, l, chefs: L.filter(a => a.fonction).map(a => a.nom).join(", ") || "—" }; };
 
@@ -547,7 +547,7 @@ async function setSt(mat, v) {
   const a = AG.find(x => x.matricule == mat);
   const done = async j => {
     const uid = (await sb.auth.getUser()).data.user.id;
-    const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", today()).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: today(), matricule: mat, statut: v, justification: j || null, saisi_par: uid, maj: new Date().toISOString() });
+    const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", ymd(shiftStart())).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: ymd(shiftStart()), matricule: mat, statut: v, justification: j || null, saisi_par: uid, maj: new Date().toISOString() });
     const { error } = await q; if (error) toast("Refusé : " + error.message); else toast(a.nom + " : " + SL[v]);
     await loadST(); if ($("#el")) setEl();
   };
