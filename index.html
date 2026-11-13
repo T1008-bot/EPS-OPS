@@ -119,7 +119,7 @@ const toast = m => { const t = $("#ts"); t.textContent = m; t.classList.add("on"
 const head = (t, s, b) => `<div class="row"><div><h2 style="font-size:17px">${t}</h2><div class="m">${s || ""}</div></div>${b || ""}</div>`;
 function ask(title, fs, ok) {
   const f = $("#mf");
-  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}">${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="4" ${x.r ? "required" : ""}>${E(x.v || "")}</textarea>` : `<input name="${x.k}" type="${x.t || "text"}" value="${E(x.v || "")}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
+  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}"${x.v == o[0] ? " selected" : ""}>${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="4" ${x.r ? "required" : ""}>${E(x.v || "")}</textarea>` : `<input name="${x.k}" type="${x.t || "text"}" value="${E(x.v || "")}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
   $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
   f.onsubmit = e => { e.preventDefault(); const v = Object.fromEntries(new FormData(f)); $("#md").classList.remove("on"); ok(v); };
 }
@@ -575,14 +575,29 @@ const ACT = {
   async sig2ir(b) { const s = SG.find(x => x.id == b.dataset.i); if (!s) return; const { data } = await sb.from("incident_reports").select("numero,id").eq("signalement_id", s.id); if (data && data.length && !confirm("Ce signalement a déjà " + data.length + " rapport(s) d’incident. En créer un autre ?")) return; $("#md").classList.remove("on"); NAV = "ir"; const ph = await pjImages(s.id); await irCreate({ ...irFromSig(s), ...(ph.length ? { photos: ph } : {}) }); },
   sigo(b) { sigF(+b.dataset.i); },
   signew() {
+    $("#mf").innerHTML = `<h2>Nouveau signalement</h2><div class="m">Parlez ou écrivez librement : quoi, où, quand, conséquences, ce qui a été fait, ce que vous demandez. L’IA remplit tous les champs à votre place, vous n’avez plus qu’à vérifier.</div><textarea id="svt" rows="9" placeholder="Ex. : Ce matin vers 8h, la climatisation de la salle arrivées est en panne, il fait très chaud, j’ai prévenu le superviseur. Merci d’envoyer un technicien."></textarea><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button type="button" class="btn" data-a="sigman">Saisie manuelle</button><button type="button" class="btn p" data-a="sigia">✨ Remplir le signalement</button></div>`;
+    $("#mf").onsubmit = e => e.preventDefault(); $("#no").onclick = () => { vxStop(); $("#md").classList.remove("on"); }; $("#md").classList.add("on");
+    vxBar($("#svt")); try { document.querySelector("#mf [data-vx=mic]").click(); } catch (e) { }
+  },
+  sigman() { const t = ($("#svt") || {}).value || ""; vxStop(); ACT.sigform({ de: t }); },
+  async sigia(b) {
+    const t = ($("#svt") || {}).value.trim(); vxStop(); if (!t) return toast("Parlez ou écrivez d’abord le problème");
+    b.disabled = true; b.textContent = "Analyse en cours…";
+    let c = null, msg = "";
+    try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CAT } }); if (error) throw error; if (data.erreur == "ia_non_configuree") msg = "L’IA n’est pas encore activée : le texte est placé dans « Problème constaté »."; else if (data.erreur) msg = "L’IA n’a pas pu analyser (" + data.erreur + ") : complétez à la main."; else c = data.champs; } catch (x) { msg = "IA indisponible : complétez à la main."; }
+    if (msg) toast(msg); else toast("Signalement rempli : vérifiez puis validez");
+    const g = k => String((c && c[k]) || "").trim();
+    ACT.sigform(c ? { ob: g("objet"), zo: g("zone"), ca: SG_CAT.includes(g("categorie")) ? g("categorie") : "Autre", sc: g("sous_categorie"), pr: ["basse", "normale", "haute", "urgente"].includes(g("priorite")) ? g("priorite") : "normale", de: g("description") || t, co: g("consequences"), me: g("mesures"), iv: g("intervention"), cl: /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(g("constat")) ? g("constat").slice(0, 16) : nowL(), ca2: g("constat_par") || ME.nom, so: g("source") } : { de: t });
+  },
+  sigform(v = {}) {
     ask("Nouveau signalement", [
-      { k: "ob", l: "Objet", r: 1 }, { k: "zo", l: "Zone / lieu précis" },
-      { k: "ca", l: "Catégorie", o: SG_CAT }, { k: "sc", l: "Sous-catégorie (facultatif)" },
-      { k: "pr", l: "Priorité", o: [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]] },
-      { k: "de", l: "Problème constaté", t: "ta", r: 1 }, { k: "co", l: "Conséquences (facultatif)", t: "ta" },
-      { k: "me", l: "Mesures conservatoires (facultatif)", t: "ta" }, { k: "iv", l: "Intervention demandée", t: "ta" },
-      { k: "cl", l: "Date et heure du constat (laisser vide si inconnue)", t: "datetime-local", v: nowL() },
-      { k: "ca2", l: "Constat fait par", v: ME.nom }, { k: "so", l: "Source de l’information (facultatif)" }
+      { k: "ob", l: "Objet", r: 1, v: v.ob }, { k: "zo", l: "Zone / lieu précis", v: v.zo },
+      { k: "ca", l: "Catégorie", o: SG_CAT, v: v.ca }, { k: "sc", l: "Sous-catégorie (facultatif)", v: v.sc },
+      { k: "pr", l: "Priorité", o: [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]], v: v.pr },
+      { k: "de", l: "Problème constaté", t: "ta", r: 1, v: v.de }, { k: "co", l: "Conséquences (facultatif)", t: "ta", v: v.co },
+      { k: "me", l: "Mesures conservatoires (facultatif)", t: "ta", v: v.me }, { k: "iv", l: "Intervention demandée", t: "ta", v: v.iv },
+      { k: "cl", l: "Date et heure du constat (laisser vide si inconnue)", t: "datetime-local", v: v.cl || nowL() },
+      { k: "ca2", l: "Constat fait par", v: v.ca2 || ME.nom }, { k: "so", l: "Source de l’information (facultatif)", v: v.so }
     ], async v => {
       const { data, error } = await sb.from("signalements").insert({ objet: v.ob.trim(), zone: v.zo.trim() || null, categorie: v.ca, sous_categorie: v.sc.trim() || null, priorite: v.pr, description: v.de.trim(), consequences: v.co.trim() || null, mesures: v.me.trim() || null, intervention_demandee: v.iv.trim() || null, constat_le: v.cl ? fromL(v.cl) : null, constat_auteur: v.ca2.trim() || null, constat_source: v.so.trim() || null }).select("id,ref").single();
       toast(error ? "Refusé : " + error.message : "Créé : " + data.ref + " — ajoutez vos photos et documents dans la fiche"); await draw(); if (data) sigF(data.id);
