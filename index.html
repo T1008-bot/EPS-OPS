@@ -22,7 +22,7 @@ nav{width:240px;flex-shrink:0;background:linear-gradient(180deg,var(--n),var(--n
 header{background:var(--s);color:var(--t);border-bottom:1px solid var(--b);height:56px;display:flex;align-items:center;gap:12px;padding:0 24px;flex-shrink:0}
 .sp{flex:1}.hb{background:none;color:inherit;border:0;border-radius:12px;padding:8px;cursor:pointer;position:relative;display:inline-flex;align-items:center;gap:8px;font:600 13px system-ui;transition:transform .25s var(--sp)}
 #tg{display:none}#ht{font-weight:700;font-size:16px}#hw{display:none}
-#bc{position:absolute;top:0;right:0;background:var(--red);color:#fff;border-radius:9px;font:700 10px system-ui;padding:1px 5px;font-style:normal}#bc:empty{display:none}
+.nbd{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;font:700 11px system-ui;padding:1px 7px;font-style:normal;min-width:18px;text-align:center}.nbd:empty{display:none}#bc{position:absolute;top:0;right:0;background:var(--red);color:#fff;border-radius:9px;font:700 10px system-ui;padding:1px 5px;font-style:normal}#bc:empty{display:none}
 #un{font-weight:600;color:var(--m)}
 select,input,textarea{font:inherit;color:var(--t);background:#fff;border:1px solid var(--b);border-radius:10px;padding:8px 12px;width:100%}
 select:focus,input:focus,textarea:focus{outline:2px solid #2F6FD066;border-color:var(--p)}
@@ -98,17 +98,17 @@ const ymd = d => new Date(d).toISOString().slice(0, 10);
 const dg = t => String(t).replace(/\D/g, "").slice(-8);
 
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
-const ALL = ["shift", "alertes", "vols", "eff", "pres", "disc", "mag", "tach", "sig", "ir"];
-const OPS = ["shift", "alertes", "vols", "eff", "disc", "mag", "tach", "sig"];
-const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres", "disc"], assistante_rh: ["shift", "eff", "pres", "disc"], approvisionnement: ["shift", "mag"] };
+const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "sig", "disc", "mag"];
+const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "sig", "disc", "mag"];
+const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "eff", "pres", "disc", "prof"], assistante_rh: ["shift", "eff", "pres", "disc", "prof"], approvisionnement: ["shift", "mag", "prof"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const IC = { shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
+const IC = { shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
 const TH = { get() { try { return localStorage.getItem("th") || "bleu"; } catch (e) { return "bleu"; } }, set(v) { try { localStorage.setItem("th", v); } catch (e) { } document.documentElement.dataset.theme = v; } };
 document.documentElement.dataset.theme = TH.get();
 const navClose = () => document.body.classList.remove("nvo"), navOpen = () => document.body.classList.contains("nvo");
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -168,8 +168,47 @@ async function start() {
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh"];
 let NNI = {};
 async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
-async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); }
-async function loadAL() { const { data } = await sb.from("alertes").select("*").gte("creee_le", new Date(Date.now() - 3 * 864e5).toISOString()).order("creee_le", { ascending: false }); AL = data || []; const n = AL.filter(a => a.statut == "ouverte").length; const b = $("#bc"); if (b) b.textContent = n || ""; }
+const BC = { alertes: 0, pres: 0 };
+function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = BC.alertes || ""; }
+async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
+/* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
+let RA = [];
+async function loadRA() {
+  const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
+  const { data } = await sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " "));
+  const rows = (data || []).filter(r => r.groupe == "Groupe " + g), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
+  RA = [];
+  [["nettoyage", "Nettoyage N" + g], ["bagages", "Manutention M" + g]].forEach(([sv, nom]) => {
+    if (now >= t0 + 2.5 * H && !has(sv, -3, 5)) RA.push(`Rapport de situation ${nom} (≈ 09h30) non reçu — relancer le chef d’équipe`);
+    if (now >= t0 + 9.5 * H && !has(sv, 8, 16)) RA.push(`Rapport de situation ${nom} (≈ 17h, après l’arrivée des renforts) non reçu — relancer le chef d’équipe`);
+  });
+  const nj = Object.entries(ST).filter(([m, r]) => r.statut == "nj" && AG.some(a => a.matricule == m && onDuty(a))).length;
+  BC.pres = RA.length + nj; setB();
+}
+/* checklists de vol (nettoyage / manutention) */
+let CHK = [], CKD = {};
+const SVN = ["superviseur_nettoyage", "chef_nettoyage"], SVM = ["superviseur_bagages", "chef_bagages"];
+function chkItems(v) {
+  const t = new Date(v.heure_estimee || v.heure_prevue).getTime(), A = v.sens == "A", m = x => new Date(t - x * 60000), o = [];
+  if (A) {
+    o.push({ k: "n_zone", sv: "N", d: m(60), l: "Inspecter et nettoyer la zone arrivée" }, { k: "n_conv", sv: "N", d: m(30), l: "Convoquer l’équipe et préparer le matériel de nettoyage cabine" },
+      { k: "m_park", sv: "M", d: m(90), l: "Vérifier la position de parking et la disponibilité du matériel de rampe" }, { k: "m_psm", sv: "M", d: m(90), l: "Réception, lecture et transmission du PSM et du LDM (dès le décodage)" },
+      { k: "m_40", sv: "M", d: m(40), l: "2e rappel : parking vérifié, PSM/LDM reçus et transmis ?" }, { k: "m_20", sv: "M", d: m(20), l: "Préparer l’équipe et la mettre en position" },
+      { k: "m_10", sv: "M", d: m(10), l: "Confirmer : équipe en position (+ équipe Wheelchair si PSM non nul)" });
+  } else o.push({ k: "n_dep", sv: "N", d: m(200), l: "Vérifier, inspecter et nettoyer si nécessaire les zones de départ (avant l’ouverture des comptoirs)" });
+  return o;
+}
+async function loadChk() {
+  const now = Date.now(), { data: vs } = await sb.from("vols").select("id,numero,sens,heure_prevue,heure_estimee,statut,source").gte("heure_prevue", new Date(now - 6 * H).toISOString()).lt("heure_prevue", new Date(now + 14 * H).toISOString());
+  const L = (vs || []).filter(v => v.statut != "annule" && v.source != "prevision"), ids = L.map(v => v.id);
+  const { data: ck } = ids.length ? await sb.from("alerte_checks").select("*").in("vol_id", ids) : { data: [] };
+  CKD = {}; (ck || []).forEach(c => CKD[c.vol_id + "|" + c.item] = c);
+  const mine = SVN.includes(ME.role) ? "N" : SVM.includes(ME.role) ? "M" : "";
+  CHK = []; L.forEach(v => chkItems(v).forEach(i => { if (!mine || mine == i.sv) CHK.push({ ...i, v, done: CKD[v.id + "|" + i.k] }); }));
+  CHK.sort((a, b) => a.d - b.d);
+  BC.alertes = AL.filter(a => a.statut == "ouverte").length + CHK.filter(c => !c.done && c.d.getTime() <= now + 15 * 60000 && c.d.getTime() > now - 3 * H).length; setB();
+}
+async function loadAL() { const { data } = await sb.from("alertes").select("*").gte("creee_le", new Date(Date.now() - 3 * 864e5).toISOString()).order("creee_le", { ascending: false }); AL = data || []; await loadChk(); }
 const team = e => { const L = AG.filter(a => a.equipe == e), c = { p: 0, nj: 0, j: 0, c: 0, mp: 0 }, l = { j: [], c: [], mp: [] }; L.forEach(a => { const s = ST[a.matricule]?.statut || "p"; c[s]++; if (l[s]) l[s].push(a.nom + (ST[a.matricule]?.justification ? ` (${ST[a.matricule].justification})` : "")); }); return { on: L.length > 0 && onDuty(L[0]), tot: L.length, c, l, chefs: L.filter(a => a.fonction).map(a => a.nom).join(", ") || "—" }; };
 
 const onDuty = a => { const g = garde(shiftStart()), n = new Date(), h = n.getUTCHours(), wd = n.getUTCDay(), e = a.equipe; if (e == "Équipe " + g || e == "Manutention " + g) return true; if (e == "Équipe 4" || e == "Chauffeurs") return h >= 8 && h < 16 && wd >= 1 && wd <= 5; return false; };
@@ -178,28 +217,30 @@ const stt = a => ST[a.matricule]?.statut || (onDuty(a) ? "p" : "h");
 /* ---------- Vues ---------- */
 const V = {};
 V.shift = async () => {
-  const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
+  await loadRA(); const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
   const since = new Date(s.getTime() - 3 * H).toISOString().slice(0, 19).replace("T", " ");
   const { data: rp } = await sb.from("rapports_detail").select("*").gte("cree_le", since).order("cree_le", { ascending: false }).limit(60);
   const last = (sv, gr) => (rp || []).find(r => r.service == sv && r.groupe == gr);
   const rn = last("nettoyage", "Groupe " + g), rb = last("bagages", "Groupe " + g), ref = rn || rb;
-  const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])];
+  const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])], LB = e => e == "Équipe 4" ? "Nettoyage · N4" : "Nettoyage · N" + e.slice(-1);
   const card = e => {
     const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0, r = last("nettoyage", "Groupe " + e.slice(-1));
-    return `<div class="card"><div class="row"><h2>${e}</h2><span class="bd info">${e == "Équipe 4" ? "08h–16h" : "24 h"}</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">Chefs : ${E(t.chefs)}</div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${["j", "c", "mp"].filter(k => t.l[k].length).map(k => `<div class="m">${SL[k]} : ${E(t.l[k].join(", "))}</div>`).join("")}${r ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(r.cree_le))} : ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renforts : ${r.renforts || 0}${r.renforts_detail ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : ""}</div>`;
+    return `<div class="card"><div class="row"><h2>${LB(e)}</h2><span class="bd info">${e == "Équipe 4" ? "08h–16h · descend à 16h" : "24 h"}</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">Chefs : ${E(t.chefs)}</div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${["j", "c", "mp"].filter(k => t.l[k].length).map(k => `<div class="m">${SL[k]} : ${E(t.l[k].join(", "))}</div>`).join("")}${r ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(r.cree_le))} : ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renforts : ${r.renforts || 0}${r.renforts_detail ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : ""}</div>`;
   };
   const open = AL.filter(a => a.statut == "ouverte" || a.statut == "prise_en_charge");
   return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
-<div class="card"><h2>Shift en cours</h2><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.join(" + ")}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${h4 ? "(en service)" : "(hors service)"}</div></div></div>
+<div class="card"><h2>Shift en cours</h2><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.map(LB).join(" + ").replace(/Nettoyage · /g, "")} + M${g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${h4 ? "(en service)" : "(hors service)"}</div></div></div>
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
-<div class="g">${teams.map(card).join("")}${rb ? `<div class="card"><div class="row"><h2>Manutention — Groupe ${g}</h2><span class="bd info">24 h</span></div><div class="k">${rb.present ?? "?"}${rb.effectif ? " / " + rb.effectif : ""}</div><div class="m">Présents selon le dernier rapport (${hm(T(rb.cree_le))}) · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div></div>` : ""}</div>
+${RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("")}<div class="g">${teams.map(card).join("")}${(() => { const t = team("Manutention " + g), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; return `<div class="card"><div class="row"><h2>Manutention · M${g}</h2><span class="bd info">24 h</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${rb ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(rb.cree_le))} : ${rb.present ?? "?"}${rb.effectif ? "/" + rb.effectif : ""} présents · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; })()}</div>
 <div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>
-<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>`;
+${ME.role == "responsable_ops" ? `<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>` : ""}`;
 };
 
 V.alertes = async () => {
-  await loadAL();
-  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
+  await loadAL(); await loadRA();
+  const now = Date.now(), SVL = { N: "Nettoyage", M: "Manutention" }, win = CHK.filter(c => c.done ? c.d.getTime() > now - 3 * H : c.d.getTime() < now + 4 * H && c.d.getTime() > now - 6 * H);
+  const ckb = `<div class="card sc"><h2>Rappels & checklists par vol</h2><div class="m">Nettoyage et manutention sont séparés. Cochez chaque action une fois réalisée (horodaté, avec le nom).</div><table><tr><th>Avant</th><th>Vol</th><th>Service</th><th>Action</th><th></th></tr>${win.map(c => { const late = !c.done && c.d.getTime() < now; return `<tr><td><b>${hm(c.d)}</b></td><td>${E(c.v.numero)} <span class="m">${c.v.sens == "A" ? "Arr." : "Dép."} ${hm(new Date(c.v.heure_estimee || c.v.heure_prevue))}</span></td><td><span class="bd ${c.sv == "N" ? "info" : "warn"}">${SVL[c.sv]}</span></td><td>${E(c.l)}${c.done ? `<div class="m">Fait ${hm(new Date(c.done.fait_le))} — ${E(c.done.fait_nom || "")}</div>` : ""}</td><td>${c.done ? `<button class="btn" data-a="chk" data-v="${c.v.id}" data-k="${c.k}" data-u="1">✓ Fait</button>` : `<button class="btn ${late ? "w" : "p"}" data-a="chk" data-v="${c.v.id}" data-k="${c.k}">${late ? "En retard — valider" : "Valider"}</button>`}</td></tr>`; }).join("") || `<tr><td colspan="5" class="m">Aucun rappel dans la fenêtre (−6 h / +4 h).</td></tr>`}</table></div>`;
+  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("") + ckb + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
 };
 
 V.vols = async () => {
@@ -245,6 +286,38 @@ V.pres = async () => {
 <div class="card sc"><h2>Historique des journées saisies (30 jours)</h2><table><tr><th>Date</th><th>Non justifiées</th><th>Justifiées</th><th>Congés</th><th>Mises à pied</th></tr>${Object.entries(hist).map(([d, c]) => `<tr><td>${dmy(d)}</td><td>${c.nj}</td><td>${c.j}</td><td>${c.c}</td><td>${c.mp}</td></tr>`).join("") || `<tr><td colspan="5" class="m">L’historique se constitue au fil des saisies.</td></tr>`}</table></div>
 <div class="card sc"><h2>Absences non justifiées récurrentes (30 jours)</h2><table><tr><th>Agent</th><th>Équipe</th><th>Nb</th></tr>${top.map(([m, n]) => `<tr><td>${E(nm[m]?.nom || m)}</td><td>${E(nm[m]?.equipe || "")}</td><td><span class="bd ${n > 1 ? "bad" : "info"}">${n}</span></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune.</td></tr>`}</table></div>
 <div class="card sc"><h2>Rapports « Situation du staff » reçus</h2><table><tr><th>Date</th><th>Service</th><th>Groupe</th><th>Présents</th><th>Renforts</th></tr>${(rp || []).map(r => `<tr><td>${dmy(T(r.cree_le))} ${hm(T(r.cree_le))}</td><td>${r.service == "bagages" ? "Manutention" : "Nettoyage"}</td><td>${E(r.groupe)}</td><td>${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""}</td><td>${r.renforts || 0}${r.renforts_detail ? " — " + E(r.renforts_detail) : ""}</td></tr>`).join("")}</table></div>`;
+};
+
+/* ---------- Mon profil ---------- */
+let PF = null;
+const PFC = { situation: "Situation du staff", bagages: "Situation du staff (Manutention)", nettoyage: "Situation du staff (Nettoyage)", flight_ops: "Rapports de vol (Flight Ops)", wheelchairs: "Rapports Wheelchair (PMR)", cargo: "Rapports Cargo", pmr_shift: "PMR Shift", cabin: "Nettoyage cabine", shift_ops: "Rapports de shift", shift_nettoyage: "Rapports de shift (nettoyage)", dispatching: "Staff Dispatching" };
+V.prof = async () => {
+  PF = PF || { d: dstr(-7), f: dstr(6), m: "" };
+  const priv = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"].includes(ME.role);
+  const { data: r, error } = await sb.rpc("mon_profil", { p_debut: PF.d, p_fin: PF.f, p_matricule: PF.m || null });
+  if (error) throw error;
+  const now = Date.now(), td = today(), ag = r.agent, T0 = r.taches || [], ST0 = r.statuts || [];
+  const prev = (r.jours_prevus || []).filter(j => j <= td), c = { nj: 0, j: 0, c: 0, mp: 0 };
+  ST0.forEach(x => { if (prev.includes(x.jour) || true) c[x.statut] = (c[x.statut] || 0) + 1; });
+  const base = prev.length - c.c, ass = base > 0 ? Math.max(0, Math.round((base - c.nj - c.j - c.mp) / base * 100)) : null;
+  const res = t => {
+    if (t.statut == "annule") return ["Annulée", "info", "x"];
+    const due = t.echeance ? new Date(t.echeance).getTime() : null;
+    if (t.statut == "fait") return t.fait_le && due && new Date(t.fait_le).getTime() > due ? ["Fait en retard", "warn", "r"] : ["Réussie", "ok", "ok"];
+    if (due && due < now) return t.auto ? ["Non réalisée (échec)", "bad", "e"] : ["À valider", "info", "v"];
+    return [t.statut == "en_cours" ? "En cours" : "À venir", "info", "f"];
+  };
+  const L = T0.map(t => ({ ...t, R: res(t) })), nb = k => L.filter(t => t.R[2] == k).length, ok = nb("ok"), rt = nb("r"), ec = nb("e"), mes = ok + rt + ec, tx = mes ? Math.round(ok / mes * 100) : null;
+  const rpc = {}; (r.rapports || []).forEach(x => rpc[x.cat] = (rpc[x.cat] || 0) + 1);
+  const kp = (t, v, s, cl) => `<div class="card"><div class="m">${t}</div><div class="k" ${cl ? `style="color:${cl}"` : ""}>${v}</div><div class="m">${s || ""}</div></div>`;
+  const set = (k, l) => `<button class="btn" data-a="pfset" data-k="${k}">${l}</button>`;
+  return head("Mon profil", ag ? `${E(ag.nom)} · ${E(ag.fonction || "")} · ${E(ag.equipe || "")} · matricule ${E(ag.matricule)}` : `${E(ME.nom)} · ${RL[ME.role] || ""}`)
+    + `<div class="card"><div class="row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap"><label class="m">Du <input type="date" id="pf1" value="${PF.d}"></label><label class="m">au <input type="date" id="pf2" value="${PF.f}"></label>${priv ? `<label class="m">Agent <select id="pfm"><option value="">Moi-même</option>${AG.filter(a => /Manutention|Encadrement/.test(a.service) || /uperviseur|hef/.test(a.fonction || "")).map(a => `<option value="${E(a.matricule)}" ${PF.m == a.matricule ? "selected" : ""}>${E(a.nom)} (${E(a.equipe)})</option>`).join("")}</select></label>` : ""}<button class="btn p" data-a="pfgo">Appliquer</button></div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${set("c14", "14 jours (aujourd’hui au centre)")}${set("m", "Mois en cours")}${set("j30", "30 derniers jours")}</div><div class="m" style="margin-top:6px">Période : ${fd(PF.d)} → ${fd(PF.f)}</div></div>`
+    + (!ag ? `<div class="card m">Aucun matricule n’est rattaché à votre compte : l’assiduité et les tâches d’équipe ne peuvent pas être calculées. Seules les tâches que vous avez créées sont listées.</div>` : "")
+    + `<div class="g">${kp("Assiduité", ass == null ? "—" : ass + " %", `${prev.length} jour(s) de service écoulés · congés exclus`, ass != null && ass < 90 ? "#e11d48" : "")}${kp("Absences", c.nj + c.j + c.mp, `NJ ${c.nj} · Justifiées ${c.j} · Congés ${c.c} · MAP ${c.mp}`)}${kp("Taux de réussite des tâches", tx == null ? "—" : tx + " %", `${ok} réussies sur ${mes} mesurées`, tx != null && tx < 80 ? "#e11d48" : "")}${kp("Retards", rt, "tâches faites hors délai", rt ? "#d97706" : "")}${kp("Échecs", ec, "tâches non réalisées dans le délai", ec ? "#e11d48" : "")}</div>`
+    + `<div class="card sc"><h2>Missions et tâches (${L.length})</h2><table><tr><th>Jour</th><th>Tâche</th><th>Échéance</th><th>Réalisée</th><th>Résultat</th></tr>${L.map(t => `<tr><td>${fd(t.jour)}</td><td>${E(t.titre)}${t.cible ? `<div class="m">${E(t.cible)}</div>` : ""}</td><td>${t.echeance ? dmy(t.echeance) + " " + hm(t.echeance) : "—"}</td><td>${t.fait_le ? dmy(t.fait_le) + " " + hm(t.fait_le) : "—"}</td><td><span class="bd ${t.R[1]}">${t.R[0]}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucune tâche sur la période.</td></tr>`}</table><div class="m">« À valider » : tâche sans preuve automatique — un responsable doit la cocher dans Tâches &amp; planning ; elle n’est pas comptée comme échec.</div></div>`
+    + `<div class="card sc"><h2>Absences et présence</h2><table><tr><th>Jour</th><th>Statut</th><th>Justification</th></tr>${ST0.map(x => `<tr><td>${fd(x.jour)}</td><td><span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut] || x.statut}</span></td><td>${E(x.justification) || "—"}</td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune absence enregistrée sur la période.</td></tr>`}</table></div>`
+    + `<div class="card sc"><h2>Rapports soumis à mon nom (${(r.rapports || []).length})</h2><table><tr><th>Type</th><th>Nombre</th></tr>${Object.entries(rpc).map(([k, n]) => `<tr><td>${E(PFC[k] || k)}</td><td><b>${n}</b></td></tr>`).join("") || `<tr><td colspan="2" class="m">Aucun rapport identifié à votre nom (le badge doit figurer dans « Rapport établi par »).</td></tr>`}</table></div>`;
 };
 
 /* ---------- Discipline ---------- */
@@ -666,7 +739,10 @@ const ACT = {
   mnew() { ask("Entrée / sortie de stock", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article", o: AR.map(x => [x.id, x.nom + " (" + x.unite + ")"]) }, { k: "t", l: "Type", o: [["entree", "Entrée"], ["sortie", "Sortie"]] }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "j", l: "Date", t: "date", v: today() }, { k: "x", l: "Fournisseur (entrée) / bénéficiaire (sortie)" }, { k: "o", l: "Note" }], async v => { const { error } = await sb.from("mouvements_stock").insert({ magasin_id: +v.m, article_id: +v.a, type: v.t, quantite: +v.q, jour: v.j, tiers: v.x || null, note: v.o || null }); toast(error ? "Refusé : " + error.message : "Mouvement enregistré"); draw(); }); },
   bnew() { ask("Expression de besoin", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article du catalogue", o: [["", "— Autre (saisir ci-dessous) —"], ...AR.map(x => [x.id, x.nom + " (" + x.unite + ")"])] }, { k: "l", l: "Si autre : désignation" }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "u", l: "Urgence", o: [["normale", "Normale"], ["urgente", "Urgente"]] }, { k: "o", l: "Motif" }], async v => { if (!v.a && !v.l.trim()) return toast("Choisissez un article ou saisissez une désignation"); const { error } = await sb.from("besoins").insert({ magasin_id: +v.m, article_id: v.a ? +v.a : null, article_libre: v.a ? null : v.l.trim(), quantite: +v.q, urgence: v.u, motif: v.o || null }); toast(error ? "Refusé : " + error.message : "Besoin enregistré"); draw(); }); },
   bdec(b) { const w = b.dataset.w, id = +b.dataset.i, go = async c => { const { error } = await sb.rpc("besoin_decider", { p_id: id, p_action: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Besoin mis à jour"); draw(); }; if (w == "refuser") ask("Motif du refus", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
+  pfgo() { const a = $("#pf1").value, b = $("#pf2").value; if (!a || !b || a > b) return toast("Période invalide"); PF = { d: a, f: b, m: $("#pfm") ? $("#pfm").value : "" }; draw(); },
+  pfset(b) { const k = b.dataset.k, m = PF?.m || ""; PF = k == "c14" ? { d: dstr(-7), f: dstr(6), m } : k == "j30" ? { d: dstr(-30), f: dstr(0), m } : { d: today().slice(0, 8) + "01", f: ymd(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0))), m }; draw(); },
   vd(b) { VD = +b.dataset.i; draw(); },
+  async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: uid }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
   async volfiche(b) {
     const { data: v } = await sb.from("vols").select("*").eq("id", b.dataset.i).maybeSingle();
     if (!v) return toast("Vol introuvable");
@@ -735,7 +811,7 @@ const ACT = {
 /* ---------- Interface ---------- */
 async function draw() {
   const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
-  $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"></div>` + ok.map(p => `<button data-p="${p}" class="nb ${p == NAV ? "on" : ""}">${ic(p)}<span>${P[p][1]}</span></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E(RL[ME.role] || "")}</small><button class="nb" id="th">${ic("theme")}<span>Thème : ${TH.get() == "clair" ? "Clair" : "Bleu EPS"}</span></button><button class="nb" id="lo">${ic("out")}<span>Déconnexion</span></button></div>`;
+  $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"></div>` + ok.map(p => `<button data-p="${p}" class="nb ${p == NAV ? "on" : ""}">${ic(p)}<span>${P[p][1]}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E(RL[ME.role] || "")}</small><button class="nb" id="th">${ic("theme")}<span>Thème : ${TH.get() == "clair" ? "Clair" : "Bleu EPS"}</span></button><button class="nb" id="lo">${ic("out")}<span>Déconnexion</span></button></div>`;
   const hn = $("#ht"); if (hn) hn.textContent = P[NAV][1]; navClose();
   $("#th").onclick = () => { TH.set(TH.get() == "clair" ? "bleu" : "clair"); $("#th span").textContent = "Thème : " + (TH.get() == "clair" ? "Clair" : "Bleu EPS"); };
   $("#lo").onclick = async () => { await sb.auth.signOut(); location.reload(); };
@@ -749,7 +825,7 @@ async function shell() {
   $("#pg").addEventListener("click", e => { if (navOpen()) { e.preventDefault(); e.stopPropagation(); navClose(); } }, true);
   $("#mn").addEventListener("scroll", () => $("header").classList.toggle("st", $("#mn").scrollTop > 40), { passive: true });
   $("#bl").onclick = () => { if ((ACC[ME.role] || []).includes("alertes")) { NAV = "alertes"; draw(); } };
-  await Promise.all([loadAG(), loadST(), loadAL()]);
+  await Promise.all([loadAG(), loadST(), loadAL()]); setInterval(() => { loadST(); loadAL(); }, 60000);
   sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(); })
     .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
   draw();
