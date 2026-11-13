@@ -211,7 +211,7 @@ V.vols = async () => {
   const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
   return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button>` : ""}</div>`)
     + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
-<div class="card sc"><h2>Programme (${L.length} vols)</h2><table><tr><th>Heure</th><th>Vol</th><th>Sens</th><th>Appareil</th><th>Origine / destination</th><th>Source</th></tr>${L.map(v => `<tr><td><b>${hm(t(v))}</b></td><td>${E(v.numero)}</td><td>${v.sens == "A" ? "Arrivée" : "Départ"}</td><td>${E(v.type_appareil) || "—"}</td><td>${E(v.provenance_destination) || "—"}</td><td><span class="bd ${v.source == "prevision" ? "warn" : v.source == "manuel" ? "info" : "ok"}">${v.source == "prevision" ? "Prévu" : v.source == "manuel" ? "Saisi" : "Réel"}</span></td></tr>`).join("") || `<tr><td colspan="6" class="m">Aucun vol.</td></tr>`}</table></div>
+<div class="card sc"><h2>Programme (${L.length} vols)</h2><table><tr><th>Heure</th><th>Vol</th><th>Sens</th><th>Appareil</th><th>Origine / destination</th><th>Source</th></tr>${L.map(v => `<tr><td><b>${hm(t(v))}</b></td><td><span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span></td><td>${v.sens == "A" ? "Arrivée" : "Départ"}</td><td>${E(v.type_appareil) || "—"}</td><td>${E(v.provenance_destination) || "—"}</td><td><span class="bd ${v.source == "prevision" ? "warn" : v.source == "manuel" ? "info" : "ok"}">${v.source == "prevision" ? "Prévu" : v.source == "manuel" ? "Saisi" : "Réel"}</span></td></tr>`).join("") || `<tr><td colspan="6" class="m">Aucun vol.</td></tr>`}</table></div>
 <div class="m">« Prévu » = estimation d’après les mêmes jours des semaines précédentes ; remplacé par le vol réel dès qu’il est confirmé.</div>`;
 };
 
@@ -663,6 +663,31 @@ const ACT = {
   bnew() { ask("Expression de besoin", [{ k: "m", l: "Magasin", o: MG.map(x => [x.id, x.nom]) }, { k: "a", l: "Article du catalogue", o: [["", "— Autre (saisir ci-dessous) —"], ...AR.map(x => [x.id, x.nom + " (" + x.unite + ")"])] }, { k: "l", l: "Si autre : désignation" }, { k: "q", l: "Quantité", t: "number", r: 1 }, { k: "u", l: "Urgence", o: [["normale", "Normale"], ["urgente", "Urgente"]] }, { k: "o", l: "Motif" }], async v => { if (!v.a && !v.l.trim()) return toast("Choisissez un article ou saisissez une désignation"); const { error } = await sb.from("besoins").insert({ magasin_id: +v.m, article_id: v.a ? +v.a : null, article_libre: v.a ? null : v.l.trim(), quantite: +v.q, urgence: v.u, motif: v.o || null }); toast(error ? "Refusé : " + error.message : "Besoin enregistré"); draw(); }); },
   bdec(b) { const w = b.dataset.w, id = +b.dataset.i, go = async c => { const { error } = await sb.rpc("besoin_decider", { p_id: id, p_action: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Besoin mis à jour"); draw(); }; if (w == "refuser") ask("Motif du refus", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
   vd(b) { VD = +b.dataset.i; draw(); },
+  async volfiche(b) {
+    const { data: v } = await sb.from("vols").select("*").eq("id", b.dataset.i).maybeSingle();
+    if (!v) return toast("Vol introuvable");
+    const nv = String(v.numero || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");
+    const [{ data: rp }, { data: sb2 }] = await Promise.all([
+      sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").eq("vol_id", v.id).order("jour_vol", { ascending: false }),
+      sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").contains("numeros_vol", [nv]).is("vol_id", null).gte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() - 864e5))).lte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() + 864e5)))]);
+    const seen = new Set(), RL = {}, all = [...(rp || []), ...(sb2 || [])].filter(r => !seen.has(r.submission_id) && seen.add(r.submission_id));
+    const CL = { wheelchairs: "Wheelchairs", flight_ops: "Flight Ops", cargo: "Cargo", cabin: "Nettoyage cabine", pmr_shift: "PMR Shift" };
+    const d = new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue), A = v.sens == "A";
+    const AL = [[/MAURITANIA|MAI\b|MAURITANIE/, "MAURITANIA AIRLINES INTERNATIONAL (MAI)"], [/ROYAL|MAROC/, "ROYAL AIR MAROC"], [/TURK/, "TURKISH AIRLINES"], [/ALG/, "AIR ALGERIE"], [/FRANCE/, "AIR FRANCE"], [/ASKY/, "ASKY"], [/BINTER/, "BINTER CANARIAS"], [/TUNIS/, "TUNISAIR"], [/SENEGAL|SÉNÉGAL/, "AIR SENEGAL"]];
+    const cp = String(v.compagnie || "").toUpperCase(), air = (AL.find(([r]) => r.test(cp)) || [])[1] || "";
+    const mk = (base, o) => base + "?" + Object.entries(o).filter(([, x]) => x).map(([k, x]) => k + "=" + encodeURIComponent(x)).join("&");
+    const dt = (n) => ({ [n + "[month]"]: String(d.getUTCMonth() + 1).padStart(2, "0"), [n + "[day]"]: String(d.getUTCDate()).padStart(2, "0"), [n + "[year]"]: d.getUTCFullYear() });
+    const uw = mk("https://form.jotform.com/252936581138565", { airlinespan: air, flightNumber: v.numero, arrivalAndor: A ? "Arrival" : "Départure", ...dt("date19") });
+    const uo = mk("https://form.jotform.com/261972772336567", { airlinespan: air, numVol: v.numero, appareil: v.type_appareil, arriveeEtou: A ? "Arrivée" : "Départ", ...dt("date") });
+    const f = $("#mf");
+    f.innerHTML = `<h2>Vol ${E(v.numero)} · ${A ? "Arrivée" : "Départ"}</h2>
+<div class="m">${E(v.compagnie) || ""} ${E(v.provenance_destination) ? "· " + E(v.provenance_destination) : ""} ${E(v.type_appareil) ? "· " + E(v.type_appareil) : ""} ${E(v.immat) ? "· " + E(v.immat) : ""}<br>${dmy(d)} ${hm(d)}${v.statut ? " · " + E(v.statut) : ""}</div>
+<div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : vol, date, sens${air ? ", compagnie" : ""}. Les autres champs restent à compléter.</div></div>
+<div class="card sc"><b>Rapports liés (${all.length})</b><table><tr><th>Type</th><th>Date</th><th>PDF</th></tr>${all.map(r => `<tr><td>${E(CL[r.categorie] || r.categorie)}</td><td>${dmy(r.jour_vol)}</td><td><a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">Ouvrir le PDF</a></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucun rapport reçu pour ce vol.</td></tr>`}</table></div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
+    f.onsubmit = e => e.preventDefault();
+    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
+  },
   df(b) { DF[b.dataset.k] = b.dataset.v; draw(); },
   ddoc(b) { const d = DL.find(x => x.id == b.dataset.i), w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(docHTML(d)); w.document.close(); },
   dnew(b) {
