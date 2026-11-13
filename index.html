@@ -500,9 +500,9 @@ ${r.verifie_nom ? `<div class="m">Vérifié par ${E(r.verifie_nom)} le ${dt(r.ve
 async function irEdit(id) {
   const r = await irFull(id); if (!r) return; if (!irEd(r)) return toast("Ce rapport n’est plus modifiable"); IRP = (r.photos || []).slice();
   const f = (k, l, v, t = "text") => `<div><label>${l}</label><input name="${k}" type="${t}" value="${E(v || "")}"></div>`;
-  $("#mf").innerHTML = `<h2>Rapport ${E(irNum(r))}</h2>${f("objet", "Subject", r.objet)}${f("site", "Site (INC)", r.site)}${f("systeme", "System", r.systeme)}${f("date_incident", "Date", r.date_incident, "date")}${f("heure_incident", "Time (ex. 14:00 LT)", r.heure_incident)}<div><label>Priority</label><select name="priorite">${["HIGH", "MEDIUM", "LOW"].map(x => `<option ${r.priorite == x ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+  $("#mf").innerHTML = `<h2>Rapport ${E(irNum(r))}</h2><div class="card" style="background:var(--pl);display:grid;gap:8px"><b>✨ Rédiger avec l’IA</b><div class="m">Dictez ou écrivez les faits dans votre langue (français, anglais, arabe…). L’IA rédige les sections A à G en anglais, dans le style du modèle EPS / AFROPORT. Vous relisez et corrigez avant d’enregistrer.</div><textarea id="irai" rows="5" placeholder="Ex. : Le 26 août vers 12h47, pendant la ronde, le superviseur principal a trouvé la porte VIP grande ouverte, sans personne, et les joints du bas des portes vitrées manquants…"></textarea><div class="row" style="justify-content:flex-start"><button type="button" class="btn p" data-a="irai">✨ Rédiger le rapport</button></div><div id="iraw" class="m"></div></div>${f("objet", "Subject", r.objet)}${f("site", "Site (INC)", r.site)}${f("systeme", "System", r.systeme)}${f("date_incident", "Date", r.date_incident, "date")}${f("heure_incident", "Time (ex. 14:00 LT)", r.heure_incident)}<div><label>Priority</label><select name="priorite">${["HIGH", "MEDIUM", "LOW"].map(x => `<option ${r.priorite == x ? "selected" : ""}>${x}</option>`).join("")}</select></div>
 ${IRSEC.map(([k, t, h]) => `<div><label>${t}</label><textarea name="${k}" rows="6">${E(r[k] || "")}</textarea><div class="m">${h}</div></div>`).join("")}
-<div><label>H: Photo (6 maximum, réduites automatiquement)</label><input id="irf" type="file" accept="image/*" multiple><div id="irth" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>${f("prepare_nom", "Prepared by — nom", r.prepare_nom)}${f("prepare_fonction", "Prepared by — fonction", r.prepare_fonction)}
+<div><label>H: Photo (réduites automatiquement, sans limite de nombre)</label><input id="irf" type="file" accept="image/*" multiple><div id="irth" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>${f("prepare_nom", "Prepared by — nom", r.prepare_nom)}${f("prepare_fonction", "Prepared by — fonction", r.prepare_fonction)}
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-a="iropen" data-i="${id}">Annuler</button><button class="btn p">Enregistrer</button></div>`;
   irThumbs(); $("#md").classList.add("on");
   $("#mf").onsubmit = async e => { e.preventDefault(); const v = Object.fromEntries(new FormData($("#mf"))); delete v.undefined; const { error } = await sb.from("incident_reports").update({ objet: v.objet.trim(), site: v.site.trim(), systeme: v.systeme.trim(), date_incident: v.date_incident || null, heure_incident: v.heure_incident.trim() || null, priorite: v.priorite, sec_a: v.sec_a, sec_b: v.sec_b, sec_c: v.sec_c, sec_d: v.sec_d, sec_e: v.sec_e, sec_f: v.sec_f, sec_g: v.sec_g, photos: IRP, prepare_nom: v.prepare_nom.trim(), prepare_fonction: v.prepare_fonction.trim() }).eq("id", id); toast(error ? "Refusé : " + error.message : "Rapport enregistré"); if (!error) { if (NAV == "ir") await draw(); irOpen(id); } };
@@ -554,7 +554,27 @@ async function setSt(mat, v) {
   if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
 }
 const ACT = {
-  async irnew() { ask("Nouveau rapport d’incident", [{ k: "ob", l: "Subject (objet)", r: 1 }], v => irCreate({ objet: v.ob.trim() })); },
+  async irnew() { await irCreate({ objet: "(to be completed)" }); },
+  async irai(b) {
+    const f = $("#mf"), g = n => (f.querySelector(`[name=${n}]`) || {}).value || "", t = ($("#irai") || {}).value.trim(); vxStop();
+    const ctx = {}; ["objet", "site", "systeme", "date_incident", "heure_incident", "sec_a", "sec_b", "sec_c", "sec_d", "sec_e", "sec_f", "sec_g"].forEach(n => { const v = g(n).trim(); if (v && v != "(to be completed)") ctx[n] = v; });
+    if (!t && !Object.keys(ctx).some(k => /^sec_|objet/.test(k))) return toast("Dictez ou écrivez d’abord les faits");
+    b.disabled = true; const old = b.textContent; b.textContent = "Rédaction en cours…"; $("#iraw").textContent = "";
+    try {
+      const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "incident", maintenant: nowL().replace("T", " ") + " LT", contexte: ctx } }); if (error) throw error;
+      if (data.erreur == "ia_non_configuree") $("#iraw").textContent = "L’IA n’est pas encore activée (clé à configurer par l’administrateur).";
+      else if (data.erreur) $("#iraw").textContent = "L’IA n’a pas pu rédiger (" + data.erreur + "). Réessayez.";
+      else {
+        const c = data.champs || {}; ["objet", "date_incident", "heure_incident", "sec_a", "sec_b", "sec_c", "sec_d", "sec_e", "sec_f", "sec_g"].forEach(n => { const el = f.querySelector(`[name=${n}]`); if (el && c[n]) el.value = c[n]; });
+        if (["HIGH", "MEDIUM", "LOW"].includes(c.priorite)) f.querySelector("[name=priorite]").value = c.priorite;
+        f.querySelectorAll(".iav").forEach(x => x.remove());
+        (c.a_verifier || []).forEach(n => { const el = f.querySelector(`[name=${n}]`); if (el) { const d = document.createElement("div"); d.className = "m iav"; d.style.cssText = "color:var(--red);font-weight:700"; d.textContent = "Proposition de l’IA : à relire et valider."; el.parentNode.appendChild(d); } });
+        $("#iraw").innerHTML = (c.manquants || []).length ? "À compléter ou vérifier : <b>" + (c.manquants || []).map(E).join(", ") + "</b>." : "Rapport rédigé : relisez chaque section puis enregistrez.";
+        toast("Rapport rédigé : relisez puis enregistrez");
+      }
+    } catch (x) { $("#iraw").textContent = "IA indisponible : " + (x.message || x); }
+    b.disabled = false; b.textContent = old;
+  },
   async iro(b) { irOpen(+b.dataset.i); },
   iropen(b) { irOpen(+b.dataset.i); },
   iredit(b) { irEdit(+b.dataset.i); },
