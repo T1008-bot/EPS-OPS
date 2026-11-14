@@ -192,7 +192,7 @@ function chkItems(v) {
   const t = new Date(v.heure_estimee || v.heure_prevue).getTime(), A = v.sens == "A", m = x => new Date(t - x * 60000), o = [];
   if (A) {
     o.push({ k: "n_zone", sv: "N", d: m(60), l: "Inspecter et nettoyer la zone arrivée" }, { k: "n_conv", sv: "N", d: m(30), l: "Convoquer l’équipe et préparer le matériel de nettoyage cabine" },
-      { k: "m_park", sv: "M", d: m(90), l: "Vérifier la position de parking et la disponibilité du matériel de rampe" }, { k: "m_psm", sv: "M", d: m(30), l: "Réception, lecture et transmission du PSM et du LDM (au plus tard 30 min avant l’arrivée)", un: 1 },
+      { k: "m_park", sv: "M", d: m(90), l: "Préparer la position de parking : cales et cônes en place" }, { k: "m_fod", sv: "M", d: m(75), l: "FOD check de la position de parking" }, { k: "m_psm", sv: "M", d: m(30), l: "Réception, lecture et transmission du PSM et du LDM (au plus tard 30 min avant l’arrivée)", un: 1 },
       { k: "m_40", sv: "M", d: m(40), l: "2e rappel : parking vérifié, PSM/LDM reçus et transmis ?" }, { k: "m_20", sv: "M", d: m(20), l: "Préparer l’équipe et la mettre en position" },
       { k: "m_10", sv: "M", d: m(10), l: "Confirmer : équipe en position (+ équipe Wheelchair si PSM non nul)" });
   } else o.push({ k: "n_dep", sv: "N", d: m(200), l: "Vérifier, inspecter et nettoyer si nécessaire les zones de départ (avant l’ouverture des comptoirs)" });
@@ -390,18 +390,48 @@ const moisC = (ref = new Date()) => { const y = ref.getUTCFullYear(), m = ref.ge
 const dstr = o => ymd(Date.now() + o * 864e5), WD = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const TS = { a_faire: "À faire", en_cours: "En cours", fait: "Fait", annule: "Annulé" }, TB = { a_faire: "warn", en_cours: "info", fait: "ok", annule: "bad" };
 const TMG = ["direction", "responsable_ops", "coordinateur_ops"];
+let TSV = "";
+const SVL2 = { "": "Tous", N: "Nettoyage", M: "Manutention" };
 V.tach = async () => {
-  const { data, error } = await sb.from("taches").select("*, agents(nom)").gte("jour", dstr(-1)).lte("jour", dstr(6)).order("heure", { nullsFirst: false }).order("created_at");
-  if (error) throw error; TK = data || [];
-  const sel = dstr(TD), cnt = {}; TK.forEach(t => { if (t.statut == "a_faire" || t.statut == "en_cours") cnt[t.jour] = (cnt[t.jour] || 0) + 1; });
+  const d0 = dstr(-1), d1 = dstr(6), sel = dstr(TD), s0 = new Date(sel + "T08:00:00Z"), s1 = new Date(s0.getTime() + 24 * H);
+  const [tk, vl] = await Promise.all([
+    sb.from("taches").select("*, agents(nom)").gte("jour", d0).lte("jour", d1).order("heure", { nullsFirst: false }).order("created_at"),
+    sb.from("vols").select("id,numero,sens,compagnie,immat,provenance_destination,heure_prevue,heure_estimee,heure_reelle,statut,source").gte("heure_prevue", s0.toISOString()).lt("heure_prevue", s1.toISOString()).order("heure_prevue")]);
+  if (tk.error) throw tk.error; TK = tk.data || [];
+  const VL = (vl.data || []).filter(v => v.statut != "annule" && v.source != "prevision"), ids = VL.map(v => v.id);
+  const [ck, rp] = ids.length ? await Promise.all([sb.from("alerte_checks").select("*").in("vol_id", ids), sb.from("rapports_staff").select("vol_id,categorie,pdf_url,recu_le").in("vol_id", ids)]) : [{ data: [] }, { data: [] }];
+  const CK = {}; (ck.data || []).forEach(c => CK[c.vol_id + "|" + c.item] = c);
+  const RP = {}; (rp.data || []).forEach(r => (RP[r.vol_id + "|" + r.categorie] = RP[r.vol_id + "|" + r.categorie] || r));
+  const now = Date.now(), mine = SVN.includes(ME.role) ? "N" : SVM.includes(ME.role) ? "M" : TSV, cnt = {};
+  TK.forEach(t => { if ((t.statut == "a_faire" || t.statut == "en_cours") && !String(t.modele || "").startsWith("vol_fo:")) cnt[t.jour] = (cnt[t.jour] || 0) + 1; });
   const dys = [-1, 0, 1, 2, 3, 4, 5, 6].map(o => { const d = dstr(o); return `<button class="dy ${o == TD ? "on" : ""}" data-a="tday" data-i="${o}">${o == 0 ? "Auj." : WD[new Date(d + "T00:00:00Z").getUTCDay()]}<b>${d.slice(8)}</b>${cnt[d] ? `<i>${cnt[d]}</i>` : ""}</button>`; }).join("");
   const ord = { en_cours: 0, a_faire: 1, fait: 2, annule: 3 };
-  const L = TK.filter(t => t.jour == sel && (!TFL || t.statut == TFL)).sort((a, b) => ord[a.statut] - ord[b.statut] || (a.priorite == "haute" ? -1 : 0) - (b.priorite == "haute" ? -1 : 0));
+  const svOf = t => /nettoy/i.test(t.service || t.cible || "") ? "N" : /manut|bagage/i.test(t.service || t.cible || "") ? "M" : "";
+  const L = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:") && (!TFL || t.statut == TFL) && (!mine || !svOf(t) || svOf(t) == mine)).sort((a, b) => ord[a.statut] - ord[b.statut] || String(a.heure || "99").localeCompare(String(b.heure || "99")));
   const fb = (v, l) => `<button class="btn ${TFL == v ? "p" : ""}" data-a="tfl" data-v="${v}">${l}</button>`;
-  const all = TK.filter(t => t.jour == sel), fait = all.filter(t => t.statut == "fait").length;
-  return head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} faites`, `<button class="btn w" data-a="tnew">+ Tâche</button>`)
-    + `<div class="dys">${dys}</div><div class="card row" style="justify-content:flex-start;gap:6px">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}</div>`
-    + (L.map(t => `<div class="card"><div class="row"><b>${E(t.titre)}</b><div><span class="bd ${t.priorite == "haute" ? "bad" : "info"}" ${t.priorite == "haute" ? "" : 'style="display:none"'}>Priorité</span> <span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></div></div>${t.description ? `<div style="margin-top:4px">${E(t.description)}</div>` : ""}<div class="m" style="margin-top:4px">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}créée par ${E(t.cree_nom)}${t.maj_nom ? " · " + TS[t.statut].toLowerCase() + " par " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button><button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>`}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`).join("") || `<div class="card m">Aucune tâche ce jour-là.</div>`);
+  const sb2 = (v, l) => `<button class="btn ${TSV == v ? "p" : ""}" data-a="tsv" data-v="${v}">${l}</button>`;
+  const all = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:")), fait = all.filter(t => t.statut == "fait").length;
+  const row = t => { const ec = t.echeance ? new Date(t.echeance).getTime() : null, late = t.statut != "fait" && t.statut != "annule" && ec && ec < now;
+    return `<div class="tkr"><div class="tkh"><b>${E(t.titre)}</b><span>${late ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div>${t.description ? `<div class="m">${E(t.description)}</div>` : ""}<div class="m">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${ec ? "échéance " + hm(new Date(ec)) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}${t.fait_le ? "fait " + hm(new Date(t.fait_le)) + " · " : ""}par ${E(t.cree_nom)}${t.maj_nom ? " · " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px">${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button><button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>`}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`; };
+  const flight = v => {
+    const A = v.sens == "A", ref = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue), it = [];
+    chkItems(v).forEach(i => { if (!mine || mine == i.sv) { const dn = CK[v.id + "|" + i.k]; it.push({ t: i.d, sv: i.sv, l: i.l, k: i.k, un: i.un, done: dn, late: !dn && i.d.getTime() < now, btn: 1 }); } });
+    if (!mine || mine == "M") {
+      const fo = RP[v.id + "|flight_ops"], wc = RP[v.id + "|wheelchairs"];
+      it.push({ t: new Date(ref.getTime() + 15 * 60000), sv: "M", l: "Rapport de vol (Flight Ops) — au plus tard 15 min après le vol", rep: fo });
+      it.push({ t: new Date(ref.getTime() + 10 * 60000), sv: "M", l: "Rapport Wheelchair — 10 min après le vol (si assistance PMR)", rep: wc, opt: 1 });
+    }
+    it.sort((a, b) => a.t - b.t);
+    const nb = it.filter(x => !x.opt), ok = nb.filter(x => x.done || x.rep).length;
+    return `<div class="card"><div class="row"><div><b>${E(v.numero)}</b> <span class="bd ${A ? "info" : "warn"}">${A ? "Arrivée" : "Départ"}</span> <span class="m">${A ? "ETA" : "ETD"} ${hm(new Date(v.heure_estimee || v.heure_prevue))}${v.heure_reelle ? " · réel " + hm(new Date(v.heure_reelle)) : ""}${v.immat ? " · " + E(v.immat) : ""}${v.provenance_destination ? " · " + (A ? "de " : "vers ") + E(v.provenance_destination) : ""}</span></div><span class="bd ${ok == nb.length && nb.length ? "ok" : "info"}">${ok}/${nb.length}</span></div>
+<div class="sc"><table class="ft"><tr><th>Heure</th><th>Équipe</th><th>Action / alerte</th><th>État</th></tr>${it.map(x => { const st = x.btn ? (x.done ? `<button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-u="1">${x.done.etat == "indisponible" ? "Indisponible (annuler)" : "✓ Fait " + hm(new Date(x.done.fait_le))}</button>` : `<button class="btn ${x.late ? "w" : "p"}" data-a="chk" data-v="${v.id}" data-k="${x.k}">${x.late ? "En retard — valider" : "Valider"}</button>${x.un ? ` <button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-e="indisponible">Indisponible</button>` : ""}`) : x.rep ? `<span class="bd ok">Reçu ${hm(new Date(x.rep.recu_le))}</span> ${x.rep.pdf_url ? `<a class="lk" href="${E(x.rep.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}` : x.opt ? `<span class="m">non reçu (à vérifier si PMR)</span>` : x.t.getTime() < now ? `<span class="bd bad">Non reçu — en retard</span>` : `<span class="bd info">À venir</span>`; return `<tr><td><b>${hm(x.t)}</b></td><td><span class="bd ${x.sv == "N" ? "info" : "warn"}">${x.sv == "N" ? "Nettoyage" : "Manutention"}</span></td><td>${E(x.l)}</td><td>${st}</td></tr>`; }).join("")}</table></div></div>`;
+  };
+  return head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} tâches faites · ${VL.length} vol(s)`, `<button class="btn w" data-a="tnew">+ Tâche</button>`)
+    + `<style>.tkr{padding:10px 0;border-top:1px solid var(--b)}.tkr:first-of-type{border-top:0}.tkh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ft td,.ft th{vertical-align:top}</style>`
+    + `<div class="dys">${dys}</div><div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}${SVN.includes(ME.role) || SVM.includes(ME.role) ? "" : " | " + sb2("", "Tous services") + sb2("N", "Nettoyage") + sb2("M", "Manutention")}</div>`
+    + `<div class="card"><h2>Tâches du shift (${L.length})</h2>${L.map(row).join("") || `<div class="m">Aucune tâche ce jour-là.</div>`}</div>`
+    + `<h2 style="margin:14px 2px 6px">Par vol — tâches et alertes selon l’approche / le décollage (${VL.length})</h2>`
+    + (VL.map(flight).join("") || `<div class="card m">Aucun vol enregistré sur ce shift (08h00 → 08h00).</div>`);
 };
 
 /* ---------- Help Desk / Signalements ---------- */
@@ -746,6 +776,7 @@ const ACT = {
   pfgo() { const a = $("#pf1").value, b = $("#pf2").value; if (!a || !b || a > b) return toast("Période invalide"); PF = { d: a, f: b, m: $("#pfm") ? $("#pfm").value : "" }; draw(); },
   pfset(b) { const k = b.dataset.k, m = PF?.m || ""; PF = k == "c14" ? { d: dstr(-7), f: dstr(6), m } : k == "j30" ? { d: dstr(-30), f: dstr(0), m } : k == "j0" ? { d: dstr(0), f: dstr(0), m } : k == "j3" ? { d: dstr(-2), f: dstr(0), m } : k == "j7" ? { d: dstr(-6), f: dstr(0), m } : k == "mc" ? { ...moisC(), m } : { d: today().slice(0, 8) + "01", f: ymd(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0))), m }; draw(); },
   vd(b) { VD = +b.dataset.i; draw(); },
+  tsv(b) { TSV = b.dataset.v; draw(); },
   async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: uid, etat: b.dataset.e || "fait" }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
   async volfiche(b) {
     const { data: v } = await sb.from("vols").select("*").eq("id", b.dataset.i).maybeSingle();
