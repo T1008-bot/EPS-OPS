@@ -231,8 +231,46 @@ const stt = a => ST[a.matricule]?.statut || (onDuty(a) ? "p" : "h");
 
 /* ---------- Vues ---------- */
 const V = {};
+/* ---------- Rapport du shift Ops (manutention) pré-rempli ---------- */
+let SHO = 0, SHRURL = "";
+const SHRR = ["superviseur_principal", "superviseur_bagages", "responsable_ops", "coordinateur_ops", "direction"];
+async function shiftRep() {
+  if (!SHRR.includes(ME.role)) return "";
+  const s = new Date(shiftStart().getTime() - SHO * 24 * H), en = new Date(s.getTime() + 24 * H), g = garde(s), iso = d => d.toISOString(), fq = d => d.toISOString().slice(0, 19).replace("T", " ");
+  const [rv, rm, rr, rw] = await Promise.all([
+    sb.from("vols").select("id,numero,sens,heure_prevue,heure_estimee,heure_reelle,statut,source").gte("heure_prevue", iso(s)).lt("heure_prevue", iso(en)).order("heure_prevue"),
+    sb.from("messages_vol").select("type,numero,jour,vol_id,part,recu_le,parse").in("jour", [ymd(s), ymd(en)]),
+    sb.from("rapports_detail").select("*").eq("service", "bagages").gte("cree_le", fq(new Date(s.getTime() - 3 * H))).lt("cree_le", fq(new Date(en.getTime() + 3 * H))).order("cree_le", { ascending: false }).limit(10),
+    sb.from("rapports_staff").select("numeros_vol,jour_vol,recu_le").eq("categorie", "wheelchairs").gte("recu_le", iso(s)).lt("recu_le", iso(en))]);
+  const sum = (a, f) => a.reduce((t, p) => t + (+p[f] || 0), 0), wnum = new Set((rw.data || []).flatMap(r => (r.numeros_vol || []).map(nvol)));
+  const F = (rv.data || []).filter(v => v.statut != "annule").map(v => {
+    const L = msgOf(v, rm.data || []), pick = k => { const by = {}; L.filter(x => x.type == k && !(x.parse && x.parse.aucun)).sort((a, b) => new Date(a.recu_le) - new Date(b.recu_le)).forEach(x => by[x.part || "1"] = x.parse || {}); return Object.values(by); }, none = k => L.some(x => x.type == k && x.parse && x.parse.aucun);
+    const ldm = pick("LDM"), psm = pick("PSM"), cpm = pick("CPM"), due = mdue(v);
+    const bag = ldm.length ? sum(ldm, "bagages_pieces") : sum(cpm, "bagages_pieces"), kg = ldm.length ? sum(ldm, "bagages_kg") : sum(cpm, "bagages_kg");
+    const miss = []; if (due) { if (!ldm.length && !none("LDM")) miss.push(cpm.length ? "LDM (CPM utilisé pour les bagages)" : "LDM"); if (!psm.length && !none("PSM")) miss.push("PSM"); if (psm.length && sum(psm, "pmr") > 0 && !wnum.has(nvol(v.numero))) miss.push("rapport Wheelchair"); }
+    return { v, A: v.sens == "A", pax: sum(ldm, "pax"), bag, kg, pmr: sum(psm, "pmr"), miss, due };
+  });
+  const tot = a => ({ n: a.length, pax: sum(a, "pax"), pmr: sum(a, "pmr"), bag: sum(a, "bag"), kg: sum(a, "kg") }), TA = tot(F.filter(x => x.A)), TD = tot(F.filter(x => !x.A));
+  const rb = (rr.data || [])[0], mat = n => (AG.find(a => a.nom == String(n || "").trim()) || {}).matricule || "", f1 = x => String(x || "").split(/[,;\/]/)[0].trim();
+  const pr = rb ? rb.present : null, eff = pr != null ? pr : team("Manutention " + g).c.p, ren = rb ? rb.renforts : null, sp = rb && rb.sup_principal || "", su = f1(rb && rb.superviseurs), ch = f1(rb && rb.chefs);
+  const o = { "de[day]": p2(s.getUTCDate()), "de[month]": p2(s.getUTCMonth() + 1), "de[year]": s.getUTCFullYear(), "au[day]": p2(en.getUTCDate()), "au[month]": p2(en.getUTCMonth() + 1), "au[year]": en.getUTCFullYear(), "a[hourSelect]": "08", "a[minuteSelect]": "00", "a31[hourSelect]": "08", "a31[minuteSelect]": "00",
+    superviseurPrincipal: sp, "superviseur18[first]": su, "superviseur18[last]": mat(su), "chefDequipe[first]": ch, "chefDequipe[last]": mat(ch), faitPar: ME.nom,
+    "situationDu[0][0]": "Equipe M" + g, "situationDu[0][1]": eff ? p2(eff) : "", "situationDu[0][5]": +ren ? (+ren == 1 ? "1" : p2(ren)) : "" };
+  [["0", TA], ["2", TD]].forEach(([r, t]) => { o[`operationsEffectuees[${r}][6]`] = String(t.n); o[`operationsEffectuees[${r}][7]`] = String(t.pax); o[`operationsEffectuees[${r}][4]`] = String(t.pmr); o[`operationsEffectuees[${r}][8]`] = String(t.bag); o[`operationsEffectuees[${r}][9]`] = String(t.kg); });
+  SHRURL = "https://form.jotform.com/250364290148051?" + Object.entries(o).filter(([, x]) => x !== "" && x != null).map(([k, x]) => k + "=" + encodeURIComponent(x)).join("&");
+  const bad = F.filter(x => x.miss.length), late = F.filter(x => !x.due).length;
+  return `<div class="card"><div class="row"><h2>Rapport du shift Ops (manutention)</h2><button class="btn" data-a="shrsw">${SHO ? "← Shift en cours" : "Shift précédent"}</button></div>
+<div class="m">Shift du ${dmy(s)} ${hm(s)} au ${dmy(en)} ${hm(en)} · équipe M${g} · données consolidées depuis les vols, LDM/CPM, PSM et rapports Wheelchairs.</div>
+<table style="margin-top:8px"><tr><th></th><th>Vols</th><th>Pax</th><th>PMR</th><th>Bagages</th><th>Tonnage (kg)</th></tr>${[["Arrivées", TA], ["Départs", TD]].map(([l, t]) => `<tr><td><b>${l}</b></td><td>${t.n}</td><td>${t.pax}</td><td>${t.pmr}</td><td>${t.bag}</td><td>${t.kg}</td></tr>`).join("")}<tr><td><b>Total</b></td><td>${TA.n + TD.n}</td><td>${TA.pax + TD.pax}</td><td>${TA.pmr + TD.pmr}</td><td>${TA.bag + TD.bag}</td><td>${TA.kg + TD.kg}</td></tr></table>
+<div class="li"><div><div class="m">Superviseur principal</div><b>${E(sp) || "—"}</b></div><div><div class="m">Superviseur</div><b>${E(su) || "—"}</b></div><div><div class="m">Chef d’équipe</div><b>${E(ch) || "—"}</b></div><div><div class="m">Équipe · effectif · renforts</div><b>M${g} · ${eff || "?"} · ${+ren || 0}</b></div></div>
+${rb ? "" : `<div class="m"><span class="bd warn">Aucun rapport de situation Manutention reçu pour ce shift : effectif, chef et superviseurs à compléter.</span></div>`}
+${bad.length ? `<div style="margin-top:10px"><span class="bd bad">${bad.length} vol(s) avec information manquante</span><table style="margin-top:6px"><tr><th>Vol</th><th>Sens</th><th>Heure</th><th>Manque</th></tr>${bad.map(x => `<tr><td><a class="lk" data-a="volfiche" data-i="${E(x.v.id)}">${E(x.v.numero)}</a></td><td>${x.A ? "Arr." : "Dép."}</td><td>${hm(new Date(x.v.heure_estimee || x.v.heure_prevue))}</td><td>${x.miss.map(E).join(", ")}</td></tr>`).join("")}</table><div class="m">Ouvrez la fiche du vol pour coller ou confirmer le message. Les totaux ci-dessus seront alors mis à jour ; ils restent modifiables dans le formulaire.</div></div>` : `<div style="margin-top:8px"><span class="bd ok">Aucune information manquante</span></div>`}
+${late ? `<div class="m">${late} vol(s) pas encore échu(s) (messages non encore attendus).</div>` : ""}
+<div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ${bad.length ? "w" : "p"}" data-a="shrop">${bad.length ? "Ouvrir quand même le rapport pré-rempli" : "Ouvrir le rapport pré-rempli"}</button></div></div>`;
+}
+
 V.shift = async () => {
-  await loadRA(); const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
+  await loadRA(); const SR = await shiftRep(); const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
   const since = new Date(s.getTime() - 3 * H).toISOString().slice(0, 19).replace("T", " ");
   const { data: rp } = await sb.from("rapports_detail").select("*").gte("cree_le", since).order("cree_le", { ascending: false }).limit(60);
   const last = (sv, gr) => (rp || []).find(r => r.service == sv && gnum(r.groupe) == String(gr).replace(/\D/g, ""));
@@ -246,6 +284,7 @@ V.shift = async () => {
   return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
 <div class="card"><h2>Shift en cours</h2><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.map(LB).join(" + ").replace(/Nettoyage · /g, "")} + M${g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${h4 ? "(en service)" : "(hors service)"}</div></div></div>
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
+${SR}
 ${RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("")}<div class="g">${teams.map(card).join("")}${(() => { const t = team("Manutention " + g), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; return `<div class="card"><div class="row"><h2>Manutention · M${g}</h2><span class="bd info">24 h</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${rb ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(rb.cree_le))} : ${rb.present ?? "?"}${rb.effectif ? "/" + rb.effectif : ""} présents · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; })()}</div>
 <div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>
 ${ME.role == "responsable_ops" ? `<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>` : ""}`;
@@ -988,6 +1027,8 @@ ${acard}${mcard}
     const r = data.resultats || [], ok = r.filter(x => x.ok), dbl = r.filter(x => x.doublon), bad = r.filter(x => x.erreur);
     toast(`${ok.length} message(s) ajouté(s)${ok.length ? " : " + ok.map(x => x.type + " " + x.numero + (x.vol_id ? "" : " (vol non trouvé)")).join(", ") : ""}${dbl.length ? " · " + dbl.length + " déjà présent(s)" : ""}${bad.length ? " · " + bad.length + " non reconnu(s)" : ""}`);
     await draw(); if (vid) ACT.volfiche({ dataset: { i: vid } }); }); },
+  shrop() { if (!SHRURL) return; window.open(SHRURL, "_blank"); },
+  async shrsw() { SHO = SHO ? 0 : 1; await draw(); },
   async msgnone(b) { const { data: v } = await sb.from("vols").select("id,numero,heure_prevue").eq("id", b.dataset.i).maybeSingle(); if (!v) return;
     const k = b.dataset.k, { error } = await sb.from("messages_vol").insert({ type: k, numero: v.numero, jour: ymd(v.heure_prevue), vol_id: v.id, source: "manuel", brut: "(aucun " + k + " pour ce vol — confirmé par " + ME.nom + ")", parse: { aucun: true }, par: ME.nom });
     toast(error ? "Refusé : " + error.message : "Noté : aucun " + k); await draw(); ACT.volfiche({ dataset: { i: v.id } }); },
