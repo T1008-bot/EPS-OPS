@@ -178,13 +178,14 @@ function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
 let RA = [];
+const gnum = x => { const m = String(x || "").trim().match(/^(?:[ÉéEe]quipe|Groupe|G)?\s*[MN]?\s*(\d)\s*$/i); return m ? m[1] : ""; };
 async function loadRA() {
   const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
   const { data } = await sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " "));
-  const rows = (data || []).filter(r => r.groupe == "Groupe " + g), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
+  const rows = (data || []).filter(r => gnum(r.groupe) == String(g)), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
   RA = [];
   [["nettoyage", "Nettoyage N" + g], ["bagages", "Manutention M" + g]].forEach(([sv, nom]) => {
-    if (now >= t0 + 2 * H && !has(sv, -3, 5)) RA.push(`⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe`);
+    if (now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push(`⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe`);
     if (now >= t0 + 9 * H && !has(sv, 8, 16)) RA.push(now >= t0 + 9.5 * H ? `⚠ Rapport de situation ${nom} (17h–17h30) non reçu — en RETARD, 2e rappel : relancer le chef d’équipe` : `Rappel : rapport de situation ${nom} à remettre entre 17h00 et 17h30 (même sans renfort)`);
   });
   const nj = Object.entries(ST).filter(([m, r]) => r.statut == "nj" && AG.some(a => a.matricule == m && onDuty(a))).length;
@@ -225,7 +226,7 @@ V.shift = async () => {
   await loadRA(); const s = shiftStart(), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
   const since = new Date(s.getTime() - 3 * H).toISOString().slice(0, 19).replace("T", " ");
   const { data: rp } = await sb.from("rapports_detail").select("*").gte("cree_le", since).order("cree_le", { ascending: false }).limit(60);
-  const last = (sv, gr) => (rp || []).find(r => r.service == sv && r.groupe == gr);
+  const last = (sv, gr) => (rp || []).find(r => r.service == sv && gnum(r.groupe) == String(gr).replace(/\D/g, ""));
   const rn = last("nettoyage", "Groupe " + g), rb = last("bagages", "Groupe " + g), ref = rn || rb;
   const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])], LB = e => e == "Équipe 4" ? "Nettoyage · N4" : "Nettoyage · N" + e.slice(-1);
   const card = e => {
