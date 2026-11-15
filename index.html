@@ -72,6 +72,13 @@ header .hb{z-index:1}
 main{padding:12px 16px calc(24px + env(safe-area-inset-bottom));gap:12px}h1{font-size:20px}
 input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-height:40px}
 [data-a]{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.08)}.lk[data-a]{display:inline-block;padding:8px 6px;margin:-8px -6px}.chp{display:inline-block;padding:6px 8px}
+.vt tr.vr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center}
+.vt tr.vr td{display:block;padding:0;text-align:left;white-space:normal!important}.vt tr.vr td::before{content:none}
+.vt td:nth-child(2){grid-column:1;grid-row:1;font-size:18px}.vt td:nth-child(6){grid-column:2;grid-row:1;text-align:right!important}
+.vt td:nth-child(1){grid-column:1/3;grid-row:2;font-size:15px}.vt td:nth-child(5){grid-column:1/3;grid-row:3;color:var(--m)}
+.vt td:nth-child(3){grid-column:1;grid-row:4;font-size:12px;color:var(--m)}.vt td:nth-child(4){grid-column:2;grid-row:4;font-size:12px;color:var(--m);text-align:right!important}
+.vt td:nth-child(7){grid-column:1/3;grid-row:5;padding-top:6px!important}
+#ptr{position:fixed;left:0;right:0;top:calc(52px + env(safe-area-inset-top));text-align:center;font-size:12px;color:var(--m);z-index:40;pointer-events:none;height:0;overflow:visible;opacity:0;transition:opacity .15s}#ptr b{display:inline-block;background:var(--s);border:1px solid var(--b);border-radius:20px;padding:6px 14px;box-shadow:var(--sh)}
 .sc{overflow:visible}.card.sc{background:none;border:0;box-shadow:none;padding:0}
 .sc table,.sc tbody{display:block}.sc tr:has(th){display:none}
 .sc tr{display:block;background:var(--s);border:1px solid var(--b);border-radius:16px;padding:8px 16px;margin:8px 0;box-shadow:var(--sh)}
@@ -313,7 +320,9 @@ let MSGS = {};
 const hh = d => hm(d).replace("h", ":");
 const msgOf = (v, ms) => (ms || []).filter(m => m.vol_id == v.id || (nvol(m.numero) == nvol(v.numero) && m.jour == ymd(v.heure_prevue)));
 const mdue = v => v.source != "prevision" && v.statut != "annule" && Date.now() > new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue).getTime() + (v.sens == "D" ? 20 * 60000 : 0);
-const mchips = (v, ms) => { const L = msgOf(v, ms), due = mdue(v), c = `chp" data-a="volfiche" data-i="${E(v.id)}`; return MT.map(k => { const m = L.filter(x => x.type == k); return m.length ? `<span class="bd ok ${c}" title="${m.some(x => x.parse && x.parse.aucun) ? "Confirmé : aucun message" : "Reçu"}">${k}${m.every(x => x.parse && x.parse.aucun) ? " ∅" : ""}</span>` : due ? `<span class="bd bad ${c}" title="Non reçu">${k}</span>` : `<span class="bd info ${c}" style="opacity:.55" title="Pas encore attendu">${k}</span>`; }).join(" "); };
+const mchips = (v, ms, v2) => { const legs = v2 ? [v, v2] : [v], c = `chp" data-a="volfiche" data-i="${E(v.id)}${v2 ? `" data-j="${E(v2.id)}` : ""}`;
+  return MT.map(k => { const ml = legs.map(x => msgOf(x, ms).filter(y => y.type == k)), st = legs.map((x, n) => ml[n].length ? "ok" : mdue(x) ? "bad" : "info"), s = st.includes("bad") ? "bad" : st.includes("ok") ? "ok" : "info", au = ml.every(m => m.length && m.every(y => y.parse && y.parse.aucun));
+    return `<span class="bd ${s} ${c}" style="${s == "info" ? "opacity:.55" : ""}" title="${{ bad: "Non reçu", ok: "Reçu", info: "Pas encore attendu" }[s]}">${k}${au ? " ∅" : ""}</span>`; }).join(" "); };
 const mmiss = (v, ms) => { const L = msgOf(v, ms); return mdue(v) ? MT.filter(k => !L.some(x => x.type == k)) : []; };
 const msum = m => { const p = m.parse || {}; if (p.aucun) return "Confirmé : aucun message reçu"; const kg = x => x != null ? x + " kg" : "?";
   if (m.type == "PSM") { const ss = Object.entries(p.ssr || {}).map(([k, n]) => n + " " + k).join(", "); return `${p.pax ?? "?"} passager(s) listé(s) · ${p.pmr || 0} PMR${ss ? " : " + ss : ""}${m.part ? " · partie " + m.part : ""}`; }
@@ -379,7 +388,7 @@ V.vols = async () => {
   return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""}</div>`)
 
     + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
-<div class="card sc"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2><table><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RW.map(w => { const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; const tm = v => { const e = etaOf(v), s0 = schOf(v); return `<b>${s0}</b>${e && e != s0 ? ` <span class="m">ETA ${e}</span>` : ""}`; }; const bg = x => `<span class="bd ${x[1]}">${x[0]}</span>`; return `<tr data-a="volfiche" data-i="${E(a.id)}" style="cursor:pointer"><td style="white-space:nowrap">${tm(a)}${one ? "" : `<div>→ ${tm(b)}</div>`}</td><td>${fl(a)}${one ? "" : "<div>" + fl(b) + "</div>"}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td style="white-space:nowrap">${one ? (a.sens == "A" ? ap(a.provenance_destination) + " → NKC" : "NKC → " + ap(a.provenance_destination)) : ap(a.provenance_destination) + " → NKC → " + ap(b.provenance_destination)}</td><td>${bg(st[0])}${one ? "" : "<div>" + bg(st[1]) + "</div>"}</td><td style="white-space:nowrap">${one ? mchips(a, MS) : `<div>${mchips(a, MS)}</div><div style="margin-top:3px">${mchips(b, MS)}</div>`}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
+<div class="card sc"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2><table class="vt"><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RW.map(w => { const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; const tm = v => { const e = etaOf(v), s0 = schOf(v); return `<b>${s0}</b>${e && e != s0 ? ` <span class="m">ETA ${e}</span>` : ""}`; }; const bg = x => `<span class="bd ${x[1]}">${x[0]}</span>`; return `<tr class="vr" data-a="volfiche" data-i="${E(a.id)}" style="cursor:pointer"><td style="white-space:nowrap">${tm(a)}${one ? "" : `<div>→ ${tm(b)}</div>`}</td><td>${fl(a)}${one ? "" : "<div>" + fl(b) + "</div>"}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td style="white-space:nowrap">${one ? (a.sens == "A" ? ap(a.provenance_destination) + " → NKC" : "NKC → " + ap(a.provenance_destination)) : ap(a.provenance_destination) + " → NKC → " + ap(b.provenance_destination)}</td><td>${bg(st[0])}${one ? "" : "<div>" + bg(st[1]) + "</div>"}</td><td style="white-space:nowrap">${mchips(a, MS, b)}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
 <div class="m"><b>Rotation</b> = arrivée et départ du même avion regroupés. <b>STA / STD</b> = heures prévues (STA arrivée, STD départ ; d’après le Flight Allocation importé s’il existe) ; <b>ETA</b> = heure estimée, si elle diffère. <b>Statut</b> : « Prévu » = vol programmé, pas encore opéré ; « Live » = vol en l’air (ETA actualisée via Flightradar24) ; « Atterri » / « Parti » avec l’heure réelle, et « en avance » / « en retard » si l’écart dépasse 15 min ; « En retard » = plus de 15 min après l’heure prévue ; « Annulé ». <b>Messages</b> : touchez PSM / LDM / CPM pour ouvrir la fiche du vol. Codes aéroports : IATA.</div>`;
 };
 
@@ -997,9 +1006,9 @@ const ACT = {
   tnote(b) { const id = +b.dataset.i; ask("Ajouter un message sur la tâche", [{ k: "t", l: "Nature", o: [["info", "Information / avancement"], ["clarification", "Question : information manquante ou clarification"], ["justification", "Justification (retard ou obstacle)"]] }, { k: "x", l: "Message (dictée possible)", t: "ta", r: 1 }], async v => { const { error } = await sb.from("taches_notes").insert({ tache_id: id, type: v.t, texte: v.x.trim(), auteur_nom: ME.nom }); toast(error ? "Refusé : " + error.message : "Message enregistré"); await draw(); ACT.tfiche({ dataset: { i: id } }); }); },
   tsv(b) { TSV = b.dataset.v; draw(); },
   async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: uid, etat: b.dataset.e || "fait" }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
-  async volfiche(b) {
-    const { data: v } = await sb.from("vols").select("*").eq("id", b.dataset.i).maybeSingle();
-    if (!v) return toast("Vol introuvable");
+  async fichehtml(vid) {
+    const { data: v } = await sb.from("vols").select("*").eq("id", vid).maybeSingle();
+    if (!v) return "";
     const nv = String(v.numero || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");
     const [{ data: rp }, { data: sb2 }, { data: mg }, { data: alc }] = await Promise.all([
       sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").eq("vol_id", v.id).order("jour_vol", { ascending: false }),
@@ -1020,13 +1029,18 @@ const ACT = {
     const dt = (n) => ({ [n + "[month]"]: String(d.getUTCMonth() + 1).padStart(2, "0"), [n + "[day]"]: String(d.getUTCDate()).padStart(2, "0"), [n + "[year]"]: d.getUTCFullYear() });
     const uw = mk("https://form.jotform.com/252936581138565", { airlinespan: air, flightNumber: v.numero, arrivalAndor: A ? "Arrival" : "Départure", ...dt("date19") });
     const uo = mk("https://form.jotform.com/261972772336567", { airlinespan: air, numVol: v.numero, appareil: v.type_appareil, arriveeEtou: A ? "Arrivée" : "Départ", ...dt("date") });
-    const f = $("#mf");
-    f.innerHTML = `<h2>Vol ${E(v.numero)} · ${A ? "Arrivée" : "Départ"}</h2>
+    return `<h2>Vol ${E(v.numero)} · ${A ? "Arrivée" : "Départ"}</h2>
 <div class="m">${E(v.compagnie) || ""} ${E(v.provenance_destination) ? "· " + E(v.provenance_destination) : ""} ${E(v.type_appareil) ? "· " + E(v.type_appareil) : ""} ${E(v.immat) ? "· " + E(v.immat) : ""}<br>${dmy(v.heure_prevue)} · <b>${A ? "STA" : "STD"} ${SCH}</b>${ETA ? ` · <b>${A ? "ETA" : "ETD"} ${ETA}</b>` : ""} <span class="bd ${SV[1]}">${E(SV[0])}</span>${v.verif_le ? ` <span class="m">(vérifié ${hm(v.verif_le)})</span>` : ""}</div>
 ${acard}${mcard}
 <div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : vol, date, sens${air ? ", compagnie" : ""}. Les autres champs restent à compléter.</div></div>
-<div class="card sc"><b>Rapports liés (${all.length})</b><table><tr><th>Type</th><th>Date</th><th>PDF</th></tr>${all.map(r => `<tr><td>${E(CL[r.categorie] || r.categorie)}</td><td>${dmy(r.jour_vol)}</td><td><a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">Ouvrir le PDF</a></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucun rapport reçu pour ce vol.</td></tr>`}</table></div>
-<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
+<div class="card sc"><b>Rapports liés (${all.length})</b><table><tr><th>Type</th><th>Date</th><th>PDF</th></tr>${all.map(r => `<tr><td>${E(CL[r.categorie] || r.categorie)}</td><td>${dmy(r.jour_vol)}</td><td><a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">Ouvrir le PDF</a></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucun rapport reçu pour ce vol.</td></tr>`}</table></div>`;
+  },
+  async volfiche(b) {
+    const ids = [b.dataset.i, b.dataset.j].filter(Boolean), parts = [];
+    for (const id of ids) { const h = await ACT.fichehtml(id); if (h) parts.push(h); }
+    if (!parts.length) return toast("Vol introuvable");
+    const f = $("#mf");
+    f.innerHTML = parts.join('<hr style="margin:20px 0;border:0;border-top:2px solid var(--b)">') + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
     f.onsubmit = e => e.preventDefault();
     $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
   },
@@ -1106,6 +1120,10 @@ async function shell() {
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
 document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } if (e.target.id == "sq") { SQ = e.target.value; sigList(); } if (e.target.id == "irq") { IRQ = e.target.value; irList(); } });
+(() => { let y0 = null, dy = 0, busy = false; const el = () => $("#mn"), ind = () => { let i = $("#ptr"); if (!i) { i = document.createElement("div"); i.id = "ptr"; document.body.appendChild(i); } return i; };
+  document.addEventListener("touchstart", e => { const m = el(); y0 = (innerWidth <= 800 && m && m.contains(e.target) && m.scrollTop <= 0 && !busy && !document.querySelector("#md.on")) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+  document.addEventListener("touchmove", e => { if (y0 == null) return; dy = e.touches[0].clientY - y0; const i = ind(); if (dy > 12 && el().scrollTop <= 0) { i.style.opacity = 1; i.style.transform = "translateY(" + Math.min(dy / 2, 50) + "px)"; i.innerHTML = "<b>" + (dy > 90 ? "↻ Relâchez pour actualiser" : "↓ Tirez pour actualiser") + "</b>"; } else i.style.opacity = 0; }, { passive: true });
+  document.addEventListener("touchend", async () => { if (y0 == null) return; const go = dy > 90, i = ind(); y0 = null; if (go) { busy = true; i.innerHTML = "<b>Actualisation…</b>"; try { await draw(); toast("Actualisé"); } catch (_) { toast("Actualisation impossible"); } busy = false; } i.style.opacity = 0; }, { passive: true }); })();
 (() => { let x0 = null, y0 = 0; document.addEventListener("touchstart", e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
   document.addEventListener("touchend", e => { if (x0 == null || innerWidth > 800) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0); if (dy < 60 && !document.querySelector("#md.on")) { if (!navOpen() && x0 < 28 && dx > 60) document.body.classList.add("nvo"); else if (navOpen() && dx < -60) navClose(); } x0 = null; }, { passive: true });
   addEventListener("resize", () => { if (innerWidth > 800) navClose(); }); document.addEventListener("keydown", e => { if (e.key == "Escape") navClose(); }); })();
