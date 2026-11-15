@@ -165,6 +165,7 @@ async function start() {
   const { data: p } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
   if (!p || !p.actif) { await sb.auth.signOut(); return pageLogin("Compte non autorisé."); }
   ME = p;
+  try { await sb.rpc("marquer_connexion"); } catch (e) { }
   if (p.must_change) return pageChange();
   shell();
 }
@@ -400,9 +401,9 @@ let TSV = "", TV = "jour";
 const SVL2 = { "": "Tous", N: "Nettoyage", M: "Manutention" };
 V.tach = async () => {
   const d0 = dstr(-1), d1 = dstr(6), sel = dstr(TD), s0 = new Date(sel + "T08:00:00Z"), s1 = new Date(s0.getTime() + 24 * H);
-  const [tk, vl, ta] = await Promise.all([
+  const [tk, vl, ta, pr] = await Promise.all([
     sb.from("taches").select("*, agents(nom)").gte("jour", d0).lte("jour", d1).order("heure", { nullsFirst: false }).order("created_at"),
-    sb.from("vols").select("id,numero,sens,compagnie,immat,provenance_destination,heure_prevue,heure_estimee,heure_reelle,statut,source").gte("heure_prevue", s0.toISOString()).lt("heure_prevue", s1.toISOString()).order("heure_prevue"), sb.from("taches").select("*").not("assigne_uid", "is", null).neq("statut", "annule").order("echeance", { nullsFirst: false }).limit(800)]);
+    sb.from("vols").select("id,numero,sens,compagnie,immat,provenance_destination,heure_prevue,heure_estimee,heure_reelle,statut,source").gte("heure_prevue", s0.toISOString()).lt("heure_prevue", s1.toISOString()).order("heure_prevue"), sb.from("taches").select("*").not("assigne_uid", "is", null).neq("statut", "annule").order("echeance", { nullsFirst: false }).limit(800), sb.from("profiles").select("id,debut_suivi")]);
   if (tk.error) throw tk.error; TK = tk.data || [];
   const VL = (vl.data || []).filter(v => v.statut != "annule" && v.source != "prevision"), ids = VL.map(v => v.id);
   const [ck, rp] = ids.length ? await Promise.all([sb.from("alerte_checks").select("*").in("vol_id", ids), sb.from("rapports_staff").select("vol_id,categorie,pdf_url,recu_le").in("vol_id", ids)]) : [{ data: [] }, { data: [] }];
@@ -411,7 +412,9 @@ V.tach = async () => {
 
   const MGRV = ["direction", "responsable_ops", "coordinateur_ops"].includes(ME.role), ASGL = ta.data || [], nw = Date.now();
   const dueOf = t => t.echeance ? new Date(t.echeance).getTime() : (() => { const m = String(t.heure || "").match(/(\d{1,2})\s*[h:]\s*(\d{0,2})/); return new Date(t.jour + "T00:00:00Z").getTime() + (m ? (+m[1] * 60 + (+m[2] || 0)) * 60000 : 24 * 3600000 - 1); })();
-  const isLate = t => t.statut != "fait" && t.statut != "annule" && dueOf(t) < nw;
+  const DS = {}; (pr.data || []).forEach(x => DS[x.id] = x.debut_suivi ? new Date(x.debut_suivi).getTime() : null);
+  /* les retards antérieurs à la 1re connexion de la personne ne comptent pas (remise à zéro) */
+  const isLate = t => t.statut != "fait" && t.statut != "annule" && dueOf(t) < nw && !(t.assigne_uid && (DS[t.assigne_uid] == null || dueOf(t) < DS[t.assigne_uid]));
   const trow = t => `<div class="tkr" data-a="tfiche" data-i="${t.id}" style="cursor:pointer"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${isLate(t) ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div><div class="m">${t.categorie ? E(t.categorie) + " · " : ""}délai ${dmy(new Date(dueOf(t)))} ${t.echeance || t.heure ? hm(new Date(dueOf(t))) : ""}${t.lieu ? " · 📍 " + E(t.lieu) : ""}${t.assigne_nom ? " · 👤 " + E(t.assigne_nom) : ""}</div></div>`;
   const MY = ASGL.filter(t => t.assigne_uid == uid), myOpen = MY.filter(t => t.statut != "fait"), myLate = myOpen.filter(isLate), myCur = myOpen.filter(t => !isLate(t) && (t.statut == "en_cours" || dueOf(t) < nw + 24 * 3600000)), myNext = myOpen.filter(t => !isLate(t) && !myCur.includes(t)), myDone = MY.filter(t => t.statut == "fait" && nw - new Date(t.maj_le || t.created_at).getTime() < 7 * 864e5);
   const meB = (l, a, cl) => a.length ? `<h2 style="margin:10px 0 2px;font-size:14px;color:${cl}">${l} (${a.length})</h2>${a.sort((x, y) => dueOf(x) - dueOf(y)).map(trow).join("")}` : "";
