@@ -252,6 +252,48 @@ V.alertes = async () => {
 
 const IATA = { GMMN: "CMN", GOBD: "DSS", DTTA: "TUN", GABS: "BKO", GBYD: "BJL", LTFM: "IST", GQPP: "NDB", GCLP: "LPA", GUCY: "CKY", DAAG: "ALG", LFPG: "CDG", GQNO: "NKC", GQNI: "EMN", LPLA: "TER", GMFF: "FEZ", GQPZ: "OUZ", DIAP: "ABJ" };
 const ap = c => c ? (IATA[c] || c) : "—";
+
+/* ---------- Messages de vol (PSM / LDM / CPM) & flight allocation ---------- */
+const nvol = n => String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");
+const MT = ["PSM", "LDM", "CPM"], MSGR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+let MSGS = {};
+const hh = d => hm(d).replace("h", ":");
+const msgOf = (v, ms) => (ms || []).filter(m => m.vol_id == v.id || (nvol(m.numero) == nvol(v.numero) && m.jour == ymd(v.heure_prevue)));
+const mdue = v => v.source != "prevision" && v.statut != "annule" && Date.now() > new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue).getTime() + (v.sens == "D" ? 20 * 60000 : 0);
+const mchips = (v, ms) => { const L = msgOf(v, ms), due = mdue(v); return MT.map(k => { const m = L.filter(x => x.type == k); return m.length ? `<span class="bd ok" title="${m.some(x => x.parse && x.parse.aucun) ? "Confirmé : aucun message" : "Reçu"}">${k}${m.every(x => x.parse && x.parse.aucun) ? " ∅" : ""}</span>` : due ? `<span class="bd bad" title="Non reçu">${k} ✗</span>` : `<span class="bd info" style="opacity:.55" title="Pas encore attendu">${k}</span>`; }).join(" "); };
+const mmiss = (v, ms) => { const L = msgOf(v, ms); return mdue(v) ? MT.filter(k => !L.some(x => x.type == k)) : []; };
+const msum = m => { const p = m.parse || {}; if (p.aucun) return "Confirmé : aucun message reçu"; const kg = x => x != null ? x + " kg" : "?";
+  if (m.type == "PSM") { const ss = Object.entries(p.ssr || {}).map(([k, n]) => n + " " + k).join(", "); return `${p.pax ?? "?"} passager(s) listé(s) · ${p.pmr || 0} PMR${ss ? " : " + ss : ""}${m.part ? " · partie " + m.part : ""}`; }
+  if (m.type == "LDM") return `Pax ${p.pax ?? "?"}${p.pax_classes ? " (" + p.pax_classes.join(" / ") + ")" : ""} · Bagages ${p.bagages_pieces ?? "?"} pcs / ${kg(p.bagages_kg)} · Fret ${kg(p.fret_kg)} · Carburant ${kg(p.carburant)}${p.immat ? " · " + p.immat : ""}`;
+  return `${p.uld ?? "?"} ULD/position(s) · Bagages ${p.bagages_pieces ?? "?"} pcs / ${kg(p.bagages_kg)}${p.emis ? " · émis " + p.emis : ""}`; };
+const waMsg = (k, v, L) => { const d = new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue), r = L.map(m => new Date(m.recu_le)).sort((a, b) => a - b)[0];
+  const l = [`${k} — Vol ${v.numero}`, `${v.sens == "A" ? "ETA" : "ETD"} : ${hh(d)}`, `Réception : ${hh(r)}`];
+  if (k == "PSM") { const ss = {}; L.forEach(m => Object.entries((m.parse || {}).ssr || {}).forEach(([c, n]) => ss[c] = (ss[c] || 0) + n)); const tot = Object.values(ss).reduce((a, b) => a + b, 0); l.push(tot ? `${tot} PMR : ${Object.entries(ss).map(([c, n]) => n + " " + c).join(", ")}` : "Aucun PMR"); l.push("Vérifier le message source pour détails (Noms, Sièges...)"); }
+  else l.push(`Répartition du chargement : voir le ${k} intégral vérifié.`);
+  return l.join("\n"); };
+const SJS = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+const loadXLSX = () => window.XLSX ? Promise.resolve() : new Promise((ok, ko) => { const s = document.createElement("script"); s.src = SJS; s.onload = ok; s.onerror = () => ko(new Error("Bibliothèque Excel indisponible")); document.head.appendChild(s); });
+const MON = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+function parseAlloc(rows) {
+  const ym = String(rows[1] && rows[1][0] || "").match(/(\d{1,2})-([A-Za-z]{3})-(\d{4})/), ry = ym ? +ym[3] : new Date().getUTCFullYear(), rm = ym ? MON[ym[2].toUpperCase()] : new Date().getUTCMonth() + 1;
+  const hi = rows.findIndex(r => String(r[0] || "").toUpperCase() == "FLIGHT"); if (hi < 0) throw new Error("Format non reconnu : en-tête « FLIGHT » introuvable");
+  const day = c => { const m = String(c || "").match(/(\d{1,2})-([A-Za-z]{3})/); if (!m) return null; const mo = MON[m[2].toUpperCase()]; if (!mo) return null; let y = ry; if (mo - rm > 6) y--; else if (rm - mo > 6) y++; return `${y}-${String(mo).padStart(2, "0")}-${String(+m[1]).padStart(2, "0")}`; };
+  const tm = x => { x = String(x ?? "").trim(); return /^\d{3,4}$/.test(x) ? x.padStart(4, "0").replace(/(\d\d)(\d\d)/, "$1:$2") : x || null; }, tx = x => (x == null || String(x).trim() == "" ? null : String(x).trim());
+  const out = [];
+  rows.slice(hi + 1).forEach(r => {
+    const a = tx(r[0]), dpt = tx(r[11]);
+    if (a && day(r[1])) out.push({ sens: "A", numero_brut: a, numero: nvol(a), jour: day(r[1]), station: tx(r[2]), heure_prevue: tm(r[3]), heure_estimee: tm(r[4]), heure_reelle: tm(r[5]), tapis: tx(r[6]), poste: tx(r[7]), pbb: tx(r[8]), statut: tx(r[9]), porte: null, comptoirs: null });
+    if (dpt && day(r[12])) out.push({ sens: "D", numero_brut: dpt, numero: nvol(dpt), jour: day(r[12]), station: tx(r[13]), heure_prevue: tm(r[14]), heure_estimee: tm(r[15]), heure_reelle: tm(r[16]), porte: tx(r[17]), poste: tx(r[18]), pbb: tx(r[19]), comptoirs: tx(r[20]), statut: tx(r[21]), tapis: null });
+  });
+  return out;
+}
+document.addEventListener("change", async e => { if (e.target.id != "alf") return; const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { toast("Lecture du fichier…"); await loadXLSX(); const wb = XLSX.read(await f.arrayBuffer(), { type: "array" }), rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: null }), L = parseAlloc(rows);
+    if (!L.length) return toast("Aucun vol trouvé dans ce fichier");
+    const { error } = await sb.from("allocation_vol").upsert(L.map(x => ({ ...x, importe_par: ME.nom, importe_le: new Date().toISOString() })), { onConflict: "jour,sens,numero" });
+    toast(error ? "Refusé : " + error.message : `Flight allocation importé : ${L.length} lignes (${L.filter(x => x.sens == "A").length} arrivées, ${L.filter(x => x.sens == "D").length} départs)`); if (!error) draw();
+  } catch (x) { toast("Import impossible : " + (x.message || x)); } }, true);
+
 V.vols = async () => {
   const d = new Date(shiftStart().getTime() + VD * 24 * H), f = new Date(d.getTime() + 24 * H);
   const [{ data: vs }, { data: ov }] = await Promise.all([
@@ -261,14 +303,17 @@ V.vols = async () => {
   let L = (vs || []).filter(v => t(v) >= d && t(v) < f);
   const real = new Set(L.filter(v => v.source != "prevision").map(v => v.numero + v.sens + ymd(t(v))));
   L = L.filter(v => v.source != "prevision" || !real.has(v.numero + v.sens + ymd(t(v)))).sort((a, b) => t(a) - t(b));
+  const { data: MS } = await sb.from("messages_vol").select("id,type,vol_id,numero,jour,recu_le,parse,source,part").gte("recu_le", new Date(d.getTime() - 36 * H).toISOString()).lt("recu_le", new Date(f.getTime() + 60 * H).toISOString());
+  const miss = L.map(v => [v, mmiss(v, MS)]).filter(x => x[1].length);
   const num = n => +((String(n).match(/(\d+)\s*$/) || [])[1]), used = new Set(), RW = [];
   L.forEach(a => { if (used.has(a.id) || a.sens != "A") return; const c = L.find(x => x.sens == "D" && !used.has(x.id) && t(x) > t(a) && t(x) - t(a) < 8 * H && ((a.rotation && a.rotation == x.rotation) || (a.immat && a.immat == x.immat) || (!a.rotation && !x.rotation && !a.immat && !x.immat && a.compagnie && a.compagnie == x.compagnie && Math.abs(num(a.numero) - num(x.numero)) == 1))); if (c) { used.add(a.id); used.add(c.id); RW.push({ r: [a, c], k: t(a) }); } });
   L.forEach(v => { if (!used.has(v.id)) RW.push({ r: [v], k: t(v) }); }); RW.sort((x, y) => x.k - y.k);
   const stv = v => { const lt = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue) - new Date(v.heure_prevue) > 15 * 60000; return v.statut == "annule" ? ["Annulé", "bad", 0] : lt ? ["En retard", "warn", 1] : v.source == "prevision" ? ["À confirmer", "info", 3] : v.source == "manuel" ? ["Prévu", "info", 2] : ["Confirmé", "ok", 4]; };
   const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
-  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button>` : ""}</div>`)
+  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""}</div>`)
+    + (miss.length ? `<div class="card" style="border-left:4px solid #e11d48"><h2>Messages de vol manquants (${miss.length} vol${miss.length > 1 ? "s" : ""})</h2>${miss.map(([v, k]) => `<div class="li"><div><span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span> <span class="m">${v.sens == "A" ? "Arrivée" : "Départ"} ${hm(v.heure_estimee || v.heure_prevue)}</span></div><div>${k.map(x => `<span class="bd bad">${x} ✗</span>`).join(" ")}</div></div>`).join("")}<div class="m">Attendus peu après le décollage. Si un message n’existe pas pour ce vol : ouvrir la fiche du vol → « Aucun message » ; ou « + PSM / LDM / CPM » pour le coller à la main.</div></div>` : "")
     + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
-<div class="card sc"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2><table><tr><th>Heure</th><th>Vol</th><th>Type</th><th>Appareil</th><th>Origine / destination</th><th>Statut</th></tr>${RW.map(w => { const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv).sort((x, y) => x[2] - y[2])[0]; const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; return `<tr><td><b>${hm(t(a))}</b>${one ? "" : ` → <b>${hm(t(b))}</b>`}</td><td>${fl(a)}${one ? "" : " / " + fl(b)}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td>${one ? ap(a.provenance_destination) : ap(a.provenance_destination) + " → " + ap(b.provenance_destination)}</td><td><span class="bd ${st[1]}">${st[0]}</span></td></tr>`; }).join("") || `<tr><td colspan="6" class="m">Aucun vol.</td></tr>`}</table></div>
+<div class="card sc"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2><table><tr><th>Heure</th><th>Vol</th><th>Type</th><th>Appareil</th><th>Origine / destination</th><th>Statut</th><th>Messages</th></tr>${RW.map(w => { const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv).sort((x, y) => x[2] - y[2])[0]; const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; return `<tr><td><b>${hm(t(a))}</b>${one ? "" : ` → <b>${hm(t(b))}</b>`}</td><td>${fl(a)}${one ? "" : " / " + fl(b)}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td>${one ? ap(a.provenance_destination) : ap(a.provenance_destination) + " → " + ap(b.provenance_destination)}</td><td><span class="bd ${st[1]}">${st[0]}</span></td><td style="white-space:nowrap">${one ? mchips(a, MS) : `<div>${mchips(a, MS)}</div><div style="margin-top:3px">${mchips(b, MS)}</div>`}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
 <div class="m"><b>Rotation</b> = arrivée et départ du même avion regroupés. <b>Statut</b> : « À confirmer » = estimation d’après les semaines précédentes ; « Prévu » = vol saisi, pas encore opéré ; « Confirmé » = vol suivi en réel ; « En retard » = plus de 15 min après l’heure prévue ; « Annulé ». Codes aéroports : IATA (CMN, NKC, IST…).</div>`;
 };
 
@@ -890,9 +935,15 @@ const ACT = {
     const { data: v } = await sb.from("vols").select("*").eq("id", b.dataset.i).maybeSingle();
     if (!v) return toast("Vol introuvable");
     const nv = String(v.numero || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");
-    const [{ data: rp }, { data: sb2 }] = await Promise.all([
+    const [{ data: rp }, { data: sb2 }, { data: mg }, { data: alc }] = await Promise.all([
       sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").eq("vol_id", v.id).order("jour_vol", { ascending: false }),
-      sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").contains("numeros_vol", [nv]).is("vol_id", null).gte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() - 864e5))).lte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() + 864e5)))]);
+      sb.from("rapports_staff").select("submission_id,categorie,pdf_url,jour_vol").contains("numeros_vol", [nv]).is("vol_id", null).gte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() - 864e5))).lte("jour_vol", ymd(new Date(new Date(v.heure_prevue).getTime() + 864e5))),
+      MSGR.includes(ME.role) ? sb.from("messages_vol").select("*").or("vol_id.eq." + v.id + ",jour.eq." + ymd(v.heure_prevue)) : Promise.resolve({ data: [] }),
+      sb.from("allocation_vol").select("*").or("vol_id.eq." + v.id + ",jour.eq." + ymd(v.heure_prevue))]);
+    const ML = msgOf(v, mg).sort((x, y) => new Date(x.recu_le) - new Date(y.recu_le)), AL0 = (alc || []).find(x => x.vol_id == v.id) || (alc || []).find(x => x.sens == v.sens && nvol(x.numero_brut || x.numero) == nvol(v.numero));
+    ML.forEach(m => MSGS[m.id] = m);
+    const mcard = MSGR.includes(ME.role) ? `<div class="card"><b>Messages du vol (PSM · LDM · CPM)</b>${MT.map(k => { const L = ML.filter(m => m.type == k && !(m.parse && m.parse.aucun)), au = ML.some(m => m.type == k && m.parse && m.parse.aucun), wt = L.length ? waMsg(k, v, L) : ""; return `<div style="margin-top:10px"><span class="bd ${L.length || au ? "ok" : mdue(v) ? "bad" : "info"}">${k}</span> ${L.length ? "" : au ? "Confirmé : aucun message" : mdue(v) ? "<b>Non reçu</b>" : "<span class=\"m\">pas encore attendu</span>"}${L.map(m => `<div class="m" style="margin-top:4px">Reçu ${dmy(m.recu_le)} ${hm(m.recu_le)} · ${m.source == "manuel" ? "ajout manuel" : "par mail"} — ${E(msum(m))}<details><summary class="lk">Voir le message source</summary><pre style="white-space:pre-wrap;font-size:12px;margin:4px 0">${E(m.brut)}</pre></details></div>`).join("")}${L.length ? `<pre style="white-space:pre-wrap;font-size:13px;background:rgba(127,127,127,.12);padding:8px;border-radius:8px;margin:6px 0">${E(wt)}</pre><div class="row" style="justify-content:flex-start;gap:6px"><button type="button" class="btn" data-a="msgcopy" data-t="${E(wt)}">Copier le message</button><a class="btn" style="color:#16a34a;font-weight:700" href="https://wa.me/?text=${encodeURIComponent(wt)}" target="_blank" rel="noopener">💬 WhatsApp</a></div>` : !au ? `<div style="margin-top:4px"><button type="button" class="btn" data-a="msgnone" data-i="${v.id}" data-k="${k}">Aucun ${k} pour ce vol</button></div>` : ""}</div>`; }).join("")}<div class="row" style="justify-content:flex-start;margin-top:10px"><button type="button" class="btn p" data-a="msgadd" data-i="${v.id}">+ Ajouter un message (coller)</button></div></div>` : "";
+    const acard = `<div class="card"><b>Affectation (Flight Allocation)</b>${AL0 ? `<table style="margin-top:6px">${(v.sens == "A" ? [["Tapis bagages", AL0.tapis], ["Poste (parking)", AL0.poste], ["Passerelle (PBB)", AL0.pbb], ["Heure prévue / estimée / réelle", [AL0.heure_prevue, AL0.heure_estimee, AL0.heure_reelle].map(x => x || "—").join(" / ")], ["Statut", AL0.statut]] : [["Porte", AL0.porte], ["Poste (parking)", AL0.poste], ["Passerelle (PBB)", AL0.pbb], ["Comptoirs d’enregistrement", AL0.comptoirs], ["Heure prévue / estimée / réelle", [AL0.heure_prevue, AL0.heure_estimee, AL0.heure_reelle].map(x => x || "—").join(" / ")], ["Statut", AL0.statut]]).map(([l, x]) => `<tr><td class="m">${l}</td><td><b>${E(x) || "—"}</b></td></tr>`).join("")}</table><div class="m">Importé par ${E(AL0.importe_par || "")} le ${dmy(AL0.importe_le)} ${hm(AL0.importe_le)}</div>` : `<div class="m" style="margin-top:4px">Aucune affectation importée pour ce vol.${VR.includes(ME.role) ? " Importer le fichier depuis l’onglet Vols (📥 Flight allocation)." : ""}</div>`}</div>`;
     const seen = new Set(), RL = {}, all = [...(rp || []), ...(sb2 || [])].filter(r => !seen.has(r.submission_id) && seen.add(r.submission_id));
     const CL = { wheelchairs: "Wheelchairs", flight_ops: "Flight Ops", cargo: "Cargo", cabin: "Nettoyage cabine", pmr_shift: "PMR Shift" };
     const d = new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue), A = v.sens == "A";
@@ -905,12 +956,23 @@ const ACT = {
     const f = $("#mf");
     f.innerHTML = `<h2>Vol ${E(v.numero)} · ${A ? "Arrivée" : "Départ"}</h2>
 <div class="m">${E(v.compagnie) || ""} ${E(v.provenance_destination) ? "· " + E(v.provenance_destination) : ""} ${E(v.type_appareil) ? "· " + E(v.type_appareil) : ""} ${E(v.immat) ? "· " + E(v.immat) : ""}<br>${dmy(d)} ${hm(d)}${v.statut ? " · " + E(v.statut) : ""}</div>
+${acard}${mcard}
 <div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : vol, date, sens${air ? ", compagnie" : ""}. Les autres champs restent à compléter.</div></div>
 <div class="card sc"><b>Rapports liés (${all.length})</b><table><tr><th>Type</th><th>Date</th><th>PDF</th></tr>${all.map(r => `<tr><td>${E(CL[r.categorie] || r.categorie)}</td><td>${dmy(r.jour_vol)}</td><td><a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">Ouvrir le PDF</a></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucun rapport reçu pour ce vol.</td></tr>`}</table></div>
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
     f.onsubmit = e => e.preventDefault();
     $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
   },
+  msgcopy(b) { const t = b.dataset.t || ""; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Message copié"), () => { const x = document.createElement("textarea"); x.value = t; document.body.appendChild(x); x.select(); try { document.execCommand("copy"); toast("Message copié"); } catch (_) { toast("Copie impossible"); } x.remove(); }); },
+  msgadd(b) { const vid = b?.dataset?.i; ask("Ajouter un PSM / LDM / CPM", [{ k: "x", l: "Collez le texte complet du message (plusieurs messages possibles à la suite)", t: "ta", r: 1 }], async v => {
+    const { data, error } = await sb.functions.invoke("msg-ingest", { body: { body: v.x, received_at: new Date().toISOString() } });
+    if (error || !data || data.erreur) return toast("Échec : " + ((data && data.erreur) || (error && error.message) || "inconnu"));
+    const r = data.resultats || [], ok = r.filter(x => x.ok), dbl = r.filter(x => x.doublon), bad = r.filter(x => x.erreur);
+    toast(`${ok.length} message(s) ajouté(s)${ok.length ? " : " + ok.map(x => x.type + " " + x.numero + (x.vol_id ? "" : " (vol non trouvé)")).join(", ") : ""}${dbl.length ? " · " + dbl.length + " déjà présent(s)" : ""}${bad.length ? " · " + bad.length + " non reconnu(s)" : ""}`);
+    await draw(); if (vid) ACT.volfiche({ dataset: { i: vid } }); }); },
+  async msgnone(b) { const { data: v } = await sb.from("vols").select("id,numero,heure_prevue").eq("id", b.dataset.i).maybeSingle(); if (!v) return;
+    const k = b.dataset.k, { error } = await sb.from("messages_vol").insert({ type: k, numero: v.numero, jour: ymd(v.heure_prevue), vol_id: v.id, source: "manuel", brut: "(aucun " + k + " pour ce vol — confirmé par " + ME.nom + ")", parse: { aucun: true }, par: ME.nom });
+    toast(error ? "Refusé : " + error.message : "Noté : aucun " + k); await draw(); ACT.volfiche({ dataset: { i: v.id } }); },
   df(b) { DF[b.dataset.k] = b.dataset.v; draw(); },
   ddoc(b) { const d = DL.find(x => x.id == b.dataset.i), w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(docHTML(d)); w.document.close(); },
   dnew(b) {
