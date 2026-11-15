@@ -12,7 +12,7 @@
 <title>EPS OPS — Opérations aéroport</title>
 <style>
 :root{color-scheme:light;--bg:#E6EEFA;--s:#fff;--t:#13294F;--m:#5B6D8C;--b:#CBDAF0;--p:#2F6FD0;--pl:#E1ECFB;--n:#2358A8;--n2:#1B4890;--red:#C0392B;--sh:0 1px 2px #1b489214,0 6px 18px #1b48921a;--sp:cubic-bezier(.34,1.32,.64,1)}
-:root[data-theme=clair]{--bg:#F4F6FA;--b:#DCE3EE;--pl:#EAF1FC;--sh:0 1px 2px #1b489210,0 4px 14px #1b489214}
+:root[data-theme=nuit]{color-scheme:dark;--bg:#0D1524;--s:#16213A;--t:#E3EAF6;--m:#93A3BF;--b:#2A3A5A;--p:#5B93E6;--pl:#1C2B48;--n:#0F2140;--n2:#0A1830;--red:#E5675A;--sh:0 1px 2px #0006,0 6px 18px #0008}[data-theme=nuit] input,[data-theme=nuit] select,[data-theme=nuit] textarea{background:#101a2e;color:var(--t);border-color:var(--b)}[data-theme=clair]{--bg:#F4F6FA;--b:#DCE3EE;--pl:#EAF1FC;--sh:0 1px 2px #1b489210,0 4px 14px #1b489214}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{height:100%}
 body{margin:0;background:var(--n);color:var(--t);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 #app{height:100%;display:flex}
@@ -116,7 +116,7 @@ const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "d
 const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["tach", "eff", "pres", "disc", "prof"], responsable_technique: ["tach", "tech", "sig", "prof"], approvisionnement: ["tach", "mag", "prof"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const IC = { zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
+const IC = { gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
 const TH = { get() { try { return localStorage.getItem("th") || "bleu"; } catch (e) { return "bleu"; } }, set(v) { try { localStorage.setItem("th", v); } catch (e) { } document.documentElement.dataset.theme = v; } };
 document.documentElement.dataset.theme = TH.get();
@@ -124,7 +124,7 @@ const navClose = () => document.body.classList.remove("nvo"), navOpen = () => do
 const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
-let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
+let ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
 
 function lab(root = document) { root.querySelectorAll(".sc table").forEach(t => { const hs = [...t.querySelectorAll("tr:first-child th")].map(x => x.textContent); t.querySelectorAll("tr").forEach(r => { if (r.querySelector("th")) return; [...r.children].forEach((c, i) => { if (c.colSpan < 2 && hs[i]) c.dataset.l = hs[i]; }); }); }); }
 const setEl = () => { $("#el").innerHTML = eT(); lab($("#el")); };
@@ -183,7 +183,7 @@ const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh"]
 let NNI = {};
 async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
 const BC = { alertes: 0, pres: 0 };
-function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = BC.alertes || ""; }
+function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
 let RA = [];
@@ -1260,28 +1260,116 @@ ${s.description ? `<div class="card">${E(s.description)}</div>` : ""}
   async zsann(b) { if (!confirm("Annuler ce signalement ?")) return; const { error } = await sb.from("signalements_zone").update({ statut: "annule" }).eq("id", +b.dataset.i); $("#md").classList.remove("on"); toast(error ? "Refusé : " + error.message : "Annulé"); draw(); }
 });
 
+/* ---------- Réglages et notifications ---------- */
+const NT_CAT = [["alertes", "Alertes vols & effectifs"], ["signalements", "Signalements de zones"], ["helpdesk", "Help Desk (signalements externes)"], ["taches", "Tâches qui me sont assignées"], ["magasin", "Magasin (expressions de besoin)"], ["systeme", "Messages de l’application"]];
+const NT_IC = { alertes: "🔔", signalements: "📍", helpdesk: "📣", taches: "✅", magasin: "📦", systeme: "⚙️" };
+let NTU = 0, NTL = [];
+const ZM = { get() { try { return +localStorage.getItem("zm") || 1; } catch (e) { return 1; } }, set(v) { try { localStorage.setItem("zm", v); } catch (e) { } document.documentElement.style.setProperty("zoom", v); } };
+ZM.set(ZM.get());
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent), pushOK = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const b64u = s => { const p = "=".repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function ntCount() { const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).eq("lu", false); NTU = count || 0; setB(); try { if (navigator.setAppBadge) NTU ? navigator.setAppBadge(NTU) : navigator.clearAppBadge(); } catch (e) { } }
+async function pushSub() {
+  const reg = await navigator.serviceWorker.ready, { data: k, error } = await sb.rpc("vapid_public"); if (error || !k) throw error || new Error("clé indisponible");
+  let s = await reg.pushManager.getSubscription(); if (!s) s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k) });
+  const j = s.toJSON(), r = await sb.from("push_abonnements").upsert({ user_id: ME.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, appareil: (isIOS ? "iPhone/iPad · " : "") + navigator.userAgent.slice(0, 110) }, { onConflict: "endpoint" });
+  if (r.error) throw r.error; return s;
+}
+async function pushEtat() {
+  if (!pushOK()) return { ok: false, txt: isIOS ? "Sur iPhone/iPad : ajoutez d’abord EPS OPS à l’écran d’accueil (bouton Partager → « Sur l’écran d’accueil »), puis ouvrez l’application depuis son icône." : "Ce navigateur ne prend pas en charge les notifications push." };
+  if (Notification.permission == "denied") return { ok: false, txt: "Notifications bloquées pour ce site : autorisez-les dans les réglages du navigateur ou du téléphone, puis revenez ici." };
+  const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.getSubscription();
+  if (Notification.permission == "granted" && s) { const { data } = await sb.from("push_abonnements").select("id").eq("endpoint", s.endpoint); if (data && data.length) return { ok: true, on: true, txt: "Activées sur cet appareil." }; }
+  return { ok: true, on: false, txt: "Désactivées sur cet appareil." };
+}
+async function ntInit() {
+  await ntCount();
+  sb.channel("notif").on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ME.id }, p => { NTU++; setB(); toast((p.new.titre || "Nouvelle notification")); }).subscribe();
+  try { if (pushOK() && Notification.permission == "granted") await pushSub(); } catch (e) { }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", async e => { const d = e.data || {}; if (d.id) { await sb.from("notifications").update({ lu: true }).eq("id", d.id); ntCount(); } if (d.nav && P[d.nav]) { NAV = d.nav; draw(); } });
+  const qn = new URLSearchParams(location.search).get("n"); if (qn) { await sb.from("notifications").update({ lu: true }).eq("id", +qn); ntCount(); }
+  if (location.search) history.replaceState(null, "", "/");
+  try { if (pushOK() && Notification.permission == "default" && !localStorage.getItem("ntp")) { localStorage.setItem("ntp", "1"); setTimeout(() => toast("Activez les notifications push : ⚙️ Réglages → Notifications"), 2500); } } catch (e) { }
+}
+function mdOpen(h) { const f = $("#mf"); f.innerHTML = h; f.onsubmit = e => e.preventDefault(); $("#md").classList.add("on"); }
+const mdClose = () => $("#md").classList.remove("on");
+const rgB = (a, l, c = "") => `<button type="button" class="btn ${c}" data-a="${a}" style="width:100%;justify-content:flex-start;text-align:left;margin-top:6px">${l}</button>`;
+Object.assign(ACT, {
+  async rgl() {
+    const pe = await pushEtat().catch(() => ({ ok: false, txt: "État inconnu." })), th = TH.get(), z = ZM.get(), tb = (v, l) => `<button type="button" class="btn ${th == v ? "p" : ""}" data-a="rgth" data-k="${v}">${l}</button>`, zb = (v, l) => `<button type="button" class="btn ${z == v ? "p" : ""}" data-a="rgzm" data-k="${v}">${l}</button>`;
+    mdOpen(`<div class="row"><h2>⚙️ Réglages</h2><button type="button" class="btn" data-a="rgx">Fermer</button></div>
+<div class="m">${E(ME.nom)} · ${E(RL[ME.role] || "")}</div>
+<div class="card"><h2>🔔 Notifications</h2>
+${rgB("nthist", `📜 Historique des notifications${NTU ? ` <span class="bd bad" style="margin-left:6px">${NTU} non lue${NTU > 1 ? "s" : ""}</span>` : ""}`)}
+${rgB("ntpar", "🎛 Paramètres des notifications")}
+<div style="margin-top:10px"><b>Notifications push (sur le téléphone)</b><div class="m">${E(pe.txt)}</div>${pe.ok ? (pe.on ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn" data-a="nttest">Envoyer un test</button><button type="button" class="btn" data-a="ntoff">Désactiver sur cet appareil</button></div>` : `<button type="button" class="btn p" data-a="nton" style="margin-top:6px">Activer les notifications push</button>`) : ""}</div></div>
+<div class="card"><h2>🎨 Affichage</h2><div class="m">Thème</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${tb("bleu", "Bleu EPS")}${tb("clair", "Clair")}${tb("nuit", "🌙 Mode nuit")}</div><div class="m">Taille du texte</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${zb(1, "Normale")}${zb(1.1, "Grande")}${zb(1.2, "Très grande")}</div></div>
+<div class="card"><h2>📱 Application</h2>${DIP ? rgB("rgins", "⬇️ Installer EPS OPS sur cet appareil") : ""}${rgB("rgprof", "👤 Mon profil et mot de passe")}${rgB("rgrel", "↻ Actualiser l’application")}</div>
+${rgB("rglo", "⎋ Se déconnecter", "d")}`);
+  },
+  rgx() { mdClose(); },
+  rgth(b) { TH.set(b.dataset.k); ACT.rgl(); },
+  rgzm(b) { ZM.set(+b.dataset.k); ACT.rgl(); },
+  rgprof() { mdClose(); NAV = "prof"; draw(); },
+  rgrel() { location.reload(); },
+  async rgins() { if (!DIP) return; DIP.prompt(); await DIP.userChoice.catch(() => { }); DIP = null; ACT.rgl(); },
+  async rglo() {
+    if (!confirm("Se déconnecter de EPS OPS ?")) return;
+    try { if (pushOK()) { const s = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (s) await sb.from("push_abonnements").delete().eq("endpoint", s.endpoint); } } catch (e) { }
+    await sb.auth.signOut(); location.reload();
+  },
+  async nton() {
+    try {
+      const p = await Notification.requestPermission(); if (p != "granted") { toast("Autorisation refusée : les notifications restent désactivées"); return ACT.rgl(); }
+      await pushSub(); await sb.from("notif_prefs").upsert({ user_id: ME.id, push: true }, { onConflict: "user_id" }); toast("Notifications push activées"); ACT.rgl();
+    } catch (e) { toast("Activation impossible : " + (e.message || e)); }
+  },
+  async ntoff() { try { const s = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (s) { await sb.from("push_abonnements").delete().eq("endpoint", s.endpoint); await s.unsubscribe(); } toast("Notifications push désactivées sur cet appareil"); } catch (e) { toast("Erreur : " + e.message); } ACT.rgl(); },
+  async nttest() { const { error } = await sb.rpc("notifier_test"); toast(error ? "Refusé : " + error.message : "Test envoyé : il doit apparaître dans quelques secondes"); },
+  async nthist() {
+    const { data, error } = await sb.from("notifications").select("*").order("created_at", { ascending: false }).limit(100); if (error) return toast("Erreur : " + error.message); NTL = data || [];
+    mdOpen(`<div class="row"><h2>📜 Historique des notifications</h2><button type="button" class="btn" data-a="rgl">← Réglages</button></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">${NTU ? `<button type="button" class="btn p" data-a="ntall">Tout marquer comme lu</button>` : ""}<button type="button" class="btn" data-a="ntpar">Paramètres</button></div>
+${NTL.map(n => `<div class="li" data-a="ntgo" data-i="${n.id}" style="cursor:pointer;align-items:flex-start;${n.lu ? "opacity:.65" : ""}"><div><b>${n.lu ? "" : "● "}${E(n.titre)}</b>${n.corps ? `<div class="m">${E(n.corps)}</div>` : ""}<div class="m">${dt(n.created_at)} · ${E((NT_CAT.find(c => c[0] == n.categorie) || [, n.categorie])[1])}</div></div><span>${NT_IC[n.categorie] || "🔔"}</span></div>`).join("") || `<div class="m" style="padding:10px 0">Aucune notification pour l’instant.</div>`}
+<div class="m">Les 100 dernières notifications sont conservées ici.</div>`);
+  },
+  async ntall() { await sb.from("notifications").update({ lu: true }).eq("lu", false); await ntCount(); ACT.nthist(); },
+  async ntgo(b) { const n = NTL.find(x => x.id == b.dataset.i); if (!n) return; if (!n.lu) { await sb.from("notifications").update({ lu: true }).eq("id", n.id); ntCount(); } mdClose(); if (n.lien && (ACC[ME.role] || []).includes(n.lien)) { NAV = n.lien; draw(); } },
+  async ntpar() {
+    const { data } = await sb.from("notif_prefs").select("*").eq("user_id", ME.id).maybeSingle(), c = (data && data.categories) || {}, pu = data ? data.push : true;
+    mdOpen(`<div class="row"><h2>🎛 Paramètres des notifications</h2><button type="button" class="btn" data-a="rgl">← Réglages</button></div>
+<div class="card"><b>Je veux être notifié pour :</b>${NT_CAT.map(([k, l]) => `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:400"><input type="checkbox" data-nc="${k}" ${c[k] === false ? "" : "checked"} style="width:auto"> ${NT_IC[k]} ${E(l)}</label>`).join("")}<div class="m" style="margin-top:6px">Une catégorie décochée n’apparaît plus ni dans l’historique ni en push.</div></div>
+<div class="card"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="npu" ${pu ? "checked" : ""} style="width:auto"> Recevoir aussi en push sur mes appareils</label><div class="m">Sinon, les notifications restent visibles seulement dans l’historique.</div></div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-a="rgl">Annuler</button><button type="button" class="btn p" data-a="ntsave">Enregistrer</button></div>`);
+  },
+  async ntsave() {
+    const cats = {}; document.querySelectorAll("[data-nc]").forEach(i => cats[i.dataset.nc] = i.checked);
+    const { error } = await sb.from("notif_prefs").upsert({ user_id: ME.id, push: $("#npu").checked, categories: cats, maj_le: new Date().toISOString() }, { onConflict: "user_id" });
+    toast(error ? "Refusé : " + error.message : "Paramètres enregistrés"); if (!error) ACT.rgl();
+  }
+});
+
 /* ---------- Interface ---------- */
 const PL = p => p == "shift" && ["responsable_rh", "assistante_rh"].includes(ME.role) ? "Shift actuel" : P[p][1];
 async function draw() {
   const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
-  $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"></div>` + ok.map(p => `<button data-p="${p}" class="nb ${p == NAV ? "on" : ""}">${ic(p)}<span>${PL(p)}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E(RL[ME.role] || "")}</small><button class="nb" id="th">${ic("theme")}<span>Thème : ${TH.get() == "clair" ? "Clair" : "Bleu EPS"}</span></button><button class="nb" id="ins" style="display:none">⬇️<span>Télécharger l’app</span></button><button class="nb" id="lo">${ic("out")}<span>Déconnexion</span></button></div>`;
+  $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"></div>` + ok.map(p => `<button data-p="${p}" class="nb ${p == NAV ? "on" : ""}">${ic(p)}<span>${PL(p)}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E(RL[ME.role] || "")}</small><button class="nb" id="rgn">${ic("gear")}<span>Réglages</span></button><button class="nb" id="ins" style="display:none">⬇️<span>Télécharger l’app</span></button></div>`;
   const hn = $("#ht"); if (hn) hn.textContent = PL(NAV); navClose();
-  $("#th").onclick = () => { TH.set(TH.get() == "clair" ? "bleu" : "clair"); $("#th span").textContent = "Thème : " + (TH.get() == "clair" ? "Clair" : "Bleu EPS"); };
-  $("#lo").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
   const ref = NAV; let h;
   try { h = await V[NAV](); } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
   if (ref == NAV) { $("#mn").innerHTML = h; lab($("#mn")); if (NAV == "sig" && $("#sl")) sigList(); if (NAV == "ir" && $("#irl")) irList(); }
 }
 async function shell() {
-  $("#app").innerHTML = `<nav id="nv"></nav><div id="pg"><header><button id="tg" class="hb" aria-label="Menu">${ic("menu")}</button><span id="hw">EPS OPS</span><span id="ht"></span><span class="sp"></span><span id="un">${E(ME.nom)}</span><button id="bl" class="hb" title="Alertes" aria-label="Alertes">${ic("alertes")}<i id="bc"></i></button></header><main id="mn"><div class="m">Chargement…</div></main></div>`;
+  $("#app").innerHTML = `<nav id="nv"></nav><div id="pg"><header><button id="tg" class="hb" aria-label="Menu">${ic("menu")}</button><span id="hw">EPS OPS</span><span id="ht"></span><span class="sp"></span><span id="un">${E(ME.nom)}</span><button id="rg" class="hb" title="Réglages" aria-label="Réglages">${ic("gear")}<i id="bc"></i></button></header><main id="mn"><div class="m">Chargement…</div></main></div>`;
   $("#tg").onclick = () => document.body.classList.toggle("nvo");
   $("#pg").addEventListener("click", e => { if (navOpen()) { e.preventDefault(); e.stopPropagation(); navClose(); } }, true);
   $("#mn").addEventListener("scroll", () => $("header").classList.toggle("st", $("#mn").scrollTop > 40), { passive: true });
-  $("#bl").onclick = () => { if ((ACC[ME.role] || []).includes("alertes")) { NAV = "alertes"; draw(); } };
+  $("#rg").onclick = () => ACT.rgl();
   await Promise.all([loadAG(), loadST(), loadAL()]); setInterval(() => { loadST(); loadAL(); }, 60000);
   sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(); })
     .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
-  draw();
+  draw(); ntInit();
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
 document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } if (e.target.id == "sq") { SQ = e.target.value; sigList(); } if (e.target.id == "irq") { IRQ = e.target.value; irList(); } });
