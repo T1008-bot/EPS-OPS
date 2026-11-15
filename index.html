@@ -327,12 +327,14 @@ const volEta = (v, a) => v.phase == "live" && v.heure_estimee ? hh(v.heure_estim
 const volSch = (v, a) => a && a.heure_prevue ? a.heure_prevue : hh(v.heure_prevue);
 const volSt = (v, a, ms) => { const A = v.sens == "A", eta = volEta(v, a), lt = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue) - new Date(v.heure_prevue) > 15 * 60000;
   if (v.statut == "annule" || /CANC/i.test(a && a.statut || "")) return ["Annulé", "bad", 0];
-  if (v.phase == "atterri" || v.phase == "parti" || (v.source == "fr24" && v.heure_reelle) || (a && a.heure_reelle)) return [A ? "Atterri" : "Parti", "ok", 5];
+  if (v.phase == "atterri" || v.phase == "parti" || (v.source == "fr24" && v.heure_reelle) || (a && a.heure_reelle)) {
+    const rt = v.heure_reelle ? new Date(v.heure_reelle) : a && a.heure_reelle ? new Date(a.jour + "T" + a.heure_reelle + ":00Z") : null, sc = a && a.heure_prevue ? new Date(a.jour + "T" + a.heure_prevue + ":00Z") : new Date(v.heure_prevue), df = rt ? (rt - sc) / 60000 : 0;
+    return [(A ? "Atterri" : "Parti") + (rt ? " " + hh(rt) : "") + (rt && df < -15 ? " · en avance" : rt && df > 15 ? " · en retard" : ""), "ok", 5]; }
   if (!A && msgOf(v, ms).length) return ["Parti", "ok", 5];
   if (v.phase == "live") return ["Live" + (eta ? " · ETA " + eta : ""), "live", 4];
   const sd = a && a.heure_prevue ? new Date(a.jour + "T" + a.heure_prevue + ":00Z") : new Date(v.heure_prevue);
   if (Date.now() - sd.getTime() > 20 * 60000) return [lt ? "En retard" : "Heure dépassée", "warn", 1];
-  return lt ? ["En retard", "warn", 1] : v.source == "prevision" ? ["À confirmer", "info", 3] : ["Prévu", "info", 2]; };
+  return lt ? ["En retard", "warn", 1] : ["Prévu", "info", 2]; };
 const SJS = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
 const loadXLSX = () => window.XLSX ? Promise.resolve() : new Promise((ok, ko) => { const s = document.createElement("script"); s.src = SJS; s.onload = ok; s.onerror = () => ko(new Error("Bibliothèque Excel indisponible")); document.head.appendChild(s); });
 const MON = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
