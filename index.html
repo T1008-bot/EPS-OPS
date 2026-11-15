@@ -111,17 +111,17 @@ const ymd = d => new Date(d).toISOString().slice(0, 10);
 const dg = t => String(t).replace(/\D/g, "").slice(-8);
 
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", responsable_technique: "Responsable Technique", responsable_comptabilite: "Responsable Comptabilité", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
-const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "sig", "tech", "disc", "mag"];
-const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "sig", "disc", "mag"];
+const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "zon", "sig", "tech", "disc", "mag"];
+const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "disc", "mag"];
 const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["shift", "tach", "eff", "pres", "disc", "prof"], assistante_rh: ["shift", "tach", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["shift", "tach", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "tech", "sig", "prof"], approvisionnement: ["shift", "tach", "mag", "prof"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const IC = { tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
+const IC = { zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
 const TH = { get() { try { return localStorage.getItem("th") || "bleu"; } catch (e) { return "bleu"; } }, set(v) { try { localStorage.setItem("th", v); } catch (e) { } document.documentElement.dataset.theme = v; } };
 document.documentElement.dataset.theme = TH.get();
 const navClose = () => document.body.classList.remove("nvo"), navOpen = () => document.body.classList.contains("nvo");
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -1108,6 +1108,151 @@ ${fcard}${acard}${mcard}
     box.innerHTML = `<div class="li" style="flex-wrap:wrap">${(ds || []).map(d => `<a class="btn w" target="_blank" rel="noopener" href="https://wa.me/222${dg(d.tel)}?text=${msg}">WhatsApp · ${E(d.nom)}</a>`).join(" ")}</div>${(sv || []).map(s => `<div class="m">${dmy(s.fait_le)} ${hm(s.fait_le)} — ${s.action == "prise_en_charge" ? "prise en charge" : s.action == "decision" ? "décision / clôture" : "vue"} par ${E(s.commentaire)}</div>`).join("")}`;
   }
 };
+
+/* ---------- Zones, dispatching et signalements de zones ---------- */
+const ZN_NAT = ["Toilettes", "Salle d'ablution", "Salle de prière", "Bureau", "Chambre", "Salle de repos", "Salle d'attente / d'embarquement", "Hall / couloir", "Escalier / escalator / ascenseur", "Comptoir / guichet", "Cuisine / office", "Local technique", "Magasin / stockage", "Terrasse", "Espace ouvert", "Jardin / espace vert", "Parking / voirie"];
+const ZN_WC = ["Toilettes", "Salle d'ablution"];
+const ZN_RL = { T: "Toilettes", S: "Sol / zone", A: "Toilettes + sol (agent unique)", A1: "Agent 1", A2: "Agent 2" };
+const ZN_ST = { ouvert: "Ouvert", intervenu: "Intervention faite", verifie: "Vérifié / clos", annule: "Annulé" }, ZN_B = { ouvert: "bad", intervenu: "info", verifie: "ok", annule: "" };
+const ZN_DL = { urgente: 15, haute: 30, normale: 60, basse: 120 };
+const ZN_W = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "chef_nettoyage"];
+const ZN_ADM = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"];
+const ZN_V = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+let ZG = [], ZP = [], ZL = [], ZD = [], ZS = [], ZT = "sig", ZJ = null, ZF = "";
+const zjCur = () => shiftStart().toISOString().slice(0, 10);
+const zjOf = t => shiftStart(new Date(t)).toISOString().slice(0, 10);
+const zjAdd = (j, n) => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const zGarde = j => garde(new Date(j + "T08:00:00Z"));
+const zNom = m => (AG.find(a => a.matricule == m) || {}).nom || m;
+const zZone = c => ZG.find(z => z.code == c) || {};
+const zLieu = c => ZL.find(l => l.code == c) || {};
+const zPoste = c => ZP.find(p => p.code == c) || {};
+async function zLoad() {
+  ZJ = ZJ || zjCur();
+  const R = await Promise.all([sb.from("zones_globales").select("*").order("ordre"), sb.from("postes").select("*").order("ordre"), sb.from("lieux").select("*").order("ordre"), sb.from("dispatch").select("*").eq("jour_shift", ZJ), sb.from("signalements_zone").select("*").order("created_at", { ascending: false }).limit(500)]);
+  R.forEach(r => { if (r.error) throw r.error; });
+  [ZG, ZP, ZL, ZD, ZS] = R.map(r => r.data || []);
+}
+/* Même règle que la base : toilettes/ablutions → agent T, sinon agent S, sinon agent unique */
+function zRole(p, nat) { if (!p || !p.code || p.type != "fixe" || p.statut != "ouvert") return null; const R = p.roles || []; return ZN_WC.includes(nat) && R.includes("T") ? "T" : !ZN_WC.includes(nat) && R.includes("S") ? "S" : R.includes("A") ? "A" : R.includes("A1") ? "A1" : R[0]; }
+function zDelai(s) {
+  if (s.statut == "annule") return "";
+  const ech = new Date(s.echeance).getTime(), fin = s.intervention_le ? new Date(s.intervention_le).getTime() : Date.now(), m = Math.round((fin - ech) / 6e4);
+  if (s.intervention_le) return m > 0 ? `<span class="bd bad">Hors délai +${m} min</span>` : `<span class="bd ok">Dans les délais</span>`;
+  return m > 0 ? `<span class="bd bad">⏱ Dépassé de ${m} min</span>` : `<span class="bd warn">Reste ${-m} min</span>`;
+}
+const zResp = s => s.resp_role == "equipe_service" ? `Équipe en service (garde ${s.equipe_garde || "?"})` : s.resp_nom ? `${E(s.resp_nom)} <span class="m">(${E(ZN_RL[s.resp_role] || s.resp_role)})</span>` : `<span class="bd warn">Poste non pourvu au dispatching</span>`;
+function zSig() {
+  const L = ZS.filter(s => !ZF || s.statut == ZF);
+  const f = (k, l) => `<button class="btn ${ZF == k ? "p" : ""}" data-a="zsf" data-k="${k}">${l}</button>`;
+  return `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${f("", "Tous")}${Object.entries(ZN_ST).map(([k, l]) => f(k, l)).join("")}</div><div class="card sc"><table><tr><th>Réf.</th><th>Constat</th><th>Zone / localisation</th><th>Nature</th><th>Agent responsable</th><th>Délai</th><th>Statut</th></tr>${L.map(s => `<tr data-a="zso" data-i="${s.id}" style="cursor:pointer"><td><b>${E(s.ref.replace("EPS/OPS/SZ/", ""))}</b></td><td>${dt(s.constat_le)}</td><td><b>${E(s.objet)}</b><div class="m">${E(zZone(s.zone_code).libelle)} · ${E(s.lieu_code ? zLieu(s.lieu_code).libelle : s.lieu_autre || "à préciser")}</div></td><td>${E(s.nature == "Autre" ? "Autre : " + (s.nature_autre || "") : s.nature)}</td><td>${zResp(s)}</td><td>${zDelai(s)}</td><td><span class="bd ${ZN_B[s.statut]}">${ZN_ST[s.statut]}</span></td></tr>`).join("") || `<tr><td colspan="7" class="m">Aucun signalement.</td></tr>`}</table></div>`;
+}
+function zDisp() {
+  const w = ZN_W.includes(ME.role), g = zGarde(ZJ), F = ZP.filter(p => p.type == "fixe"), D = ZP.filter(p => p.type == "demande");
+  const cnt = {}; ZD.forEach(d => cnt[d.matricule] = (cnt[d.matricule] || 0) + 1);
+  let tot = 0, ok = 0, wc = 0, wcok = 0;
+  const rows = F.map(p => {
+    if (p.statut != "ouvert") return `<tr><td><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></td><td colspan="2"><span class="bd">Hors service</span> <span class="m">mise en service requise (onglet Zones & postes)</span></td></tr>`;
+    return p.roles.map((r, i) => {
+      const d = ZD.find(x => x.poste_code == p.code && x.role == r); tot++; if (d) ok++;
+      if (r == "T" || r == "A") { wc++; if (d) wcok++; }
+      return `<tr>${i == 0 ? `<td rowspan="${p.roles.length}"><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></td>` : ""}<td>${E(ZN_RL[r])}</td><td>${d ? `<b>${E(zNom(d.matricule))}</b> <span class="m">${E(d.matricule)}</span>${cnt[d.matricule] > 1 ? ' <span class="bd warn">double affectation</span>' : ""}${w ? ` <button class="btn" data-a="zaff" data-p="${p.code}" data-r="${r}">Changer</button> <button class="btn" data-a="zdel" data-i="${d.id}">Retirer</button>` : ""}` : `<span class="bd ${r == "T" || r == "A" ? "bad" : "warn"}">Non affecté</span>${w ? ` <button class="btn p" data-a="zaff" data-p="${p.code}" data-r="${r}">Affecter</button>` : ""}`}</td></tr>`;
+    }).join("");
+  }).join("");
+  return `<div class="card row" style="gap:6px;flex-wrap:wrap"><div><b>Shift du ${fd(ZJ)} (8h → 8h)</b><div class="m">Équipe de garde : Équipe ${g} · ${ok}/${tot} postes pourvus · toilettes : ${wcok}/${wc}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-a="zjp" data-k="-1">◀ Shift précédent</button><button class="btn" data-a="zjp" data-k="0">Shift en cours</button><button class="btn" data-a="zjp" data-k="1">Shift suivant ▶</button>${w ? `<button class="btn w" data-a="zcopy">Reprendre le shift précédent</button>` : ""}</div></div>${wcok < wc ? `<div class="al">Présence permanente obligatoire sur les toilettes : ${wc - wcok} poste(s) toilettes sans agent.</div>` : ""}<div class="card sc"><table><tr><th>Poste</th><th>Rôle</th><th>Agent affecté</th></tr>${rows}</table></div><div class="card"><h2>Sans agent fixe (à la demande)</h2>${D.map(p => `<div class="li"><div><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></div><span class="bd info">À la demande</span></div>`).join("")}<div class="m">Ces postes restent disponibles dans les signalements ; la responsabilité revient à l’équipe en service.</div></div>`;
+}
+function zRef() {
+  const a = ZN_ADM.includes(ME.role);
+  return `<div class="card sc"><h2>Zones globales</h2><table><tr><th>Zone</th><th>Localisations précises</th><th>Statut</th></tr>${ZG.map(z => { const L = ZL.filter(l => l.zones.includes(z.code)); return `<tr><td><b>${E(z.libelle)}</b>${z.note ? `<div class="m">${E(z.note)}</div>` : ""}</td><td class="m">${L.map(l => E(l.libelle)).join(" · ") || "—"}${L.length ? " · " : ""}Autre (à préciser)</td><td><span class="bd ${z.statut == "ouverte" ? "ok" : "warn"}">${z.statut == "ouverte" ? "Ouverte" : "Pas encore ouverte"}</span>${z.statut_le ? `<div class="m">${dt(z.statut_le)} · ${E(z.statut_par || "")}</div>` : ""}${a && (z.statut != "ouverte" || z.statut_le) ? `<div><button class="btn ${z.statut == "ouverte" ? "" : "p"}" data-a="zmes" data-k="${z.code}" data-s="${z.statut == "ouverte" ? "hors_service" : "ouverte"}">${z.statut == "ouverte" ? "Repasser hors service" : "Déclarer la mise en service"}</button></div>` : ""}</td></tr>`; }).join("")}</table></div>
+<div class="card sc"><h2>Postes d’affectation</h2><table><tr><th>Poste</th><th>Couverture</th><th>Type</th><th>Agents</th></tr>${ZP.map(p => `<tr><td><b>${E(p.libelle)}</b><div class="m">${E(p.secteur)}</div></td><td class="m">${E(p.couverture || "")}</td><td><span class="bd ${p.type == "fixe" ? (p.statut == "ouvert" ? "ok" : "") : "info"}">${p.type == "fixe" ? (p.statut == "ouvert" ? "Poste fixe" : "Hors service") : "À la demande"}</span></td><td>${p.roles.map(r => E(ZN_RL[r])).join(" + ") || "—"}</td></tr>`).join("")}</table></div>
+<div class="card"><h2>Nature de l’enceinte</h2><div class="m">${ZN_NAT.map(E).join(" · ")} · Autre (à préciser)</div></div>`;
+}
+V.zon = async () => {
+  await zLoad();
+  const tab = (k, l) => `<button class="btn ${ZT == k ? "p" : ""}" data-a="zt" data-k="${k}">${l}</button>`, n = ZS.filter(s => s.statut == "ouvert").length;
+  return head("Zones & dispatching", "Signalements par zone, agent responsable et délais", `<button class="btn w" data-a="zsnew">+ Signalement</button>`)
+    + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${tab("sig", `Signalements (${n} ouvert${n > 1 ? "s" : ""})`)}${tab("disp", "Dispatching")}${tab("ref", "Zones & postes")}</div>` + (ZT == "disp" ? zDisp() : ZT == "ref" ? zRef() : zSig());
+};
+Object.assign(ACT, {
+  zt(b) { ZT = b.dataset.k; draw(); },
+  zsf(b) { ZF = b.dataset.k; draw(); },
+  zjp(b) { const k = +b.dataset.k; ZJ = k ? zjAdd(ZJ || zjCur(), k) : zjCur(); draw(); },
+  async zmes(b) {
+    const z = zZone(b.dataset.k), on = b.dataset.s == "ouverte";
+    if (!confirm(on ? `Déclarer la mise en service de « ${z.libelle} » ? Le dispatching et les tâches deviendront possibles.` : `Repasser « ${z.libelle} » hors service ?`)) return;
+    const { error } = await sb.rpc("zone_statut", { p_code: z.code, p_statut: b.dataset.s }); toast(error ? "Refusé : " + error.message : on ? "Zone mise en service" : "Zone hors service"); draw();
+  },
+  zaff(b) {
+    const p = zPoste(b.dataset.p), r = b.dataset.r, g = zGarde(ZJ), pris = new Set(ZD.map(d => d.matricule));
+    const ok = a => !/Manutention|Chauffeurs/.test(a.service), lab = a => `${a.nom} (${a.equipe} · ${a.matricule})${pris.has(a.matricule) ? " — déjà affecté" : ""}`;
+    const L1 = AG.filter(a => ok(a) && a.service == "Terminal" && a.equipe == "Équipe " + g), L2 = AG.filter(a => ok(a) && !L1.includes(a));
+    ask(`${p.libelle} — ${ZN_RL[r]}`, [{ k: "m", l: `Agent (équipe de garde ${g} en premier)`, o: [["", "— Choisir —"]].concat(L1.map(a => [a.matricule, lab(a)]), [["", "──── Autres agents ────"]], L2.map(a => [a.matricule, lab(a)])) }], async v => {
+      if (!v.m) return toast("Aucun agent choisi");
+      const { error } = await sb.from("dispatch").upsert({ jour_shift: ZJ, poste_code: p.code, role: r, matricule: v.m, cree_nom: ME.nom }, { onConflict: "jour_shift,poste_code,role" });
+      toast(error ? "Refusé : " + error.message : "Affecté : " + zNom(v.m)); draw();
+    });
+  },
+  async zdel(b) { if (!confirm("Retirer cet agent du poste ?")) return; const { error } = await sb.from("dispatch").delete().eq("id", +b.dataset.i); toast(error ? "Refusé : " + error.message : "Affectation retirée"); draw(); },
+  async zcopy() {
+    const prev = zjAdd(ZJ, -1), { data, error } = await sb.from("dispatch").select("poste_code,role,matricule").eq("jour_shift", prev);
+    if (error) return toast("Erreur : " + error.message); if (!data.length) return toast("Aucun dispatching le shift précédent");
+    const L = data.filter(d => !ZD.some(x => x.poste_code == d.poste_code && x.role == d.role) && zPoste(d.poste_code).statut == "ouvert");
+    if (!L.length) return toast("Rien à reprendre : postes déjà pourvus");
+    if (!confirm(`Reprendre ${L.length} affectation(s) du shift du ${fd(prev)} ? Pensez à vérifier : l’équipe de garde change à chaque shift.`)) return;
+    const r = await sb.from("dispatch").insert(L.map(d => ({ ...d, jour_shift: ZJ, cree_nom: ME.nom }))); toast(r.error ? "Refusé : " + r.error.message : L.length + " affectation(s) reprises"); draw();
+  },
+  async zsnew() {
+    if (!ZG.length) await zLoad();
+    const sel = (id, o) => `<select id="${id}">${o.map(x => `<option value="${E(x[0])}">${E(x[1])}</option>`).join("")}</select>`;
+    $("#mf").innerHTML = `<h2>Nouveau signalement de zone</h2>
+<div><label>1. Zone globale</label>${sel("zz", [["", "— Choisir la zone —"]].concat(ZG.map(z => [z.code, z.libelle + (z.statut == "ouverte" ? "" : " — pas encore ouverte")])))}</div><div id="zzn" class="m"></div>
+<div><label>2. Localisation précise</label>${sel("zl", [["", "— Choisir d’abord la zone —"]])}</div><div id="zlw" style="display:none"><label>Préciser la localisation</label><input id="zla"></div>
+<div><label>3. Nature de l’enceinte</label>${sel("zn", [["", "— Choisir —"]].concat(ZN_NAT.map(x => [x, x]), [["Autre", "Autre (à préciser)"]]))}</div><div id="znw" style="display:none"><label>Préciser la nature</label><input id="zna"></div>
+<div id="zr" class="card m">Agent responsable : choisissez la localisation et la nature.</div>
+<div><label>Objet</label><input id="zo" required placeholder="Ex. : toilettes hommes sales, sol mouillé…"></div>
+<div><label>Description (facultatif)</label><textarea id="zde" rows="3"></textarea></div>
+<div><label>Priorité</label>${sel("zp", [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]])}</div>
+<div><label>Délai d’intervention attendu (minutes)</label><input id="zd" type="number" min="5" step="5" value="${ZN_DL.normale}"></div>
+<div><label>Date et heure du constat</label><input id="zc" type="datetime-local" value="${nowL()}"></div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Enregistrer</button></div>`;
+    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
+    const prev = async () => {
+      const z = zZone($("#zz").value), lc = $("#zl").value, nat = $("#zn").value;
+      $("#zzn").textContent = z.statut && z.statut != "ouverte" ? "Zone pas encore ouverte : le signalement est enregistré et suivi par l’équipe en service." : "";
+      $("#zlw").style.display = lc == "__autre" ? "" : "none"; $("#znw").style.display = nat == "Autre" ? "" : "none";
+      if (!lc || !nat) { $("#zr").textContent = "Agent responsable : choisissez la localisation et la nature."; return; }
+      const p = lc == "__autre" ? null : zPoste(zLieu(lc).poste_code), r = zRole(p, nat), j = zjOf(fromL($("#zc").value || nowL()));
+      let D = ZD; if (j != ZJ) { const q = await sb.from("dispatch").select("*").eq("jour_shift", j); D = q.data || []; }
+      if (!r) { $("#zr").innerHTML = `Agent responsable : <b>équipe en service (garde ${zGarde(j)})</b>${p && p.type == "demande" ? " — poste sans agent fixe, intervention à la demande" : ""}`; return; }
+      const d = D.filter(x => x.poste_code == p.code && (x.role == r || (r == "A1" && x.role == "A2")));
+      $("#zr").innerHTML = `Poste : <b>${E(p.libelle)}</b> (${E(ZN_RL[r])})<br>Agent responsable : ${d.length ? "<b>" + d.map(x => E(zNom(x.matricule))).join(" / ") + "</b>" : '<span class="bd warn">poste non pourvu au dispatching de ce shift</span>'}`;
+    };
+    $("#zz").onchange = () => { const c = $("#zz").value, L = ZL.filter(l => l.zones.includes(c)); $("#zl").innerHTML = c ? [["", "— Choisir —"]].concat(L.map(l => [l.code, l.libelle]), [["__autre", "Autre (à préciser)"]]).map(x => `<option value="${E(x[0])}">${E(x[1])}</option>`).join("") : `<option value="">— Choisir d’abord la zone —</option>`; prev(); };
+    $("#zl").onchange = prev; $("#zn").onchange = prev; $("#zc").onchange = prev;
+    $("#zp").onchange = () => { $("#zd").value = ZN_DL[$("#zp").value]; };
+    $("#mf").onsubmit = async e => {
+      e.preventDefault(); const z = $("#zz").value, lc = $("#zl").value, nat = $("#zn").value;
+      if (!z || !lc || !nat) return toast("Zone, localisation et nature sont obligatoires");
+      if (lc == "__autre" && !$("#zla").value.trim()) return toast("Précisez la localisation");
+      if (nat == "Autre" && !$("#zna").value.trim()) return toast("Précisez la nature de l’enceinte");
+      const { data, error } = await sb.from("signalements_zone").insert({ zone_code: z, lieu_code: lc == "__autre" ? null : lc, lieu_autre: lc == "__autre" ? $("#zla").value.trim() : null, nature: nat, nature_autre: nat == "Autre" ? $("#zna").value.trim() : null, objet: $("#zo").value.trim(), description: $("#zde").value.trim() || null, priorite: $("#zp").value, delai_min: +$("#zd").value || 30, constat_le: fromL($("#zc").value || nowL()), cree_nom: ME.nom }).select("id,ref,resp_nom,resp_role").single();
+      if (error) return toast("Refusé : " + error.message);
+      $("#md").classList.remove("on"); toast("Créé : " + data.ref + (data.resp_nom ? " — responsable : " + data.resp_nom : "")); ZT = "sig"; if (NAV != "zon") NAV = "zon"; draw();
+    };
+  },
+  zso(b) {
+    const s = ZS.find(x => x.id == b.dataset.i); if (!s) return; const v = ZN_V.includes(ME.role);
+    $("#mf").innerHTML = `<h2>${E(s.objet)}</h2><div class="m">${E(s.ref)} · priorité <b>${s.priorite}</b> · <span class="bd ${ZN_B[s.statut]}">${ZN_ST[s.statut]}</span> ${zDelai(s)}</div>
+<div class="card"><div><b>Zone :</b> ${E(zZone(s.zone_code).libelle)}</div><div><b>Localisation :</b> ${E(s.lieu_code ? zLieu(s.lieu_code).libelle : s.lieu_autre || "—")}</div><div><b>Nature :</b> ${E(s.nature == "Autre" ? "Autre : " + (s.nature_autre || "") : s.nature)}</div><div><b>Poste :</b> ${s.poste_code ? E(zPoste(s.poste_code).libelle) : "—"}</div><div><b>Agent responsable :</b> ${zResp(s)}</div><div class="m">Shift du ${fd(s.jour_shift)} · équipe de garde ${s.equipe_garde || "?"}</div></div>
+${s.description ? `<div class="card">${E(s.description)}</div>` : ""}
+<div class="card m">Constaté le ${dt(s.constat_le)} par ${E(s.cree_nom || "—")} · échéance ${dt(s.echeance)} (${s.delai_min} min)${s.intervention_le ? `<br>Intervention le ${dt(s.intervention_le)} par ${E(s.intervention_par || "—")}${s.intervention_comm ? " — " + E(s.intervention_comm) : ""}` : ""}${s.verifie_le ? `<br>Vérifié le ${dt(s.verifie_le)} par ${E(s.verifie_par || "—")}` : ""}</div>
+<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${v && s.statut == "ouvert" ? `<button type="button" class="btn p" data-a="zsint" data-i="${s.id}">Intervention faite</button>` : ""}${v && s.statut == "intervenu" ? `<button type="button" class="btn p" data-a="zsver" data-i="${s.id}">Vérifier et clore</button>` : ""}${v && ["ouvert", "intervenu"].includes(s.statut) ? `<button type="button" class="btn" data-a="zsann" data-i="${s.id}">Annuler</button>` : ""}<button type="button" class="btn" id="no">Fermer</button></div>`;
+    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault();
+  },
+  zsint(b) { const id = +b.dataset.i; ask("Intervention faite", [{ k: "t", l: "Heure de fin d’intervention", t: "datetime-local", v: nowL(), r: 1 }, { k: "p", l: "Faite par", v: (ZS.find(x => x.id == id) || {}).resp_nom || "" }, { k: "c", l: "Commentaire (facultatif)", t: "ta" }], async v => { const { error } = await sb.from("signalements_zone").update({ statut: "intervenu", intervention_le: fromL(v.t), intervention_par: v.p.trim() || null, intervention_comm: v.c.trim() || null }).eq("id", id); toast(error ? "Refusé : " + error.message : "Intervention enregistrée"); draw(); }); },
+  async zsver(b) { const { error } = await sb.from("signalements_zone").update({ statut: "verifie", verifie_le: new Date().toISOString(), verifie_par: ME.nom }).eq("id", +b.dataset.i); $("#md").classList.remove("on"); toast(error ? "Refusé : " + error.message : "Vérifié et clos"); draw(); },
+  async zsann(b) { if (!confirm("Annuler ce signalement ?")) return; const { error } = await sb.from("signalements_zone").update({ statut: "annule" }).eq("id", +b.dataset.i); $("#md").classList.remove("on"); toast(error ? "Refusé : " + error.message : "Annulé"); draw(); }
+});
 
 /* ---------- Interface ---------- */
 async function draw() {
