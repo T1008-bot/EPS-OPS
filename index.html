@@ -369,7 +369,7 @@ V.vols = async () => {
   const { data: ALC } = await sb.from("allocation_vol").select("*").gte("jour", ymd(d.getTime() - 864e5)).lte("jour", ymd(f.getTime() + 864e5));
   const alo = v => (ALC || []).find(x => x.sens == v.sens && nvol(x.numero_brut || x.numero) == nvol(v.numero) && x.jour == ymd(v.heure_prevue));
   const num = n => +((String(n).match(/(\d+)\s*$/) || [])[1]), used = new Set(), RW = [];
-  L.forEach(a => { if (used.has(a.id) || a.sens != "A") return; const c = L.find(x => x.sens == "D" && !used.has(x.id) && t(x) > t(a) && t(x) - t(a) < 8 * H && ((a.rotation && a.rotation == x.rotation) || (a.immat && a.immat == x.immat) || (!a.rotation && !x.rotation && !a.immat && !x.immat && a.compagnie && a.compagnie == x.compagnie && Math.abs(num(a.numero) - num(x.numero)) == 1))); if (c) { used.add(a.id); used.add(c.id); RW.push({ r: [a, c], k: t(a) }); } });
+  L.forEach(a => { if (used.has(a.id) || a.sens != "A") return; const c = L.find(x => x.sens == "D" && !used.has(x.id) && t(x) > t(a) && t(x) - t(a) < 8 * H && ((a.rotation && a.rotation == x.rotation) || (a.immat && a.immat == x.immat) || (!a.rotation && !x.rotation && !a.immat && !x.immat && a.compagnie && a.compagnie == x.compagnie && Math.abs(num(a.numero) - num(x.numero)) <= 1))); if (c) { used.add(a.id); used.add(c.id); RW.push({ r: [a, c], k: t(a) }); } });
   L.forEach(v => { if (!used.has(v.id)) RW.push({ r: [v], k: t(v) }); }); RW.sort((x, y) => x.k - y.k);
   const etaOf = v => volEta(v, alo(v)), schOf = v => volSch(v, alo(v)), stv = v => volSt(v, alo(v), MS);
   const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
