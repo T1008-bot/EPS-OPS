@@ -113,15 +113,15 @@ const dg = t => String(t).replace(/\D/g, "").slice(-8);
 const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsable des Opérations", coordinateur_ops: "Coordinateur des Opérations", responsable_rh: "Responsable RH", assistante_rh: "Assistante RH", responsable_technique: "Responsable Technique", responsable_comptabilite: "Responsable Comptabilité", approvisionnement: "Responsable Approvisionnement", superviseur_principal: "Superviseur Principal", superviseur_nettoyage: "Superviseur Nettoyage", superviseur_bagages: "Superviseur Manutention", chef_nettoyage: "Chef d’équipe Nettoyage", chef_bagages: "Chef d’équipe Manutention" };
 const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "zon", "sig", "tech", "disc", "mag"];
 const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "disc", "mag"];
-const ACC = { direction: ALL, responsable_ops: ALL, coordinateur_ops: ALL, superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["tach", "eff", "pres", "disc", "prof"], responsable_technique: ["tach", "tech", "sig", "prof"], approvisionnement: ["tach", "mag", "prof"] };
+const ACC = { direction: [...ALL, "cmd"], responsable_ops: [...ALL, "cmd"], coordinateur_ops: [...ALL, "cmd"], superviseur_principal: ALL, superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["tach", "cmd", "eff", "pres", "disc", "prof"], responsable_technique: ["tach", "tech", "sig", "cmd", "prof"], approvisionnement: ["tach", "mag", "cmd", "prof"] };
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const IC = { gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
+const IC = { cmd: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
 const TH = { get() { try { return localStorage.getItem("th") || "bleu"; } catch (e) { return "bleu"; } }, set(v) { try { localStorage.setItem("th", v); } catch (e) { } document.documentElement.dataset.theme = v; } };
 document.documentElement.dataset.theme = TH.get();
 const navClose = () => document.body.classList.remove("nvo"), navOpen = () => document.body.classList.contains("nvo");
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"] };
+const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"], cmd: ["🛒", "Demandes d’achat"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -657,7 +657,9 @@ V.sig = async () => {
   const [a, b] = await Promise.all([sb.from("signalements").select("*").order("created_at", { ascending: false }).limit(500), sb.from("signalement_events").select("*").order("quand").limit(3000), pjLoadAll()]);
   if (a.error) throw a.error; SG = a.data || []; SGE = {}; (b.data || []).forEach(e => (SGE[e.signalement_id] = SGE[e.signalement_id] || []).push(e));
   const o = (k, l, opts) => `<select data-g="${k}"><option value="">${l}</option>${opts.map(([v, t]) => `<option value="${v}" ${SGF[k] == v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+  const nda = (ACC[ME.role] || []).includes("cmd") ? await cmNbAFaire() : -1;
   return head("Help Desk", "Signalements externes — suivi jusqu’à la clôture", `<button class="btn w" data-a="signew">+ Signalement</button>`)
+    + (nda >= 0 ? `<div class="card row"><div><b>🛒 Demandes d’achat</b><div class="m">Signalements de manque, rupture ou pièce à acheter</div></div><button class="btn ${nda ? "w" : ""}" data-p="cmd">${nda ? nda + " à traiter" : "Ouvrir"}</button></div>` : "")
     + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="sq" placeholder="Rechercher (réf., BDM, objet, zone…)" value="${E(SQ)}">${o("st", "Statut : tous", Object.entries(SG_ST))}${o("bdm", "BDM : tous", [["m", "BDM manquant"], ["p", "BDM renseigné"]])}${o("rep", "Réponse : toutes", [["a", "Réponse absente"], ["r", "Réponse reçue"]])}</div><div id="sl"></div><div class="m">● priorité : gris basse · bleu normale · orange haute · rouge urgente. Touchez une ligne pour ouvrir la fiche.</div>`;
 };
 function sigF(id) {
@@ -1261,8 +1263,8 @@ ${s.description ? `<div class="card">${E(s.description)}</div>` : ""}
 });
 
 /* ---------- Réglages et notifications ---------- */
-const NT_CAT = [["alertes", "Alertes vols & effectifs"], ["signalements", "Signalements de zones"], ["helpdesk", "Help Desk (signalements externes)"], ["taches", "Tâches qui me sont assignées"], ["magasin", "Magasin (expressions de besoin)"], ["systeme", "Messages de l’application"]];
-const NT_IC = { alertes: "🔔", signalements: "📍", helpdesk: "📣", taches: "✅", magasin: "📦", systeme: "⚙️" };
+const NT_CAT = [["alertes", "Alertes vols & effectifs"], ["signalements", "Signalements de zones"], ["helpdesk", "Help Desk (signalements externes)"], ["taches", "Tâches qui me sont assignées"], ["magasin", "Magasin (expressions de besoin)"], ["commandes", "Demandes d’achat"], ["systeme", "Messages de l’application"]];
+const NT_IC = { alertes: "🔔", signalements: "📍", helpdesk: "📣", taches: "✅", magasin: "📦", commandes: "🛒", systeme: "⚙️" };
 let NTU = 0, NTL = [];
 const ZM = { get() { try { return +localStorage.getItem("zm") || 1; } catch (e) { return 1; } }, set(v) { try { localStorage.setItem("zm", v); } catch (e) { } document.documentElement.style.setProperty("zoom", v); } };
 ZM.set(ZM.get());
@@ -1348,6 +1350,109 @@ ${NTL.map(n => `<div class="li" data-a="ntgo" data-i="${n.id}" style="cursor:poi
     toast(error ? "Refusé : " + error.message : "Paramètres enregistrés"); if (!error) ACT.rgl();
   }
 });
+
+/* ---------- Demandes d'achat (commandes) ---------- */
+const CM_CAT = {
+  "Technique": ["Pièce de rechange", "Accessoire", "Outil", "Équipement / matériel", "Réparation / prestation", "Consommable technique"],
+  "Approvisionnement / magasin": ["Produits de nettoyage", "Consommables", "EPI / tenues", "Matériel d’exploitation", "Article manquant au magasin principal"],
+  "Bureau & administratif": ["Fournitures de bureau", "Informatique", "Impression / papeterie", "Mobilier"],
+  "Autre": []
+};
+const CM_MOT = { manquant: "Matériel / article manquant", rupture: "Rupture de stock", penurie: "Pénurie (stock bas)", panne: "Panne / casse", remplacement: "Remplacement / usure", autre: "Autre" };
+const CM_ST = { envoyee: "Envoyée", vue: "Vue / reçue", approuvee: "Approuvée", refusee: "Refusée", commandee: "Commandée", recue: "Livrée (reçue)", annulee: "Annulée" };
+const CM_B = { envoyee: "warn", vue: "info", approuvee: "ok", refusee: "bad", commandee: "info", recue: "ok", annulee: "" };
+const CM_DEST = { direction: "Direction", approvisionnement: "Approvisionnement (Mme Ndey Ba)" };
+const CM_NEW = ["responsable_technique", "responsable_comptabilite", "approvisionnement", "direction", "responsable_ops", "coordinateur_ops"];
+let CM = [], CME = {}, CMF = "actives";
+const cmDecide = c => c.destinataire == "approvisionnement" ? ["approvisionnement", "direction", "responsable_ops"].includes(ME.role) : ["direction", "responsable_ops"].includes(ME.role);
+async function cmLoad() {
+  const [a, b] = await Promise.all([sb.from("commandes").select("*").order("created_at", { ascending: false }).limit(500), sb.from("commande_events").select("*").order("quand").limit(3000)]);
+  if (a.error) throw a.error; CM = a.data || []; CME = {}; (b.data || []).forEach(e => (CME[e.commande_id] = CME[e.commande_id] || []).push(e));
+}
+const cmAFaire = c => (["envoyee", "vue"].includes(c.statut) && cmDecide(c)) || (c.statut == "approuvee" && ["approvisionnement", "direction", "responsable_ops"].includes(ME.role)) || (["approuvee", "commandee"].includes(c.statut) && c.cree_par == ME.id);
+V.cmd = async () => {
+  await cmLoad();
+  const F = { actives: c => !["recue", "refusee", "annulee"].includes(c.statut), afaire: cmAFaire, toutes: () => true, closes: c => ["recue", "refusee", "annulee"].includes(c.statut) };
+  const L = CM.filter(F[CMF] || F.actives), n = CM.filter(cmAFaire).length, fb = (k, l) => `<button class="btn ${CMF == k ? "p" : ""}" data-a="cmf" data-k="${k}">${l}</button>`;
+  return head("Demandes d’achat", "Signalements de manque, rupture ou pièce à acheter — décision, achat et réception", CM_NEW.includes(ME.role) ? `<button class="btn w" data-a="cmnew">+ Demande d’achat</button>` : "")
+    + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("actives", "En cours")}${fb("afaire", `À traiter par moi${n ? " (" + n + ")" : ""}`)}${fb("closes", "Clôturées")}${fb("toutes", "Toutes")}</div>
+<div class="card sc"><table><tr><th>Réf.</th><th>Date</th><th>Objet</th><th>Catégorie</th><th>Demandeur</th><th>Adressée à</th><th>Statut</th></tr>${L.map(c => `<tr data-a="cmo" data-i="${c.id}" style="cursor:pointer"><td><b>${E(c.ref.replace("EPS/OPS/DA/", ""))}</b></td><td>${dt(c.created_at)}</td><td><b>${E(c.objet)}</b>${c.quantite ? `<div class="m">Qté : ${E(c.quantite)}</div>` : ""}${c.urgence == "urgente" ? ' <span class="bd bad">Urgent</span>' : c.urgence == "haute" ? ' <span class="bd warn">Haute</span>' : ""}</td><td>${E(c.categorie)}<div class="m">${E(c.sous_categorie_autre || c.sous_categorie)}</div></td><td>${E(c.cree_nom || "—")}</td><td>${E(CM_DEST[c.destinataire])}</td><td><span class="bd ${CM_B[c.statut]}">${CM_ST[c.statut]}</span>${cmAFaire(c) ? ' <span class="bd warn">à traiter</span>' : ""}</td></tr>`).join("") || `<tr><td colspan="7" class="m">Aucune demande.</td></tr>`}</table></div>
+<div class="m">Circuit : Envoyée → Vue / reçue → Approuvée ou refusée → Commandée → Livrée (avec la photo du bon de réception / décharge signé).</div>`;
+};
+async function cmNbAFaire() { try { if (!(ACC[ME.role] || []).includes("cmd")) return 0; const { data } = await sb.from("commandes").select("id,statut,destinataire,cree_par").in("statut", ["envoyee", "vue", "approuvee", "commandee"]); return (data || []).filter(cmAFaire).length; } catch (e) { return 0; } }
+Object.assign(ACT, {
+  cmf(b) { CMF = b.dataset.k; draw(); },
+  async cmnew() {
+    await loadEQC().catch(() => { });
+    const tech = ME.role == "responsable_technique", cat0 = tech ? "Technique" : "Approvisionnement / magasin", dest0 = ["responsable_comptabilite"].includes(ME.role) ? "approvisionnement" : "direction";
+    const sel = (id, o, v) => `<select id="${id}">${o.map(x => `<option value="${E(x[0])}" ${x[0] == v ? "selected" : ""}>${E(x[1])}</option>`).join("")}</select>`;
+    $("#mf").innerHTML = `<h2>🛒 Nouvelle demande d’achat</h2>
+<div><label>Motif</label>${sel("cmm", Object.entries(CM_MOT), "manquant")}</div>
+<div><label>Catégorie</label>${sel("cmc", Object.keys(CM_CAT).map(k => [k, k]), cat0)}</div>
+<div><label>Sous-catégorie</label><select id="cms"></select></div><div id="cmsw" style="display:none"><label>Préciser</label><input id="cmsa" placeholder="Ex. : courroie, joint, câble…"></div>
+<div><label>Objet (ce qu’il faut acheter)</label><input id="cmo" required placeholder="Ex. : Filtre à huile groupe électrogène"></div>
+<div><label>Description, références, marque, modèle</label><textarea id="cmd" rows="3" placeholder="Référence constructeur, dimensions, compatibilité, fournisseur conseillé…"></textarea></div>
+<div><label>Quantité</label><input id="cmq" placeholder="Ex. : 2 pièces, 5 cartons"></div>
+${EQC.length ? `<div><label>Équipement concerné (facultatif)</label>${sel("cme", [["", "— Aucun —"]].concat(EQC.map(e => [String(e.id), (e.code ? e.code + " · " : "") + (e.designation || "")])), "")}</div>` : ""}
+<div><label>Urgence</label>${sel("cmu", [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]], "normale")}</div>
+<div><label>Adressée à</label>${sel("cmt", Object.entries(CM_DEST), dest0)}</div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Envoyer la demande</button></div>`;
+    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
+    const sc = () => { const L = CM_CAT[$("#cmc").value] || []; $("#cms").innerHTML = L.concat(["Autre (à préciser)"]).map(x => `<option>${E(x)}</option>`).join(""); $("#cmsw").style.display = L.length ? "none" : ""; };
+    $("#cmc").onchange = sc; $("#cms").onchange = () => { $("#cmsw").style.display = $("#cms").value == "Autre (à préciser)" ? "" : "none"; }; sc();
+    $("#mf").onsubmit = async e => {
+      e.preventDefault(); const autre = $("#cms").value == "Autre (à préciser)";
+      if (autre && !$("#cmsa").value.trim()) return toast("Précisez la sous-catégorie");
+      const { data, error } = await sb.from("commandes").insert({ motif: $("#cmm").value, categorie: $("#cmc").value, sous_categorie: autre ? "Autre" : $("#cms").value, sous_categorie_autre: autre ? $("#cmsa").value.trim() : null, objet: $("#cmo").value.trim(), description: $("#cmd").value.trim() || null, quantite: $("#cmq").value.trim() || null, equipement_id: $("#cme") && $("#cme").value ? +$("#cme").value : null, urgence: $("#cmu").value, destinataire: $("#cmt").value }).select("ref").single();
+      if (error) return toast("Refusé : " + error.message);
+      $("#md").classList.remove("on"); toast("Demande envoyée : " + data.ref); NAV = "cmd"; CMF = "actives"; draw();
+    };
+  },
+  async cmo(b) {
+    await loadEQC().catch(() => { });
+    const c = CM.find(x => x.id == b.dataset.i); if (!c) return; const dec = cmDecide(c), ach = ["approvisionnement", "direction", "responsable_ops"].includes(ME.role), rec = c.cree_par == ME.id || ["approvisionnement", "direction", "responsable_ops", "coordinateur_ops"].includes(ME.role);
+    let pv = ""; if (c.preuve_chemin) { const { data } = await sb.storage.from("commandes-pj").createSignedUrl(c.preuve_chemin, 3600); if (data) pv = /\.pdf$/i.test(c.preuve_chemin) ? `<a class="lk" href="${data.signedUrl}" target="_blank" rel="noopener">📎 Ouvrir le bon de réception (PDF)</a>` : `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Bon de réception" style="max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--b)"></a>`; }
+    const H = (CME[c.id] || []).map(e => `<div class="li"><div><b>${CM_ST[e.statut] || e.statut}</b>${e.commentaire ? `<div class="m">${E(e.commentaire)}</div>` : ""}</div><div class="m" style="text-align:right">${dt(e.quand)}<br>${E(e.auteur_nom || "")}</div></div>`).join("");
+    const btn = (a, l, k = "") => `<button type="button" class="btn ${k}" data-a="${a}" data-i="${c.id}">${l}</button>`;
+    $("#mf").innerHTML = `<div class="row"><h2>${E(c.objet)}</h2><span class="bd ${CM_B[c.statut]}">${CM_ST[c.statut]}</span></div>
+<div class="m">${E(c.ref)} · ${dt(c.created_at)} · par ${E(c.cree_nom || "—")} · adressée à ${E(CM_DEST[c.destinataire])}</div>
+<div class="card"><div><b>Motif :</b> ${E(CM_MOT[c.motif] || c.motif)}</div><div><b>Catégorie :</b> ${E(c.categorie)} · ${E(c.sous_categorie_autre || c.sous_categorie)}</div>${c.quantite ? `<div><b>Quantité :</b> ${E(c.quantite)}</div>` : ""}<div><b>Urgence :</b> ${E(c.urgence)}</div>${c.equipement_id ? `<div><b>Équipement :</b> ${E(((EQC.find(e => e.id == c.equipement_id) || {}).designation) || "#" + c.equipement_id)}</div>` : ""}</div>
+${c.description ? `<div class="card" style="white-space:pre-wrap">${E(c.description)}</div>` : ""}
+${pv ? `<div class="card"><b>Preuve de réception</b> · ${c.recue_le ? dt(c.recue_le) : ""} · ${E(c.recue_par || "")}<div style="margin-top:6px">${pv}</div></div>` : ""}
+<div class="card"><h2>Historique</h2>${H || '<div class="m">—</div>'}</div>
+<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">
+${dec && c.statut == "envoyee" ? btn("cmvue", "👁 Marquer comme vue") : ""}
+${dec && ["envoyee", "vue"].includes(c.statut) ? btn("cmapp", "✔ Approuver", "p") + btn("cmref", "✖ Refuser") : ""}
+${ach && c.statut == "approuvee" ? btn("cmcom", "🛒 Achat lancé / commandée", "p") : ""}
+${rec && ["approuvee", "commandee"].includes(c.statut) ? btn("cmrec", "📦 Réception (bon signé)", "p") : ""}
+${["envoyee", "vue"].includes(c.statut) && (c.cree_par == ME.id || ["direction", "responsable_ops"].includes(ME.role)) ? btn("cmann", "Annuler la demande") : ""}
+<button type="button" class="btn" id="no">Fermer</button></div>`;
+    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault();
+  },
+  async cmvue(b) { await cmSet(+b.dataset.i, { statut: "vue" }, "Demande marquée comme vue"); },
+  cmapp(b) { ask("Approuver la demande", [{ k: "c", l: "Commentaire (facultatif)", t: "ta" }], v => cmSet(+b.dataset.i, { statut: "approuvee", decision_comm: v.c.trim() || null }, "Demande approuvée")); },
+  cmref(b) { ask("Refuser la demande", [{ k: "c", l: "Motif du refus", t: "ta", r: 1 }], v => cmSet(+b.dataset.i, { statut: "refusee", decision_comm: v.c.trim() }, "Demande refusée")); },
+  cmcom(b) { ask("Achat lancé", [{ k: "c", l: "Fournisseur, bon de commande, délai… (facultatif)", t: "ta" }], v => cmSet(+b.dataset.i, { statut: "commandee", commande_comm: v.c.trim() || null }, "Demande marquée commandée")); },
+  async cmann(b) { if (!confirm("Annuler cette demande d’achat ?")) return; await cmSet(+b.dataset.i, { statut: "annulee" }, "Demande annulée"); },
+  cmrec(b) {
+    const id = +b.dataset.i;
+    $("#mf").innerHTML = `<h2>📦 Réception de la commande</h2><div class="m">Joignez la photo (ou le PDF) du bon de réception / bon de décharge signé par le responsable qui a reçu.</div>
+<div><label>Bon de réception / décharge signé</label><input id="crf" type="file" accept="image/*,application/pdf" capture="environment" required></div>
+<div><label>Reçu par</label><input id="crp" value="${E(ME.nom)}" required></div>
+<div><label>Date et heure de réception</label><input id="crd" type="datetime-local" value="${nowL()}" required></div>
+<div><label>Remarques (quantité reçue, état…)</label><textarea id="crc" rows="2"></textarea></div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Enregistrer la réception</button></div>`;
+    $("#no").onclick = () => $("#md").classList.remove("on");
+    $("#mf").onsubmit = async e => {
+      e.preventDefault(); const f = $("#crf").files[0]; if (!f) return toast("La photo du bon signé est obligatoire");
+      if (f.size > 15e6) return toast("Fichier trop lourd (15 Mo max)");
+      const ext = (f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, ""), chemin = `${id}/${Date.now()}.${ext}`;
+      const up = await sb.storage.from("commandes-pj").upload(chemin, f, { contentType: f.type || undefined }); if (up.error) return toast("Envoi de la photo impossible : " + up.error.message);
+      await cmSet(id, { statut: "recue", preuve_chemin: chemin, recue_par: $("#crp").value.trim(), recue_le: fromL($("#crd").value), recue_comm: $("#crc").value.trim() || null }, "Réception enregistrée");
+    };
+  }
+});
+async function cmSet(id, o, ok) { const { error } = await sb.from("commandes").update(o).eq("id", id); $("#md").classList.remove("on"); toast(error ? "Refusé : " + error.message : ok); draw(); }
 
 /* ---------- Interface ---------- */
 const PL = p => p == "shift" && ["responsable_rh", "assistante_rh"].includes(ME.role) ? "Shift actuel" : P[p][1];
