@@ -240,6 +240,8 @@ const stt = a => ST[a.matricule]?.statut || (onDuty(a) ? "p" : "h");
 /* ---------- Vues ---------- */
 const V = {};
 /* ---------- Rapport du shift Ops (manutention) pré-rempli ---------- */
+const nl = x => { if (x == null || x === "") return ""; let a = x; if (typeof x == "string") { try { a = JSON.parse(x); } catch (_) { a = x; } } return Array.isArray(a) ? a.filter(Boolean).join(", ") : String(a); };
+const sn = x => String(x || "").replace(/^\s*(M\.?|Mr\.?|Mme\.?)\s+/i, "").trim();
 let SHO = 0, SHRURL = "", SHV = 0;
 const SHRR = ["superviseur_principal", "superviseur_bagages", "responsable_ops", "coordinateur_ops", "direction"];
 async function shiftRep() {
@@ -248,7 +250,7 @@ async function shiftRep() {
   const [rv, rm, rr, rw] = await Promise.all([
     sb.from("vols").select("id,numero,sens,heure_prevue,heure_estimee,heure_reelle,statut,source").gte("heure_prevue", iso(s)).lt("heure_prevue", iso(en)).order("heure_prevue"),
     sb.from("messages_vol").select("type,numero,jour,vol_id,part,recu_le,parse").in("jour", [ymd(s), ymd(en)]),
-    sb.from("rapports_detail").select("*").eq("service", "bagages").gte("cree_le", fq(new Date(s.getTime() - 3 * H))).lt("cree_le", fq(new Date(en.getTime() + 3 * H))).order("cree_le", { ascending: false }).limit(10),
+    sb.from("rapports_detail").select("*").gte("cree_le", fq(new Date(s.getTime() - 3 * H))).lt("cree_le", fq(new Date(en.getTime() + 3 * H))).order("cree_le", { ascending: false }).limit(40),
     sb.from("rapports_staff").select("numeros_vol,jour_vol,recu_le,brut").eq("categorie", "wheelchairs").gte("recu_le", iso(s)).lt("recu_le", iso(en))]);
   const wn = x => { const m = String(x ?? "").match(/\d+/); return m ? +m[0] : 0; }, WC = { A: { d: 0, r: 0 }, D: { d: 0, r: 0 } };
   (rw.data || []).forEach(r => { const a = (r.brut && r.brut.answers) || {}, g = k => a[k] && a[k].answer; WC.A.d += wn(g("10")); WC.D.d += wn(g("11")); WC.A.r += wn(g("12")); WC.D.r += wn(g("13")); });
@@ -263,8 +265,8 @@ async function shiftRep() {
   });
   const tot = a => ({ n: a.length, pax: sum(a, "pax"), pmr: sum(a, "pmr"), bag: sum(a, "bag"), kg: sum(a, "kg") }), TA = tot(F.filter(x => x.A)), TD = tot(F.filter(x => !x.A));
   const PA = TA.pmr, PD = TD.pmr; if (nWC) { TA.pmr = WC.A.r; TD.pmr = WC.D.r; }
-  const rb = (rr.data || [])[0], mat = n => (AG.find(a => a.nom == String(n || "").trim()) || {}).matricule || "", f1 = x => String(x || "").split(/[,;\/]/)[0].trim();
-  const pr = rb ? rb.present : null, eff = pr != null ? pr : team("Manutention " + g).c.p, ren = rb ? rb.renforts : null, sp = rb && rb.sup_principal || "", su = f1(rb && rb.superviseurs), ch = f1(rb && rb.chefs);
+  const rb = (rr.data || []).find(x => x.service == "bagages"), mat = n => (AG.find(a => sn(a.nom).toLowerCase() == sn(n).toLowerCase()) || {}).matricule || "", f1 = x => sn(nl(x).split(/[,;]/)[0]);
+  const pr = rb ? rb.present : null, eff = pr != null ? pr : team("Manutention " + g).c.p, ren = rb ? rb.renforts : null, sp = sn(nl(((rr.data || []).find(x => x.sup_principal) || {}).sup_principal)), su = f1(rb && rb.superviseurs), ch = f1(rb && rb.chefs);
   const o = { "de[day]": p2(s.getUTCDate()), "de[month]": p2(s.getUTCMonth() + 1), "de[year]": s.getUTCFullYear(), "au[day]": p2(en.getUTCDate()), "au[month]": p2(en.getUTCMonth() + 1), "au[year]": en.getUTCFullYear(), "a[hourSelect]": "08", "a[minuteSelect]": "00", "a31[hourSelect]": "08", "a31[minuteSelect]": "00",
     superviseurPrincipal: sp, "superviseur18[first]": su, "superviseur18[last]": mat(su), "chefDequipe[first]": ch, "chefDequipe[last]": mat(ch), faitPar: ME.nom,
     "situationDu[0][0]": "Equipe M" + g, "situationDu[0][1]": eff ? p2(eff) : "", "situationDu[0][5]": +ren ? (+ren == 1 ? "1" : p2(ren)) : "" };
@@ -300,7 +302,10 @@ V.shift = async () => {
   const open = AL.filter(a => a.statut == "ouverte" || a.statut == "prise_en_charge");
   return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
 <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><h2>${SHL[SHV]}</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${shb(0, "Shift en cours")}${shb(1, "Shift d’hier")}${shb(2, "Shift d’avant-hier")}</div></div><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.map(LB).join(" + ").replace(/Nettoyage · /g, "")} + M${g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${SHV ? "" : h4 ? "(en service)" : "(hors service)"}</div></div></div>
-<div class="li"><div><div class="m">Superviseur principal</div><b>${E(ref?.sup_principal) || "—"}</b></div><div><div class="m">Superviseurs</div><b>${E(ref?.superviseurs) || "—"}</b></div><div><div class="m">Chefs d’équipe en service</div><b>${E(ref?.chefs) || "—"}</b></div></div></div>
+<div class="li"><div><div class="m">Superviseur principal</div><b>${E(nl((rp || []).find(r => r.sup_principal)?.sup_principal)) || "—"}</b></div></div>
+<div class="li"><div><div class="m">Manutention M${g} · Superviseur(s)</div><b>${E(nl(rb?.superviseurs)) || "—"}</b></div><div><div class="m">Manutention M${g} · Chef(s) d’équipe</div><b>${E(nl(rb?.chefs)) || "—"}</b></div></div>
+${rb ? "" : `<div class="m"><span class="bd warn">Rapport de situation Manutention non reçu pour ce shift</span></div>`}
+<div class="li"><div><div class="m">Nettoyage N${g} · Superviseur(s)</div><b>${E(nl(rn?.superviseurs)) || "—"}</b></div><div><div class="m">Nettoyage N${g} · Chef(s) d’équipe</div><b>${E(nl(rn?.chefs)) || "—"}</b></div></div></div>
 ${SR}
 ${SHV ? "" : RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("")}<div class="g">${teams.map(card).join("")}${(() => { const t = team("Manutention " + g), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; return `<div class="card"><div class="row"><h2>Manutention · M${g}</h2><span class="bd info">24 h</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${rb ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(rb.cree_le))} : ${rb.present ?? "?"}${rb.effectif ? "/" + rb.effectif : ""} présents · renforts : ${rb.renforts || 0}${rb.renforts_detail ? " (" + E(rb.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; })()}</div>
 ${SHV ? "" : `<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>`}
