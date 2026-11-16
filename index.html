@@ -92,6 +92,7 @@ input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-hei
 #ts{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));max-width:none}
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation-duration:.01s!important}}
+.fa{display:flex;gap:8px}.fa .btn{flex:1;text-align:center;font-size:15px;padding:12px}.btn.wa{background:#16a34a;border-color:#16a34a;color:#fff}.fc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fch{text-align:left;border:1px solid var(--b);background:var(--pl);border-radius:12px;padding:8px 10px;cursor:pointer;color:var(--t);font:inherit;transition:transform .2s var(--sp)}.fch:active{transform:scale(.97)}.fch small{display:block;color:var(--m);font-size:11px;font-weight:600}.fch b{font-size:14px}.fch b small{display:inline;margin-left:4px}.fch.on{outline:2px solid var(--p);background:var(--s)}#fx{border-top:1px solid var(--b);padding-top:8px}
 </style>
 </head>
 <body>
@@ -416,7 +417,44 @@ V.eff = async () => {
   return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`) + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option><option value="h" ${F.st == "h" ? "selected" : ""}>Hors shift</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
 };
 
+/* ---------- Situations à suivre (absentéisme) ---------- */
+let PM = "", PSD = null, SF = { dp: "", g: "", sv: "", per: "30", seuil: "1", et: "" };
+const skp = (t, v, s, cl) => `<div class="card"><div class="m">${t}</div><div class="k" ${cl ? `style="color:${cl}"` : ""}>${v}</div><div class="m">${s || ""}</div></div>`;
+async function presSuivi() {
+  const dOk = (ACC[ME.role] || []).includes("disc");
+  if (!PSD || PSD.per != SF.per || Date.now() - PSD.t > 120000) {
+    const since = ymd(Date.now() - +SF.per * 864e5);
+    const [rows, su, dc] = await Promise.all([allRows(() => sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since).order("jour", { ascending: false })), sb.from("suivi_absences").select("*"), dOk ? sb.from("discipline").select("matricule") : { data: [] }]);
+    const sui = {}; (su.data || []).forEach(x => sui[x.matricule] = x);
+    const dcn = {}; (dc.data || []).forEach(x => dcn[x.matricule] = (dcn[x.matricule] || 0) + 1);
+    PSD = { per: SF.per, t: Date.now(), rows, sui, dcn };
+  }
+  const S = {}; PSD.rows.forEach(r => { const x = S[r.matricule] = S[r.matricule] || { nj: 0, j: 0, c: 0, mp: 0, last: null }; if (x[r.statut] != null) x[r.statut]++; if ((r.statut == "nj" || r.statut == "j") && (!x.last || r.jour > x.last)) x.last = r.jour; });
+  const z = { nj: 0, j: 0, c: 0, mp: 0, last: null };
+  const hit = (a, x) => { const sv = PSD.sui[a.matricule], open = sv && sv.etat != "regularise"; const q = SF.seuil == "t" ? x.nj + x.j >= 1 : x.nj >= +SF.seuil; return q || open; };
+  const base = AG.filter(a => { const x = S[a.matricule] || z; return hit(a, x); });
+  const inDp = a => !SF.dp || grpOf(a).dp == SF.dp;
+  const L = base.filter(a => inDp(a) && (!SF.g || grpOf(a).g == SF.g) && (!SF.sv || a.service == SF.sv) && (!SF.et || (SF.et == "aucun" ? !PSD.sui[a.matricule] : PSD.sui[a.matricule]?.etat == SF.et)));
+  const chip = (k, v, l) => `<button type="button" class="btn${SF[k] == v ? " p" : ""}" data-a="sf" data-k="${k}" data-v="${v}">${l}</button>`;
+  const grs = ["Groupe 1", "Groupe 2", "Groupe 3", ...(SF.dp != "Manutention" && SF.dp != "Chauffeurs" ? ["Journée (N4)"] : []), ...(!SF.dp || SF.dp == "Chauffeurs" ? ["Chauffeurs"] : [])].filter(g => SF.dp != "Chauffeurs" || g == "Chauffeurs");
+  const svs = [...new Set(AG.filter(inDp).map(a => a.service))].sort();
+  const sel = (k, opts) => `<select data-sf="${k}">${opts.map(([v, l]) => `<option value="${v}" ${SF[k] == v ? "selected" : ""}>${E(l)}</option>`).join("")}</select>`;
+  const tnj = L.reduce((n, a) => n + (S[a.matricule]?.nj || 0), 0), nOpen = L.filter(a => { const s = PSD.sui[a.matricule]; return !s || s.etat != "regularise"; }).length, nReg = L.length - nOpen;
+  const row = a => { const x = S[a.matricule] || z, sv = PSD.sui[a.matricule], g = grpOf(a), tl = a.tel ? a.tel.replace(/\s/g, "") : ""; return `<tr><td><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span> <span class="m">${E(a.matricule)}</span></td><td>${g.c}</td><td>${E(a.service)}</td><td><span class="bd ${x.nj > 1 ? "bad" : x.nj ? "warn" : "info"}">${x.nj}</span></td><td>${x.j}</td><td>${x.mp}</td>${dOk ? `<td>${PSD.dcn[a.matricule] || 0}</td>` : ""}<td>${x.last ? fd(x.last) : "—"}</td><td>${sv ? `<span class="bd ${SE[sv.etat][1]}">${SE[sv.etat][0]}</span>` : '<span class="bd bad">À suivre</span>'}</td><td style="white-space:nowrap">${tl ? `<a href="tel:${E(tl)}" title="Appeler">📞</a> <a href="https://wa.me/222${dg(a.tel)}" target="_blank" rel="noopener" title="WhatsApp">💬</a>` : "—"}</td></tr>`; };
+  const ord = ["Groupe 1", "Groupe 2", "Groupe 3", "Journée (N4)", "Chauffeurs"];
+  const sec = ord.map(g => { const R = L.filter(a => grpOf(a).g == g).sort((p, q) => (S[q.matricule]?.nj || 0) - (S[p.matricule]?.nj || 0) || (S[q.matricule]?.j || 0) - (S[p.matricule]?.j || 0)); if (!R.length) return ""; return `<div class="card sc"><h2>${g} <span class="m">— ${R.length} agent${R.length > 1 ? "s" : ""}</span></h2><table><tr><th>Agent</th><th>Équipe</th><th>Service</th><th>NJ</th><th>Justifiées</th><th>MAP</th>${dOk ? "<th>Dossiers disc.</th>" : ""}<th>Dernière abs.</th><th>Suivi</th><th>Contact</th></tr>${R.map(row).join("")}</table></div>`; }).join("");
+  return head("📌 Situations à suivre", `Agents absentéistes et situations à régulariser — ${SF.per} derniers jours`, `<button class="btn" data-a="pmode" data-v="">← Situation du jour</button>`)
+    + `<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${chip("dp", "", "Tous services")}${chip("dp", "Nettoyage", "Nettoyage")}${chip("dp", "Manutention", "Manutention")}${chip("dp", "Chauffeurs", "Chauffeurs")}</div>
+<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${chip("g", "", "Tous les groupes")}${grs.map(g => chip("g", g, g)).join("")}</div>
+<div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${sel("sv", [["", "Tous les sous-services"], ...svs.map(x => [x, x])])}${sel("per", [["30", "30 derniers jours"], ["60", "60 derniers jours"], ["90", "90 derniers jours"]])}${sel("seuil", [["1", "≥ 1 abs. non justifiée"], ["2", "≥ 2 abs. non justifiées"], ["3", "≥ 3 abs. non justifiées"], ["t", "Toute absence (hors congé)"]])}${sel("et", [["", "Suivi : tous"], ["aucun", "Suivi : non ouvert"], ...Object.entries(SE).map(([k, v]) => [k, "Suivi : " + v[0]])])}</div></div>`
+    + `<div class="g">${skp("Agents listés", L.length, "selon les filtres")}${skp("Abs. non justifiées", tnj, "cumul sur la période", tnj ? "#e11d48" : "")}${skp("À traiter", nOpen, "suivi non régularisé", nOpen ? "#d97706" : "")}${skp("Régularisés", nReg, "situation close")}</div>`
+    + (sec || `<div class="card m">Aucun agent ne correspond à ces critères.</div>`)
+    + `<div class="m">Touchez un nom pour ouvrir la carte de l’agent (appel, WhatsApp, embauche, antécédents, suivi). Un agent reste listé tant que son suivi n’est pas « Régularisé », même sous le seuil.</div>`;
+}
+document.addEventListener("change", e => { const k = e.target.dataset?.sf; if (k) { SF[k] = e.target.value; draw(); } });
+
 V.pres = async () => {
+  if (PM == "suivi") return presSuivi();
   const since = ymd(Date.now() - 30 * 864e5);
   const [{ data: hs }, { data: rp }] = await Promise.all([
     sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since).order("jour", { ascending: false }),
@@ -427,11 +465,11 @@ V.pres = async () => {
     return `<div class="card"><b>${e}</b><div class="k">${t.c.p} / ${t.tot}</div><div class="m">${p} % · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c} · MAP ${t.c.mp}</div>${dr ? `<div class="m" style="margin-top:6px">Déclaré (${hm(T(dr.cree_le))}) : <b>${dp ?? "?"}${dr.effectif ? "/" + dr.effectif : ""}</b> présents · renforts ${dr.renforts || 0}${ec != null && ec != 0 ? ` <span class="bd ${Math.abs(ec) > 2 ? "bad" : "warn"}">écart ${ec > 0 ? "+" : ""}${ec} avec le calculé</span>` : ec == 0 ? ' <span class="bd ok">cohérent</span>' : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; };
   const ab = AG.filter(a => ST[a.matricule]), nm = Object.fromEntries(AG.map(a => [a.matricule, a]));
   const top = Object.entries(rec).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  return head("Suivi présence", `Situation en temps réel — ${dmy(new Date())} ${hm(new Date())}`, `<button class="btn p" data-p="eff">Mettre à jour (annuaire)</button>`)
+  return head("Suivi présence", `Situation en temps réel — ${dmy(new Date())} ${hm(new Date())}`, `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn w" data-a="pmode" data-v="suivi">📌 Situations à suivre</button><button class="btn p" data-p="eff">Mettre à jour (annuaire)</button></div>`)
     + `<div class="g">${TM.map(cd).join("")}</div>
-<div class="card sc"><h2>Absents du jour</h2><table><tr><th>Agent</th><th>Équipe</th><th>Statut</th><th>Justification</th></tr>${ab.map(a => `<tr><td><b>${E(a.nom)}</b> <span class="m">${E(a.matricule)}</span></td><td>${E(a.equipe)}</td><td><span class="bd ${ST[a.matricule].statut == "nj" ? "bad" : "info"}">${SL[ST[a.matricule].statut]}</span></td><td>${E(ST[a.matricule].justification) || "—"}</td></tr>`).join("") || `<tr><td colspan="4" class="m">Aucune absence saisie aujourd’hui.</td></tr>`}</table></div>
+<div class="card sc"><h2>Absents du jour</h2><table><tr><th>Agent</th><th>Équipe</th><th>Statut</th><th>Justification</th></tr>${ab.map(a => `<tr><td><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span> <span class="m">${E(a.matricule)}</span></td><td>${E(a.equipe)}</td><td><span class="bd ${ST[a.matricule].statut == "nj" ? "bad" : "info"}">${SL[ST[a.matricule].statut]}</span></td><td>${E(ST[a.matricule].justification) || "—"}</td></tr>`).join("") || `<tr><td colspan="4" class="m">Aucune absence saisie aujourd’hui.</td></tr>`}</table></div>
 <div class="card sc"><h2>Historique des journées saisies (30 jours)</h2><table><tr><th>Date</th><th>Non justifiées</th><th>Justifiées</th><th>Congés</th><th>Mises à pied</th></tr>${Object.entries(hist).map(([d, c]) => `<tr><td>${dmy(d)}</td><td>${c.nj}</td><td>${c.j}</td><td>${c.c}</td><td>${c.mp}</td></tr>`).join("") || `<tr><td colspan="5" class="m">L’historique se constitue au fil des saisies.</td></tr>`}</table></div>
-<div class="card sc"><h2>Absences non justifiées récurrentes (30 jours)</h2><table><tr><th>Agent</th><th>Équipe</th><th>Nb</th></tr>${top.map(([m, n]) => `<tr><td>${E(nm[m]?.nom || m)}</td><td>${E(nm[m]?.equipe || "")}</td><td><span class="bd ${n > 1 ? "bad" : "info"}">${n}</span></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune.</td></tr>`}</table></div>
+<div class="card sc"><h2>Absences non justifiées récurrentes (30 jours)</h2><table><tr><th>Agent</th><th>Équipe</th><th>Nb</th></tr>${top.map(([m, n]) => `<tr><td>${nm[m] ? `<span class="lk" data-a="fiche" data-m="${E(m)}">${E(nm[m].nom)}</span>` : E(m)}</td><td>${E(nm[m]?.equipe || "")}</td><td><span class="bd ${n > 1 ? "bad" : "info"}">${n}</span></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune.</td></tr>`}</table></div>
 <div class="card sc"><h2>Rapports « Situation du staff » reçus</h2><table><tr><th>Date</th><th>Service</th><th>Groupe</th><th>Présents</th><th>Renforts</th></tr>${(rp || []).map(r => `<tr><td>${dmy(T(r.cree_le))} ${hm(T(r.cree_le))}</td><td>${r.service == "bagages" ? "Manutention" : "Nettoyage"}</td><td>${E(r.groupe)}</td><td>${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""}</td><td>${r.renforts || 0}${r.renforts_detail ? " — " + E(r.renforts_detail) : ""}</td></tr>`).join("")}</table></div>`;
 };
 
@@ -837,24 +875,50 @@ function irFromSig(s) {
 }
 async function irCreate(vals) { const { data, error } = await sb.from("incident_reports").insert({ prepare_nom: ME.nom, prepare_fonction: RLE[ME.role] || "EPS", ...vals }).select("id").single(); if (error) { toast("Refusé : " + error.message); return null; } toast("Brouillon créé"); if (NAV == "ir") await draw(); irEdit(data.id); return data.id; }
 
-/* ---------- Fiche agent ---------- */
-async function fiche(mat) {
+/* ---------- Fiche agent (carte RH) ---------- */
+const AGW = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh"];
+const SE = { a_suivre: ["À suivre", "bad"], contacte: ["Contacté", "info"], en_attente: ["En attente", "warn"], regularise: ["Régularisé", "ok"] };
+const grpOf = a => { const e = a.equipe || ""; if (e.startsWith("Manutention")) return { dp: "Manutention", g: "Groupe " + e.slice(-1), c: "M" + e.slice(-1) }; if (e == "Chauffeurs") return { dp: "Chauffeurs", g: "Chauffeurs", c: "Ch" }; if (e == "Équipe 4") return { dp: "Nettoyage", g: "Journée (N4)", c: "N4" }; return { dp: "Nettoyage", g: "Groupe " + e.slice(-1), c: "N" + e.slice(-1) }; };
+const anc = d => { if (!d) return ""; const m = Math.floor((Date.now() - new Date(d)) / (30.44 * 864e5)); if (m < 0) return ""; return m < 12 ? m + " mois" : Math.floor(m / 12) + " an" + (m >= 24 ? "s" : "") + (m % 12 ? " " + (m % 12) + " mois" : ""); };
+async function allRows(mk) { let out = [], i = 0; for (;;) { const { data, error } = await mk().range(i, i + 999); if (error) throw error; out = out.concat(data || []); if (!data || data.length < 1000) break; i += 1000; } return out; }
+let FC = null;
+async function fiche(mat, k) {
   const a = AG.find(x => x.matricule == mat); if (!a) return;
   const since = ymd(Date.now() - 90 * 864e5), dOk = (ACC[ME.role] || []).includes("disc");
-  const [d, s] = await Promise.all([dOk ? sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("matricule", mat).order("created_at", { ascending: false }) : { data: null }, sb.from("statuts_jour").select("jour,statut,justification").eq("matricule", mat).gte("jour", since).order("jour", { ascending: false })]);
+  const [d, s, su] = await Promise.all([dOk ? sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("matricule", mat).order("created_at", { ascending: false }) : { data: null }, sb.from("statuts_jour").select("jour,statut,justification").eq("matricule", mat).gte("jour", since).order("jour", { ascending: false }), sb.from("suivi_absences").select("*").eq("matricule", mat).maybeSingle()]);
   const dd = d.error ? null : d.data; if (dd) DL = dd;
   const ab = s.data || [], c = { nj: 0, j: 0, c: 0, mp: 0 }; ab.forEach(x => { if (c[x.statut] != null) c[x.statut]++; });
-  const nn = NNI[mat];
-  $("#mf").innerHTML = `<div class="row"><h2>${E(a.nom)}${a.fonction ? ` <span class="bd info">${E(a.fonction)}</span>` : ""}</h2></div>
-<div class="m">ID <b>${E(a.matricule)}</b> · Badge <b>${E(a.badge) || "—"}</b> · ${E(a.equipe)} · ${E(a.service)}</div>
-<div>${a.tel ? `📞 <a href="tel:${a.tel.replace(/\s/g, "")}" style="color:var(--p)">${E(a.tel)}</a> · <a href="https://wa.me/222${dg(a.tel)}" target="_blank" rel="noopener" style="color:#16a34a;font-weight:700">💬 WhatsApp</a>` : '<span class="m">Pas de téléphone</span>'}${nn ? `<div class="m">NNI : <span ${nn.a_confirmer ? 'style="color:#e11d48;font-weight:700"' : ""}>${E(nn.nni)}</span>${nn.a_confirmer ? " (à confirmer par la RH)" : ""}</div>` : ""}</div>
-<div class="m">90 derniers jours : abs. non justifiées <b>${c.nj}</b> · justifiées <b>${c.j}</b> · congés <b>${c.c}</b> · mises à pied <b>${c.mp}</b></div>
-${dd ? `<h2 style="margin-top:6px">Dossiers disciplinaires (${dd.length})</h2>${dd.map(x => `<div class="li" style="flex-wrap:wrap"><div><span class="bd info">${x.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[x.statut]}">${DS[x.statut]}</span><div><b>${E(x.objet)}</b></div><div class="m">${E(x.ref)} · ${fd(String(x.created_at).slice(0, 10))}${x.mp_debut ? " · du " + fd(x.mp_debut) + " au " + fd(x.mp_fin) : ""}</div></div><button type="button" class="btn" data-a="ddoc" data-i="${x.id}">Document</button></div>`).join("") || '<div class="m">Aucun dossier.</div>'}` : ""}
-<h2 style="margin-top:6px">Absences et statuts saisis</h2>${ab.slice(0, 15).map(x => `<div class="li"><div>${fd(x.jour)} · <span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut]}</span>${x.justification ? `<div class="m">${E(x.justification)}</div>` : ""}</div></div>`).join("") || '<div class="m">Aucune sur 90 jours.</div>'}
-<div class="row" style="justify-content:flex-end">${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no">Fermer</button></div>`;
-  $("#no").onclick = () => $("#md").classList.remove("on");
+  FC = { a, dd, ab, c, sv: su.data || null }; ficheDraw(k);
+}
+function ficheDraw(k) {
+  const { a, dd, c, sv } = FC, g = grpOf(a), st = stt(a), tl = a.tel ? a.tel.replace(/\s/g, "") : "";
+  const ch = (kk, l, v, x = "") => `<button type="button" class="fch${k == kk ? " on" : ""}" data-a="fxk" data-k="${kk}" ${x}><small>${l}</small><b>${v}</b></button>`;
+  const go = (l, v, at) => `<button type="button" class="fch" data-a="fgo" ${at}><small>${l} ↗</small><b>${v}</b></button>`;
+  const ndd = dd ? dd.length : null, sve = sv ? SE[sv.etat] : null;
+  $("#mf").innerHTML = `<div class="row" style="align-items:flex-start"><div><h2>${E(a.nom)}</h2><div class="m">${a.fonction ? `<span class="bd info">${E(a.fonction)}</span> ` : ""}${g.c} · ${E(a.service)}</div></div><button type="button" class="btn" id="no" aria-label="Fermer">✕</button></div>
+<div class="fa">${tl ? `<a class="btn p" href="tel:${E(tl)}">📞 Appeler</a><a class="btn wa" href="https://wa.me/222${dg(a.tel)}" target="_blank" rel="noopener">💬 WhatsApp</a>` : `<span class="m">Aucun numéro de téléphone enregistré.</span>`}</div>
+${tl ? `<div class="m" style="text-align:center">📱 <a href="tel:${E(tl)}" style="color:var(--p);font-weight:700">${E(a.tel)}</a></div>` : ""}
+<div class="fc">${ch("id", "Matricule · badge", `${E(a.matricule)} · ${E(a.badge) || "sans badge"}`)}${ch("emb", "Date d’embauche", a.date_embauche ? `${fd(a.date_embauche)}<small>${anc(a.date_embauche)}</small>` : '<span style="color:var(--m)">À renseigner</span>')}
+${go("Groupe", `${g.g} · ${g.dp}`, `data-eq="${E(a.equipe)}"`)}${go("Service", E(a.service), `data-sv="${E(a.service)}"`)}
+${ch("auj", "Aujourd’hui", `<span class="bd ${st == "p" ? "ok" : st == "h" ? "info" : "bad"}">${SL[st]}</span>`)}${ch("suivi", "Suivi RH", sve ? `<span class="bd ${sve[1]}">${sve[0]}</span>` : '<span style="color:var(--m)">Aucun</span>')}
+${ch("nj", "Abs. non justifiées (90 j)", `<span style="color:${c.nj ? "#e11d48" : "inherit"}">${c.nj}</span>`)}${ch("j", "Abs. justifiées (90 j)", c.j)}
+${ch("c", "Congés (90 j)", c.c)}${ch("mp", "Mises à pied (90 j)", c.mp)}
+${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
+<div id="fx">${k ? fxHTML(k) : '<div class="m" style="text-align:center">Touchez un élément pour afficher le détail.</div>'}</div>
+<div class="row" style="justify-content:flex-end">${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no2">Fermer</button></div>`;
+  const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
   $("#mf").onsubmit = e => e.preventDefault();
   $("#md").classList.add("on");
+}
+function fxHTML(k) {
+  const { a, dd, ab, sv } = FC, nn = NNI[a.matricule], li = L => L.map(x => `<div class="li"><div>${fd(x.jour)} · <span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut]}</span>${x.justification ? `<div class="m">${E(x.justification)}</div>` : ""}</div></div>`).join("");
+  if (k == "id") return `<div class="li"><div>Matricule</div><b>${E(a.matricule)}</b></div><div class="li"><div>N° badge</div><b>${E(a.badge) || "—"}</b></div>${nn ? `<div class="li"><div>NNI</div><b ${nn.a_confirmer ? 'style="color:#e11d48"' : ""}>${E(nn.nni)}${nn.a_confirmer ? " (à confirmer)" : ""}</b></div>` : ""}<div class="li"><div>Équipe</div><b>${E(a.equipe)}</b></div>${a.zone ? `<div class="li"><div>Zone</div><b>${E(a.zone)}</b></div>` : ""}<div class="li"><div>Téléphone</div><b>${E(a.tel) || "—"}</b></div>`;
+  if (k == "emb") return `<div class="li"><div>Date d’embauche</div><b>${a.date_embauche ? fd(a.date_embauche) + " · " + anc(a.date_embauche) : "non renseignée"}</b></div>${AGW.includes(ME.role) ? `<div class="row" style="gap:8px"><input id="fxe" type="date" value="${E(a.date_embauche || "")}" style="flex:1"><button type="button" class="btn p" data-a="embsave">Enregistrer</button></div>` : ""}`;
+  if (k == "auj") { const x = ST[a.matricule]; return `<div class="li"><div>Shift du ${fd(ymd(shiftStart()))}</div><b>${SL[stt(a)]}</b></div>${x?.justification ? `<div class="m">${E(x.justification)}</div>` : ""}`; }
+  if (["nj", "j", "c", "mp"].includes(k)) { const L = ab.filter(x => x.statut == k); return `<h2>${SL[k]} — 90 derniers jours</h2>` + (li(L) || '<div class="m">Aucune.</div>'); }
+  if (k == "disc") return `<h2>Dossiers disciplinaires</h2>` + ((dd || []).map(x => `<div class="li" style="flex-wrap:wrap"><div><span class="bd info">${x.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[x.statut]}">${DS[x.statut]}</span><div><b>${E(x.objet)}</b></div><div class="m">${E(x.ref)} · ${fd(String(x.created_at).slice(0, 10))}${x.mp_debut ? " · du " + fd(x.mp_debut) + " au " + fd(x.mp_fin) : ""}</div></div><button type="button" class="btn" data-a="ddoc" data-i="${x.id}">Document</button></div>`).join("") || '<div class="m">Aucun dossier.</div>');
+  if (k == "suivi") { const w = AGW.includes(ME.role); return `<h2>Suivi RH de la situation</h2>${sv ? `<div class="m">Dernière mise à jour : ${dmy(sv.maj)} ${hm(sv.maj)}${sv.par_nom ? " par " + E(sv.par_nom) : ""}</div>` : ""}${w ? `<div><label>État</label><select id="fxs">${Object.entries(SE).map(([kk, v]) => `<option value="${kk}" ${(sv?.etat || "a_suivre") == kk ? "selected" : ""}>${v[0]}</option>`).join("")}</select></div><div><label>Note (appel, justificatif attendu, décision…)</label><textarea id="fxn" rows="3">${E(sv?.note || "")}</textarea></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn p" data-a="suisave">Enregistrer le suivi</button></div>` : sv ? `<div><span class="bd ${SE[sv.etat][1]}">${SE[sv.etat][0]}</span></div><div class="m">${E(sv.note || "")}</div>` : '<div class="m">Aucun suivi ouvert.</div>'}`; }
+  return "";
 }
 
 /* ---------- Actions ---------- */
@@ -958,6 +1022,12 @@ const ACT = {
     ask(T[ty], [q, { k: "c", l: ty == "cloture" || ty == "verification" ? "Constat / résultat" : "Contenu", t: "ta", r: ty != "constat" }, { k: "s", l: "Source / canal (facultatif)" }], v => sigEvent(id, ty, fromL(v.q), v.c, v.s));
   },
   fiche(b) { fiche(b.dataset.m); },
+  fxk(b) { if (!FC) return; const k = b.dataset.k, on = b.classList.contains("on"); ficheDraw(on ? null : k); if (!on) $("#fx").scrollIntoView({ behavior: "smooth", block: "nearest" }); },
+  fgo(b) { $("#md").classList.remove("on"); if (!(ACC[ME.role] || []).includes("eff")) return toast("Annuaire non accessible à votre profil"); F = { q: "", eq: b.dataset.eq || "", sv: b.dataset.sv || "", st: "", bd: "" }; NAV = "eff"; draw(); },
+  async embsave() { const v = $("#fxe").value || null, m = FC.a.matricule; const { error } = await sb.from("agents").update({ date_embauche: v }).eq("matricule", m); if (error) return toast("Refusé : " + error.message); FC.a.date_embauche = v; const x = AG.find(y => y.matricule == m); if (x) x.date_embauche = v; toast("Date d’embauche enregistrée"); ficheDraw("emb"); },
+  async suisave() { const m = FC.a.matricule, o = { matricule: m, etat: $("#fxs").value, note: $("#fxn").value.trim() || null, maj: new Date().toISOString(), par_nom: ME.nom }; const { data, error } = await sb.from("suivi_absences").upsert(o).select().single(); if (error) return toast("Refusé : " + error.message); FC.sv = data; if (PSD) PSD.sui[m] = data; toast("Suivi enregistré"); ficheDraw("suivi"); if (NAV == "pres" && PM == "suivi") draw(); },
+  pmode(b) { PM = b.dataset.v || ""; draw(); },
+  sf(b) { SF[b.dataset.k] = b.dataset.v; if (b.dataset.k == "dp") { SF.g = ""; SF.sv = ""; } draw(); },
   tday(b) { TD = +b.dataset.i; draw(); },
   tfl(b) { TFL = b.dataset.v; draw(); },
   async tst(b) { const w = b.dataset.w, go = async c => { const { error } = await sb.rpc("tache_statut", { p_id: +b.dataset.i, p_statut: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Tâche : " + TS[w]); draw(); }; if (w == "annule") ask("Motif d’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
