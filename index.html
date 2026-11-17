@@ -67,6 +67,7 @@ label{font-size:12px;font-weight:600;display:block;margin-bottom:4px}
 .ld{display:flex;align-items:center;gap:10px;color:var(--m);font-size:13px;padding:12px 4px}.ld i{width:18px;height:18px;border:2px solid var(--b);border-top-color:var(--p);border-radius:50%;animation:spn .8s linear infinite}@keyframes spn{to{transform:rotate(360deg)}}
 header{position:relative}body.ldg header{overflow:hidden}body.ldg header::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:35%;background:#ff7a6b;animation:pgb 1s ease-in-out infinite}@keyframes pgb{from{transform:translateX(-100%)}to{transform:translateX(290%)}}
 .li.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:start}
+.dsl{display:flex;flex-direction:column;gap:4px;margin-top:4px}.dsg{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer}.dsg:hover,.dsg:active{background:var(--pl)}
 .svl{border-top:1px solid var(--b);padding:8px 0}.svt{font-size:12px;font-weight:800;color:var(--p);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}.svg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.tsc table{min-width:520px}.sxb>.card:first-child>.row:first-child>h2{display:none}.card{min-width:0}
 .tcd{cursor:pointer;transition:transform .2s var(--sp),box-shadow .2s}.tcd:hover{box-shadow:0 0 0 2px var(--p)}
@@ -578,30 +579,36 @@ let DL = [], DF = { st: "", ty: "" };
 const fd = d => d ? String(d).slice(8, 10) + "/" + String(d).slice(5, 7) + "/" + String(d).slice(0, 4) : "";
 function findAg(q) { q = String(q).trim(); const m = AG.find(a => a.matricule == q); if (m) return [m]; const t = N(q).split(/\s+/).filter(Boolean); return t.length ? AG.filter(a => t.every(x => N(a.nom).includes(x))) : []; }
 const paras = s => String(s || "").split(/\n+/).filter(x => x.trim()).map(x => `<p>${E(x.trim())}</p>`).join("");
-function docHTML(d) {
+function docHTML(d, im = {}) {
   const a = d.agents || {}, fem = d.civilite == "Mme", cv = fem ? "Madame" : "Monsieur", map = d.type == "MAP", draft = d.statut == "propose" || d.statut == "refuse";
   const fonc = a.fonction || ((a.service || "").includes("Manutention") ? "Agent" + (fem ? "e" : "") + " de manutention" : "Agent" + (fem ? "e" : "") + " de nettoyage");
   const eq = String(a.equipe || "").replace("Manutention ", "Équipe ");
-  const dt = fd(String(d.decide_le || d.created_at).slice(0, 10)), nj = d.mp_jours || d.mp_jours_propose;
+  const dt = fd(String(d.de_etape ? d.created_at : (d.decide_le || d.created_at)).slice(0, 10)), nj = d.mp_jours || d.mp_jours_propose;
   const mots = nj ? (JW[nj] || nj) + " (" + nj + ") jour" + (nj > 1 ? "s" : "") : "[durée à fixer]";
   const sanction = `<p>Au regard de ces faits, ${d.de_ref ? "également visés par la demande d’explication " + E(d.de_ref) + ", " : ""}il a été décidé de prononcer à votre encontre une mise à pied disciplinaire de ${mots}, à compter du ${d.mp_debut ? fd(d.mp_debut) : "[date à fixer]"} et jusqu’au ${d.mp_fin ? fd(d.mp_fin) : "[date à fixer]"} inclus. Votre reprise est fixée au ${d.reprise ? fd(d.reprise) : "[date à fixer]"}, selon votre horaire de service.</p><p>Durant cette période, vous ne devrez pas vous présenter à votre poste ni exercer vos fonctions. ${E(d.consignes || "")} Toute récidive pourra entraîner une mesure disciplinaire plus sévère, conformément au règlement intérieur de l’entreprise.</p>`;
   const corps = map ? `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}${sanction}<p>Veuillez agréer, ${cv}, l’expression de nos salutations distinguées.</p>`
     : `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}<p>À défaut de réponse ou si les éléments fournis ne permettent pas de justifier ce manquement, une mesure disciplinaire pourra être prise conformément au règlement intérieur de l’entreprise.</p>`;
-  const sig = `<div class="sg"><b>ÉTABLIE PAR</b><br>El Moustapha A. Dedda<br>Responsable des Opérations<br><br>Signature : ____________________</div>`;
+  const sig = d.etabli_nom ? `<div class="sg"><b>ÉTABLIE PAR</b><br>${E(d.etabli_nom)}<br>${E(d.etabli_fonction || "")}<br>${im.etab ? `<img src="${im.etab}" style="height:60px;max-width:230px;margin-top:4px">` : "<br>Signature : ____________________"}</div>`
+    : `<div class="sg"><b>ÉTABLIE PAR</b><br>El Moustapha A. Dedda<br>Responsable des Opérations<br><br>Signature : ____________________</div>`;
+  const sl = d.signe_le ? dmy(d.signe_le) + "/" + new Date(d.signe_le).getUTCFullYear() + " à " + hm(d.signe_le) : "";
+  const rep = d.de_etape == "signee" ? paras(d.reponse) : d.de_etape == "refus" ? `<p><i>L’agent${fem ? "e" : ""} a refusé de répondre et de signer la présente demande.</i>${d.refus_motif ? " Circonstances : " + E(d.refus_motif) : ""}</p>` : "";
+  const remise = d.signe_le ? `<b>REMISE À L’AGENT${fem ? "E" : ""}</b><br>Date : ${sl}<br>${d.de_etape == "refus" ? `Refus de signer constaté en présence du témoin : <b>${E(d.temoin_nom)}</b><br>Signature du témoin :<br>${im.temoin ? `<img src="${im.temoin}" style="height:60px;max-width:230px">` : ""}` : `Signature :<br>${im.agent ? `<img src="${im.agent}" style="height:60px;max-width:230px">` : ""}`}`
+    : `<b>REMISE À L’AGENT${fem ? "E" : ""}</b><br><br>Date : ____ / ____ / ________<br><br>Signature : ____________________`;
+  const trace = d.signe_le ? `<br>Document établi et signé électroniquement dans EPS OPS. Remis le ${sl} par ${E(d.recueilli_nom)} (${E(d.recueilli_fonction || "")}), qui atteste avoir lu et fait comprendre à l’agent${fem ? "e" : ""} les faits reprochés.${d.doc_hash ? " Empreinte : " + E(d.doc_hash) : ""}` : "";
   const fin = map ? `<table class="two"><tr><td>${sig}</td><td><b>ACCUSÉ DE RÉCEPTION ET DÉCHARGE</b><br>Je soussigné${fem ? "e" : ""} ${E(a.nom)}, reconnais avoir reçu un exemplaire de la présente notification.<br>Mention : « Lu et reçu, pour décharge »<br>Date : ____ / ____ / ________<br><br>Signature : ____________________</td></tr></table>`
-    : `<div class="bx"><b>RÉPONSE DE L’AGENT${fem ? "E" : ""}</b></div><div class="bx"><b>AVIS DU SUPERVISEUR PRINCIPAL</b></div><table class="two"><tr><td>${sig}</td><td><b>REMISE À L’AGENT${fem ? "E" : ""}</b><br><br>Date : ____ / ____ / ________<br><br>Signature : ____________________</td></tr></table>`;
+    : `<div class="bx"><b>RÉPONSE DE L’AGENT${fem ? "E" : ""}</b>${rep}</div><div class="bx"><b>AVIS DU SUPERVISEUR PRINCIPAL</b></div><table class="two"><tr><td>${sig}</td><td>${remise}</td></tr></table>`;
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${E(d.ref)}</title><style>
 @page{size:A4;margin:16mm}body{font:12.5px/1.5 Arial,Helvetica,sans-serif;color:#111;max-width:760px;margin:0 auto;padding:16px;position:relative}
 .hd{display:flex;justify-content:space-between;border-bottom:3px solid #072448;padding-bottom:8px;margin-bottom:14px}.hd b{font-size:16px;color:#072448}.hd span{font-size:11px;color:#444;text-align:right}
 h1{text-align:center;font-size:16px;margin:14px 0 4px;color:#072448}.ob{text-align:center;font-weight:700;margin-bottom:14px}.dt{text-align:right}
 table.in{width:100%;border-collapse:collapse;margin:8px 0 14px}table.in td{border:1px solid #bbb;padding:5px 8px}table.in td:first-child{width:28%;background:#f1f4f9;font-weight:700}
-p{margin:0 0 10px;text-align:justify}.bx{border:1px solid #888;min-height:70px;padding:6px 8px;margin:10px 0}table.two{width:100%;border-collapse:collapse;margin-top:14px}table.two td{width:50%;vertical-align:top;border:1px solid #bbb;padding:8px}
+p{margin:0 0 10px;text-align:justify}.bx p{margin:6px 0 0}.bx{border:1px solid #888;min-height:70px;padding:6px 8px;margin:10px 0}table.two{width:100%;border-collapse:collapse;margin-top:14px}table.two td{width:50%;vertical-align:top;border:1px solid #bbb;padding:8px}
 .ft{margin-top:14px;font-size:10.5px;color:#555;border-top:1px solid #ccc;padding-top:6px}.wm{position:fixed;top:40%;left:12%;font-size:90px;color:#e11d4818;transform:rotate(-25deg);font-weight:800;pointer-events:none}
 .pb{position:fixed;top:8px;right:8px}@media print{.pb{display:none}}</style></head><body>${draft ? '<div class="wm">PROJET</div>' : ""}<button class="pb" onclick="print()">Imprimer / PDF</button>
 <div class="hd"><b>EPS.SARL | OPÉRATIONS</b><span>DOCUMENT DISCIPLINAIRE<br>${E(d.ref)}</span></div>
 <div class="dt">Fait à Nouakchott, le ${dt}</div><h1>${map ? "NOTIFICATION DE MISE À PIED DISCIPLINAIRE" : "DEMANDE D’EXPLICATION"}</h1><div class="ob">${E(d.objet)}</div>
 <table class="in"><tr><td>À</td><td>${E(d.civilite)} ${E(a.nom)} - Badge n° ${E(a.badge || "—")} - ID ${E(d.matricule)}</td></tr><tr><td>Fonction</td><td>${E(fonc)} - ${E(eq)}</td></tr><tr><td>Affectation</td><td>${E(d.affectation || a.service || "")}</td></tr><tr><td>Référence</td><td>${E(d.ref)}</td></tr></table>
-${corps}${fin}<div class="ft">Document interne RH | Copie : dossier personnel &nbsp; ${E(d.ref)}</div></body></html>`;
+${corps}${fin}<div class="ft">Document interne RH | Copie : dossier personnel &nbsp; ${E(d.ref)}${trace}</div></body></html>`;
 }
 V.disc = async () => {
   const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").order("created_at", { ascending: false });
@@ -609,11 +616,12 @@ V.disc = async () => {
   DL = data || [];
   const L = DL.filter(d => (!DF.st || d.statut == DF.st) && (!DF.ty || d.type == DF.ty)), val = DV.includes(ME.role);
   const fb = (k, v, l) => `<button class="btn ${DF[k] == v ? "p" : ""}" data-a="df" data-k="${k}" data-v="${v}">${l}</button>`;
-  return head("Discipline", `${DL.length} dossier(s) · ${DL.filter(d => d.statut == "propose").length} à valider`, `<button class="btn w" data-a="dnew">+ Nouveau dossier</button>`)
+  return head("Discipline", `${DL.length} dossier(s) · ${DL.filter(d => d.statut == "propose").length} à valider`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${DE_ETAB.includes(ME.role) ? `<button class="btn w" data-a="denew">+ Demande d’explication</button><button class="btn" data-a="msig">✍️ Ma signature</button>` : ""}${DV.includes(ME.role) || DE_ETAB.includes(ME.role) ? `<button class="btn" data-a="dnew">+ Mise à pied</button>` : ""}</div>`)
     + `<div class="card row" style="justify-content:flex-start;gap:6px">${fb("st", "", "Tous")}${fb("st", "propose", "À valider")}${fb("st", "valide", "Validés")}${fb("st", "notifie", "Notifiés")}${fb("st", "refuse", "Refusés")} <span class="m">|</span> ${fb("ty", "", "DE + MAP")}${fb("ty", "DE", "Demandes d’explication")}${fb("ty", "MAP", "Mises à pied")}</div>`
-    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><span class="lk" data-a="fiche" data-m="${E(d.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${d.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[d.statut]}">${DS[d.statut]}</span></div></div>
+    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><span class="lk" data-a="fiche" data-m="${E(d.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${d.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> ${d.de_etape ? `<span class="bd ${DE_ET[d.de_etape][1]}">${DE_ET[d.de_etape][0]}</span>` : `<span class="bd ${DB[d.statut]}">${DS[d.statut]}</span>`}</div></div>
 <div style="margin-top:6px"><b>${E(d.objet)}</b></div><div class="m">Faits du ${fd(d.date_faits)} · proposé par ${E(d.propose_nom)} le ${fd(String(d.created_at).slice(0, 10))}${d.decide_nom ? " · décision : " + E(d.decide_nom) : ""}${d.mp_debut ? " · MAP du " + fd(d.mp_debut) + " au " + fd(d.mp_fin) + " (" + d.mp_jours + " j), reprise le " + fd(d.reprise) : ""}${d.commentaire ? " · « " + E(d.commentaire) + " »" : ""}</div>
-<div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><button class="btn" data-a="ddoc" data-i="${d.id}">${d.statut == "propose" ? "Aperçu du document" : "Document / PDF"}</button>${val && d.statut == "propose" ? `<button class="btn p" data-a="dval" data-i="${d.id}">Valider</button><button class="btn d" data-a="dref" data-i="${d.id}">Refuser</button>` : ""}${val && d.statut == "valide" ? `<button class="btn p" data-a="dnot" data-i="${d.id}">Marquer comme remis à l’agent</button>` : ""}</div></div>`; }).join("") || `<div class="card m">Aucun dossier.</div>`)
+${d.de_etape ? `<div class="m">Établie par ${E(d.etabli_nom || "")}${d.delegue_nom ? " · remise déléguée à " + E(d.delegue_nom) : ""}${d.consigne_delegation ? " (« " + E(d.consigne_delegation) + " »)" : ""}${d.signe_le ? " · remise le " + dmy(d.signe_le) + " " + hm(d.signe_le) + " par " + E(d.recueilli_nom) : ""}</div>` : ""}
+<div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${d.de_etape ? (d.de_etape == "redigee" ? `<button class="btn" data-a="deprev" data-i="${d.id}">Aperçu</button>${[d.etabli_par, d.delegue_uid].includes(UID) || DE_ETAB.slice(0, 3).includes(ME.role) ? `<button class="btn p" data-a="deremise" data-i="${d.id}">Remettre à l’agent</button>` : ""}` : `<button class="btn p" data-a="depdf" data-i="${d.id}">📄 PDF signé</button>`) : `<button class="btn" data-a="ddoc" data-i="${d.id}">${d.statut == "propose" ? "Aperçu du document" : "Document / PDF"}</button>`}${!d.de_etape && val && d.statut == "propose" ? `<button class="btn p" data-a="dval" data-i="${d.id}">Valider</button><button class="btn d" data-a="dref" data-i="${d.id}">Refuser</button>` : ""}${!d.de_etape && val && d.statut == "valide" ? `<button class="btn p" data-a="dnot" data-i="${d.id}">Marquer comme remis à l’agent</button>` : ""}</div></div>`; }).join("") || `<div class="card m">Aucun dossier.</div>`)
     + `<div class="m">Les documents suivent le modèle EPS (références EPS/OPS/DISC/DE-ou-MAP-ID/année). La sanction, la durée et les dates sont toujours saisies et validées par une personne. À la validation d’une mise à pied, les jours concernés apparaissent automatiquement comme « Mise à pied » dans le suivi de présence.</div>`;
 };
 
@@ -983,7 +991,7 @@ function fxHTML(k) {
   if (k == "emb") return `<div class="li"><div>Date d’embauche</div><b>${a.date_embauche ? fd(a.date_embauche) + " · " + anc(a.date_embauche) : "non renseignée"}</b></div>${AGW.includes(ME.role) ? `<div class="row" style="gap:8px"><input id="fxe" type="date" value="${E(a.date_embauche || "")}" style="flex:1"><button type="button" class="btn p" data-a="embsave">Enregistrer</button></div>` : ""}`;
   if (k == "auj") { const x = ST[a.matricule]; return `<div class="li"><div>Shift du ${fd(ymd(shiftStart()))}</div><b>${SL[stt(a)]}</b></div>${x?.justification ? `<div class="m">${E(JU(x.justification))}</div>` : ""}`; }
   if (["nj", "j", "c", "mp"].includes(k)) { const L = ab.filter(x => x.statut == k); return `<h2>${SL[k]} — 90 derniers jours</h2>` + (li(L) || '<div class="m">Aucune.</div>'); }
-  if (k == "disc") return `<h2>Dossiers disciplinaires</h2>` + ((dd || []).map(x => `<div class="li" style="flex-wrap:wrap"><div><span class="bd info">${x.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[x.statut]}">${DS[x.statut]}</span><div><b>${E(x.objet)}</b></div><div class="m">${E(x.ref)} · ${fd(String(x.created_at).slice(0, 10))}${x.mp_debut ? " · du " + fd(x.mp_debut) + " au " + fd(x.mp_fin) : ""}</div></div><button type="button" class="btn" data-a="ddoc" data-i="${x.id}">Document</button></div>`).join("") || '<div class="m">Aucun dossier.</div>');
+  if (k == "disc") return `<h2>Dossiers disciplinaires</h2>` + ((dd || []).map(x => `<div class="li" style="flex-wrap:wrap"><div><span class="bd info">${x.type == "MAP" ? "Mise à pied" : "Demande d’explication"}</span> <span class="bd ${DB[x.statut]}">${DS[x.statut]}</span><div><b>${E(x.objet)}</b></div><div class="m">${E(x.ref)} · ${fd(String(x.created_at).slice(0, 10))}${x.mp_debut ? " · du " + fd(x.mp_debut) + " au " + fd(x.mp_fin) : ""}</div></div><button type="button" class="btn" data-a="${x.de_etape && x.de_etape != "redigee" ? "depdf" : x.de_etape ? "deprev" : "ddoc"}" data-i="${x.id}">${x.de_etape && x.de_etape != "redigee" ? "PDF signé" : "Document"}</button></div>`).join("") || '<div class="m">Aucun dossier.</div>');
   if (k == "suivi") { const w = AGW.includes(ME.role); return `<h2>Suivi RH de la situation</h2>${sv ? `<div class="m">Dernière mise à jour : ${dmy(sv.maj)} ${hm(sv.maj)}${sv.par_nom ? " par " + E(sv.par_nom) : ""}</div>` : ""}${w ? `<div><label>État</label><select id="fxs">${Object.entries(SE).map(([kk, v]) => `<option value="${kk}" ${(sv?.etat || "a_suivre") == kk ? "selected" : ""}>${v[0]}</option>`).join("")}</select></div><div><label>Note (appel, justificatif attendu, décision…)</label><textarea id="fxn" rows="3">${E(sv?.note || "")}</textarea></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn p" data-a="suisave">Enregistrer le suivi</button></div>` : sv ? `<div><span class="bd ${SE[sv.etat][1]}">${SE[sv.etat][0]}</span></div><div class="m">${E(sv.note || "")}</div>` : '<div class="m">Aucun suivi ouvert.</div>'}`; }
   return "";
 }
@@ -1232,9 +1240,9 @@ ${fcard}${acard}${mcard}
   df(b) { DF[b.dataset.k] = b.dataset.v; draw(); },
   ddoc(b) { const d = DL.find(x => x.id == b.dataset.i), w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.open(); w.document.write(docHTML(d)); w.document.close(); },
   dnew(b) {
-    ask("Nouveau dossier disciplinaire", [
+    ask("Proposition de mise à pied", [
       { k: "q", l: "Agent (ID ou nom)", r: 1, v: b?.dataset?.m || "" },
-      { k: "ty", l: "Document", o: [["DE", "Demande d’explication"], ["MAP", "Mise à pied disciplinaire"]] },
+      { k: "ty", l: "Document", o: [["MAP", "Mise à pied disciplinaire"]] },
       { k: "cv", l: "Civilité", o: ["M.", "Mme"] },
       { k: "df", l: "Date des faits", t: "date", r: 1 },
       { k: "ob", l: "Objet (ex. Retard de dix heures et absence injustifiée - Shift du 24/09/2026)", r: 1 },
@@ -1608,6 +1616,174 @@ async function cmSet(id, o, ok) { const { error } = await sb.from("commandes").u
 
 /* ---------- Interface ---------- */
 const PL = p => p == "shift" && ["responsable_rh", "assistante_rh"].includes(ME.role) ? "Shift actuel" : P[p][1];
+/* ---------- Demande d'explication électronique ---------- */
+const DE_ETAB = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+const DE_DELEG = ["superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const DE_ET = { redigee: ["À remettre à l’agent", "warn"], signee: ["Signée par l’agent", "ok"], refus: ["Refus constaté (témoin)", "bad"] };
+const DST = () => sb.storage.from("discipline");
+let DESEL = null, PADS = {};
+const blobURL = b => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); });
+async function stURL(path) { if (!path) return null; const { data, error } = await DST().download(path); return error || !data ? null : await blobURL(data); }
+async function maSig() { return await stURL("signatures/" + UID + ".png"); }
+const dURL2blob = u => fetch(u).then(r => r.blob());
+async function sha(t) { const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 20).toUpperCase().replace(/(.{4})(?!$)/g, "$1-"); }
+
+/* zone de signature au doigt */
+function sigPad(cv) {
+  const r = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; cv.width = w * r; cv.height = h * r;
+  const c = cv.getContext("2d"); c.scale(r, r); c.lineCap = c.lineJoin = "round"; c.lineWidth = 2.6; c.strokeStyle = "#0d2a6e";
+  let on = false, used = false, lx = 0, ly = 0; const pos = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+  cv.style.touchAction = "none";
+  cv.onpointerdown = e => { on = true; used = true; [lx, ly] = pos(e); cv.setPointerCapture(e.pointerId); c.beginPath(); c.arc(lx, ly, 1.2, 0, 7); c.fillStyle = "#0d2a6e"; c.fill(); };
+  cv.onpointermove = e => { if (!on) return; const [x, y] = pos(e); c.beginPath(); c.moveTo(lx, ly); c.lineTo(x, y); c.stroke(); lx = x; ly = y; };
+  cv.onpointerup = cv.onpointercancel = () => { on = false; };
+  return { used: () => used, clear() { c.clearRect(0, 0, w, h); used = false; }, png: () => trimPNG(cv) };
+}
+function trimPNG(cv) {
+  const c = cv.getContext("2d"), { width: W, height: H } = cv, d = c.getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null; const p = 8, o = document.createElement("canvas"); o.width = x1 - x0 + 2 * p; o.height = y1 - y0 + 2 * p;
+  o.getContext("2d").drawImage(cv, x0 - p, y0 - p, o.width, o.height, 0, 0, o.width, o.height); return o.toDataURL("image/png");
+}
+/* photo d'une signature au stylo : correction de l'éclairage, fond transparent, encre renforcée, recadrage */
+function sigPhoto(file) {
+  return new Promise((ok, ko) => { const im = new Image(), u = URL.createObjectURL(file); im.onerror = () => ko(new Error("Image illisible")); im.onload = () => {
+    const k = Math.min(1, 1400 / Math.max(im.width, im.height)), W = Math.round(im.width * k), H = Math.round(im.height * k);
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const c = cv.getContext("2d"); c.drawImage(im, 0, 0, W, H); URL.revokeObjectURL(u);
+    const id = c.getImageData(0, 0, W, H), d = id.data, L = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    /* fond estimé par moyenne locale (image intégrale) pour compenser ombres et éclairage inégal */
+    const R = Math.max(12, Math.round(Math.min(W, H) / 12)), S = new Float64Array((W + 1) * (H + 1));
+    for (let y = 1; y <= H; y++) { let row = 0; for (let x = 1; x <= W; x++) { row += L[(y - 1) * W + x - 1]; S[y * (W + 1) + x] = S[(y - 1) * (W + 1) + x] + row; } }
+    const bg = (x, y) => { const a = Math.max(0, x - R), b = Math.max(0, y - R), e = Math.min(W, x + R + 1), f = Math.min(H, y + R + 1); return (S[f * (W + 1) + e] - S[b * (W + 1) + e] - S[f * (W + 1) + a] + S[b * (W + 1) + a]) / ((e - a) * (f - b)); };
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, q = L[i] / Math.max(1, bg(x, y)), al = Math.max(0, Math.min(1, (0.86 - q) / 0.22)), j = i * 4;
+      if (al < 0.08) { d[j + 3] = 0; continue; }
+      d[j] = Math.round(d[j] * 0.45); d[j + 1] = Math.round(d[j + 1] * 0.45); d[j + 2] = Math.round(d[j + 2] * 0.55 + 20); d[j + 3] = Math.round(255 * Math.min(1, al * 1.4));
+      if (al > 0.35) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return ko(new Error("Aucune signature détectée : photographiez une signature à l’encre foncée sur papier blanc"));
+    c.putImageData(id, 0, 0); const p = 12, o = document.createElement("canvas"); o.width = Math.min(W, x1 - x0 + 2 * p); o.height = Math.min(H, y1 - y0 + 2 * p);
+    o.getContext("2d").drawImage(cv, Math.max(0, x0 - p), Math.max(0, y0 - p), o.width, o.height, 0, 0, o.width, o.height); ok(o.toDataURL("image/png"));
+  }; im.src = u; });
+}
+const SGBG = "background:repeating-conic-gradient(#eef2f8 0% 25%,#fff 0% 50%) 50%/16px 16px;border:1px solid var(--b);border-radius:12px";
+function msigOpen(apres) {
+  mdOpen(`<div class="row"><h2>✍️ Ma signature</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m">Elle est apposée sur les demandes d’explication que vous établissez. Elle n’est lisible que depuis votre compte ; chaque document reçoit sa propre copie.</div>
+<div id="sgcur" style="${SGBG};min-height:90px;display:flex;align-items:center;justify-content:center"><span class="m">Chargement…</span></div>
+<div class="row" style="justify-content:flex-start;gap:6px"><label class="btn p">📷 Photographier ma signature (recommandé)<input type="file" id="sgph" accept="image/*" capture="environment" hidden></label><button type="button" class="btn" id="sgdr">✍️ Signer au doigt</button></div>
+<div class="m">Photo : signez à l’encre foncée (bleu ou noir) sur une feuille blanche, cadrez de près, sans ombre. Le fond est supprimé automatiquement.</div>
+<div id="sgw" style="display:none;gap:8px;flex-direction:column"></div>`);
+  $("#no").onclick = () => $("#md").classList.remove("on");
+  maSig().then(u => { $("#sgcur").innerHTML = u ? `<img src="${u}" style="max-height:110px;max-width:100%">` : `<span class="m">Aucune signature enregistrée.</span>`; });
+  const save = async png => { const { error } = await DST().upload("signatures/" + UID + ".png", await dURL2blob(png), { upsert: true, contentType: "image/png" }); if (error) return toast("Refusé : " + error.message); toast("Signature enregistrée"); $("#md").classList.remove("on"); if (apres) apres(); };
+  const prev = png => { const w = $("#sgw"); w.style.display = "flex"; w.innerHTML = `<b>Aperçu (fond transparent)</b><div style="${SGBG};padding:10px;text-align:center"><img src="${png}" style="max-height:120px;max-width:100%"></div><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="sgre">Reprendre</button><button type="button" class="btn p" id="sgok">Enregistrer cette signature</button></div>`; $("#sgre").onclick = () => { w.style.display = "none"; }; $("#sgok").onclick = () => save(png); };
+  $("#sgph").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; try { prev(await sigPhoto(f)); } catch (x) { toast(x.message); } };
+  $("#sgdr").onclick = () => { const w = $("#sgw"); w.style.display = "flex"; w.innerHTML = `<b>Signez dans le cadre</b><canvas id="sgpad" style="width:100%;height:170px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="sgcl">Effacer</button><button type="button" class="btn p" id="sgok">Enregistrer</button></div>`; const p = sigPad($("#sgpad")); $("#sgcl").onclick = () => p.clear(); $("#sgok").onclick = () => { const png = p.used() && p.png(); if (!png) return toast("Signez d’abord dans le cadre"); save(png); }; };
+}
+
+/* recherche d'agent façon répertoire : nom, matricule ou badge dès les premiers caractères */
+function agSug(q) {
+  const t = N(q).split(/\s+/).filter(Boolean); if (!t.length) return [];
+  return AG.filter(a => t.every(x => N(a.nom).split(/[\s'’-]+/).some(w => w.startsWith(x)) || N(a.nom).includes(x) || String(a.matricule).startsWith(x) || String(a.badge || "").startsWith(x))).slice(0, 8);
+}
+document.addEventListener("input", e => { if (e.target.id != "deq") return; const L = agSug(e.target.value); $("#deql").innerHTML = L.map(a => `<button type="button" class="dsg" data-a="desel" data-m="${E(a.matricule)}"><b>${E(a.nom)}</b><span class="m">ID ${E(a.matricule)}${a.badge ? " · badge " + E(a.badge) : ""} · ${E(a.equipe || "")}</span></button>`).join("") || (e.target.value.trim() ? `<div class="m" style="padding:6px">Aucun agent ne correspond.</div>` : ""); });
+
+async function denewOpen() {
+  if (!(await maSig())) { toast("Enregistrez d’abord votre signature : elle sera apposée sur la demande."); return msigOpen(denewOpen); }
+  DESEL = null; const co = ((await sb.rpc("collaborateurs")).data || []).filter(c => DE_DELEG.includes(c.role) && c.id != UID);
+  mdOpen(`<div class="row"><h2>Nouvelle demande d’explication</h2><button type="button" class="btn" id="no">✕</button></div>
+<div><label>1. Agent concerné</label><input id="deq" placeholder="Nom, matricule ou badge…" autocomplete="off"><div id="deql" class="dsl"></div><div id="dech"></div></div>
+<div class="fc"><div><label>Civilité</label><select id="decv"><option>M.</option><option>Mme</option></select></div><div><label>Date des faits</label><input id="dedf" type="date" value="${today()}" max="${today()}"></div></div>
+<div><label>2. Objet</label><input id="deob" placeholder="Ex. Absence injustifiée – Shift du 17/11/2026"></div>
+<div><label>Faits constatés</label><textarea id="defa" rows="5">Il a été constaté que, </textarea></div>
+<div><label>Explication demandée</label><textarea id="dequ" rows="3">Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur ces faits, accompagnée de tout justificatif utile.</textarea></div>
+<div><label>Affectation</label><input id="deaf"></div>
+<div><label>3. Remise à l’agent (lecture, réponse et signature)</label><select id="dedl"><option value="">Je m’en charge moi-même</option>${co.map(c => `<option value="${c.id}">Déléguer à ${E(c.nom)} — ${E(RL[c.role] || c.role)}</option>`).join("")}</select></div>
+<div id="decw" style="display:none"><label>Consigne pour la personne déléguée (facultatif)</label><input id="deco" placeholder="Ex. À remettre avant la fin du shift"></div>
+<div class="m">Vous êtes l’émetteur (« Établie par ») : votre signature enregistrée est apposée sur le document.</div>
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="deok">Établir la demande</button></div>`);
+  const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
+  $("#dedl").onchange = e => { $("#decw").style.display = e.target.value ? "" : "none"; };
+  $("#deok").onclick = async () => {
+    if (!DESEL) return toast("Choisissez l’agent concerné"); const ob = $("#deob").value.trim(), fa = $("#defa").value.trim();
+    if (!ob || fa.length < 25) return toast("Renseignez l’objet et décrivez les faits");
+    const b = $("#deok"); b.disabled = true; b.textContent = "Enregistrement…";
+    const { data, error } = await sb.rpc("de_creer", { p_matricule: DESEL.matricule, p_civilite: $("#decv").value, p_date: $("#dedf").value, p_objet: ob, p_faits: fa, p_qualif: $("#dequ").value.trim() || null, p_affect: $("#deaf").value.trim() || null, p_delegue: $("#dedl").value || null, p_consigne: $("#deco").value.trim() || null });
+    if (error) { b.disabled = false; b.textContent = "Établir la demande"; return toast("Refusé : " + error.message); }
+    const pth = `de/${data.id}/etab.png`, cp = await DST().copy("signatures/" + UID + ".png", pth);
+    if (!cp.error) await sb.rpc("de_sig_etab", { p_id: data.id, p_chemin: pth });
+    const del = $("#dedl").value; cl(); toast("Demande établie : " + data.ref + (del ? " — remise déléguée" : ""));
+    await draw(); if (!del && confirm("Remettre maintenant la demande à l’agent (lecture, réponse et signature) ?")) deRemise(data.id);
+  };
+}
+function deChip(a) { $("#dech").innerHTML = `<div class="card" style="padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>${E(a.nom)}</b><div class="m">ID ${E(a.matricule)} · badge ${E(a.badge || "—")} · ${E(a.equipe || "")} · ${E(a.service || "")}</div></div><button type="button" class="btn" data-a="dedesel">Changer</button></div>`; $("#deq").style.display = "none"; $("#deql").innerHTML = ""; if (!$("#deaf").value) $("#deaf").value = (a.service || "") + " – AINO"; }
+
+async function deImgs(d) { const [etab, agent, temoin] = await Promise.all([stURL(d.sig_etab), stURL(d.sig_agent), stURL(d.sig_temoin)]); return { etab, agent, temoin }; }
+async function deLoad(id) { const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("id", id).single(); if (error) throw error; return data; }
+
+/* remise à l'agent : lecture, attestation, réponse, signature (ou refus constaté avec témoin) */
+async function deRemise(id) {
+  let d; try { d = await deLoad(id); } catch (e) { return toast("Demande introuvable"); }
+  const a = d.agents || {}; PADS = {};
+  mdOpen(`<div class="row"><h2>Remise à l’agent</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m">${E(d.ref)} · établie par ${E(d.etabli_nom || "")}</div>
+<div class="card" style="background:var(--pl)"><b>${E(d.civilite)} ${E(a.nom)}</b> <span class="m">ID ${E(d.matricule)} · badge ${E(a.badge || "—")}</span><div style="margin-top:6px"><b>Objet :</b> ${E(d.objet)}</div><div class="m">Faits du ${fd(d.date_faits)}</div><div style="margin-top:6px">${paras(d.faits)}${paras(d.qualification)}</div></div>
+<label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600"><input type="checkbox" id="deat" style="width:22px;height:22px;flex-shrink:0;margin-top:2px"> J’atteste avoir lu et fait comprendre à l’agent les faits qui lui sont reprochés.</label>
+<div id="deok1"><label>Réponse de l’agent (écrite ou dictée)</label><textarea id="derep" rows="5"></textarea>
+<label>Signature de l’agent</label><canvas id="pa" style="width:100%;height:170px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas>
+<div class="row" style="justify-content:space-between;gap:6px"><button type="button" class="btn" id="pacl">Effacer la signature</button><button type="button" class="btn d" id="derf">L’agent refuse de répondre / signer</button></div></div>
+<div id="deko" style="display:none;flex-direction:column;gap:8px"><div class="al">Refus de l’agent : la remise est constatée par un témoin.</div><label>Motif / circonstances du refus</label><textarea id="dermo" rows="3"></textarea><label>Nom du témoin</label><input id="detn"><label>Signature du témoin</label><canvas id="pt" style="width:100%;height:150px;background:#fff;border:1px dashed var(--red);border-radius:12px"></canvas><div class="row" style="justify-content:space-between"><button type="button" class="btn" id="ptcl">Effacer</button><button type="button" class="btn" id="dercx">← Revenir à la signature de l’agent</button></div></div>
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn p" id="desg">Valider et générer le document</button></div>`);
+  $("#no").onclick = () => $("#md").classList.remove("on");
+  let refus = false; PADS.a = sigPad($("#pa")); $("#pacl").onclick = () => PADS.a.clear();
+  $("#derf").onclick = () => { refus = true; $("#deok1").style.display = "none"; $("#deko").style.display = "flex"; PADS.t = sigPad($("#pt")); $("#ptcl").onclick = () => PADS.t.clear(); };
+  $("#dercx").onclick = () => { refus = false; $("#deko").style.display = "none"; $("#deok1").style.display = ""; };
+  $("#desg").onclick = async () => {
+    if (!$("#deat").checked) return toast("Cochez l’attestation de lecture et d’explication des faits");
+    const rep = $("#derep").value.trim(), tn = refus ? $("#detn").value.trim() : "";
+    if (!refus && !rep) return toast("Saisissez ou dictez la réponse de l’agent (ou utilisez « refuse de répondre »)");
+    if (!refus && !PADS.a.used()) return toast("Faites signer l’agent dans le cadre");
+    if (refus && (!tn || !PADS.t || !PADS.t.used())) return toast("Nom et signature du témoin requis");
+    const b = $("#desg"); b.disabled = true; b.textContent = "Enregistrement…";
+    try {
+      const png = refus ? PADS.t.png() : PADS.a.png(), pth = `de/${d.id}/${refus ? "temoin" : "agent"}.png`;
+      const up = await DST().upload(pth, await dURL2blob(png), { upsert: true, contentType: "image/png" }); if (up.error) throw up.error;
+      const h = await sha([d.ref, d.matricule, d.objet, d.faits, d.qualification, refus ? "REFUS:" + $("#dermo").value + ":" + tn : rep, png].join("|"));
+      const { error } = await sb.rpc("de_signer", { p_id: d.id, p_reponse: refus ? null : rep, p_sig_agent: refus ? null : pth, p_refus: refus, p_refus_motif: refus ? $("#dermo").value.trim() || null : null, p_temoin: refus ? tn : null, p_sig_temoin: refus ? pth : null, p_atteste: true, p_hash: h });
+      if (error) throw error;
+      b.textContent = "Génération du PDF…"; await dePDF(d.id);
+      $("#md").classList.remove("on"); toast("Demande signée et archivée : " + d.ref); draw();
+    } catch (e) { b.disabled = false; b.textContent = "Valider et générer le document"; toast("Échec : " + (e.message || e)); }
+  };
+}
+let H2P = null;
+const h2pLoad = () => H2P || (H2P = window.html2pdf ? Promise.resolve() : new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"; s.onload = ok; s.onerror = () => { H2P = null; ko(new Error("Module PDF indisponible (connexion)")); }; document.head.appendChild(s); }));
+async function dePDF(id) {
+  const d = await deLoad(id), im = await deImgs(d); await h2pLoad();
+  const html = docHTML(d, im), css = (html.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || "", body = (html.match(/<body>([\s\S]*)<\/body>/) || [])[1] || "";
+  const el = document.createElement("div"); el.style.cssText = "position:fixed;left:-10000px;top:0;width:760px;background:#fff";
+  el.innerHTML = `<style>${css.replace(/@page[^}]*}/, "").replace(/body\{/, ".pdfb{")}</style><div class="pdfb">${body.replace(/<button class="pb"[^>]*>.*?<\/button>/, "")}</div>`; document.body.appendChild(el);
+  try {
+    const blob = await window.html2pdf().set({ margin: [10, 10, 10, 10], image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: "#fff" }, jsPDF: { unit: "mm", format: "a4" }, pagebreak: { mode: ["css", "legacy"] } }).from(el.firstElementChild.nextElementSibling).outputPdf("blob");
+    const pth = `de/${d.id}/document.pdf`, up = await DST().upload(pth, blob, { upsert: true, contentType: "application/pdf" }); if (up.error) throw up.error;
+    const { error } = await sb.rpc("de_pdf", { p_id: d.id, p_chemin: pth }); if (error) throw error;
+  } finally { el.remove(); }
+}
+Object.assign(ACT, {
+  msig() { msigOpen(); },
+  denew() { denewOpen(); },
+  desel(b) { DESEL = AG.find(a => a.matricule == b.dataset.m); if (DESEL) deChip(DESEL); },
+  dedesel() { DESEL = null; $("#dech").innerHTML = ""; $("#deq").style.display = ""; $("#deq").value = ""; $("#deq").focus(); },
+  deremise(b) { deRemise(+b.dataset.i); },
+  async depdf(b) { const d = DL.find(x => x.id == b.dataset.i); if (!d) return; const w = window.open("", "_blank");
+    if (!d.doc_pdf) { toast("Génération du PDF…"); try { await dePDF(d.id); await draw(); } catch (e) { if (w) w.close(); return toast("Échec : " + e.message); } }
+    const p = d.doc_pdf || `de/${d.id}/document.pdf`, { data, error } = await DST().createSignedUrl(p, 600); if (error) { if (w) w.close(); return toast("PDF indisponible : " + error.message); } if (w) w.location = data.signedUrl; else location.href = data.signedUrl; },
+  async deprev(b) { const w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.write("<p style='font:14px Arial'>Chargement…</p>"); const d = await deLoad(+b.dataset.i), im = await deImgs(d); w.document.open(); w.document.write(docHTML(d, im)); w.document.close(); }
+});
+
 /* Onglets intégrés comme cartes dépliables dans une page hôte */
 const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "shift", cmd: "mag" }, SXL = { sig: "Signalements · Help Desk", shr: "Rapport du shift Ops (manutention)" };
 let BOOT = Promise.resolve(), DG = 0, SHOWN = "", SXA = null, SXS = null;
