@@ -1,6 +1,19 @@
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
-self.addEventListener("fetch",e=>{});
+const C="eps-ops-v1";
+self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!=C).map(k=>caches.delete(k))))));
+self.addEventListener("fetch",e=>{
+  const r=e.request;if(r.method!="GET")return;const u=new URL(r.url);
+  /* bibliothèques versionnées (CDN) : cache d'abord */
+  if(u.hostname=="cdn.jsdelivr.net"){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>m||fetch(r).then(x=>{if(x.ok||x.type=="opaque")c.put(r,x.clone());return x;}))));return;}
+  /* page de l'app : réseau d'abord ; si le réseau est lent (>3 s) ou coupé, dernière version en cache */
+  if(r.mode=="navigate"&&u.origin==self.location.origin){e.respondWith(caches.open(C).then(async c=>{
+    const net=fetch(r).then(x=>{if(x.ok)c.put("/",x.clone());return x;}),m=await c.match("/");
+    if(!m)return net;
+    return Promise.race([net.catch(()=>m),new Promise(ok=>setTimeout(()=>ok(m),3000))]);
+  }));return;}
+  if(u.origin==self.location.origin&&/\.(png|webmanifest)$/.test(u.pathname)){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>{const n=fetch(r).then(x=>{if(x.ok)c.put(r,x.clone());return x;});return m||n;})));}
+});
 self.addEventListener("push",e=>{
   let d={};try{d=e.data?e.data.json():{}}catch(x){d={titre:"EPS OPS",corps:e.data?e.data.text():""}}
   const w=[self.registration.showNotification(d.titre||"EPS OPS",{body:d.corps||"",icon:"/icon-192.png",badge:"/icon-192.png",tag:d.tag||undefined,renotify:!!d.tag,data:{lien:d.lien||"",id:d.id||null}})];
