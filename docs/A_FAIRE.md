@@ -15,3 +15,10 @@
   écran de consentement « En production », jeton stocké dans les secrets Supabase.
 - **Import des listes d'équipes depuis l'app** (comparatif avant application), y compris Nettoyage.
 - Nettoyage : appliquer le classeur du 16/11 à l'annuaire (comparatif à valider).
+- **Demandes d'explication signées via formulaire** : formulaire Jotform (émission, réponse de
+  l'agent + signature, avis du superviseur principal + signature) ; lecture par `jotform-sync`,
+  rattachement à l'agent (matricule/badge) et à la DE existante (référence), mise en forme avec le
+  modèle actuel de l'app (`docHTML`), signatures intégrées, PDF archivé dans Supabase Storage et
+  consultable depuis la carte de l'agent. À trancher : un seul formulaire ou lien personnel envoyé
+  à l'agent ; émission dans l'app ou sur Jotform ; signature de l'émetteur ; même circuit pour les
+  notifications de mise à pied (accusé de réception).
