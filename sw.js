@@ -1,17 +1,13 @@
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
-const C="eps-ops-v1";
+const C="eps-ops-v2";
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!=C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
   const r=e.request;if(r.method!="GET")return;const u=new URL(r.url);
   /* bibliothèques versionnées (CDN) : cache d'abord */
   if(u.hostname=="cdn.jsdelivr.net"){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>m||fetch(r).then(x=>{if(x.ok||x.type=="opaque")c.put(r,x.clone());return x;}))));return;}
-  /* page de l'app : réseau d'abord ; si le réseau est lent (>3 s) ou coupé, dernière version en cache */
-  if(r.mode=="navigate"&&u.origin==self.location.origin){e.respondWith(caches.open(C).then(async c=>{
-    const net=fetch(r).then(x=>{if(x.ok)c.put("/",x.clone());return x;}),m=await c.match("/");
-    if(!m)return net;
-    return Promise.race([net.catch(()=>m),new Promise(ok=>setTimeout(()=>ok(m),3000))]);
-  }));return;}
+  /* page de l'app : toujours la version en ligne ; la copie en cache ne sert que hors connexion */
+  if(r.mode=="navigate"&&u.origin==self.location.origin){e.respondWith(fetch(r,{cache:"no-store"}).then(x=>{if(x.ok){const y=x.clone();caches.open(C).then(c=>c.put("/",y));}return x;}).catch(()=>caches.match("/")));return;}
   if(u.origin==self.location.origin&&/\.(png|webmanifest)$/.test(u.pathname)){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>{const n=fetch(r).then(x=>{if(x.ok)c.put(r,x.clone());return x;});return m||n;})));}
 });
 self.addEventListener("push",e=>{
