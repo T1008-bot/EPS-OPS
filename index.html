@@ -53,7 +53,7 @@ label{font-size:12px;font-weight:600;display:block;margin-bottom:4px}
 @keyframes fi{from{opacity:0}}@keyframes up{from{opacity:0;transform:translateY(32px) scale(.98)}}
 #ts{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));right:16px;background:var(--n);color:#fff;padding:12px 16px;border-radius:12px;opacity:0;transform:translateY(20px);transition:.3s var(--sp);z-index:10;max-width:320px;pointer-events:none;box-shadow:var(--sh)}#ts.on{opacity:1;transform:none}
 .lk{color:var(--p);font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
-.dys{display:flex;gap:8px;overflow-x:auto;padding:0 24px 4px 0;scroll-snap-type:x proximity;scrollbar-width:none}.dys::-webkit-scrollbar{display:none}
+.dys{display:flex;gap:8px;overflow-x:auto;padding:10px 24px 4px 4px;scroll-snap-type:x proximity;scrollbar-width:none}.dys::-webkit-scrollbar{display:none}
 .dy{flex:0 0 auto;min-width:56px;scroll-snap-align:start;border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:14px;padding:8px;text-align:center;font:600 12px system-ui;cursor:pointer;position:relative;transition:transform .25s var(--sp)}
 .dy b{display:block;font-size:17px}.dy.on{background:var(--p);border-color:var(--p);color:#fff}.dy i{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:9px;font:700 10px system-ui;padding:1px 5px;font-style:normal}
 .stp{display:flex;align-items:flex-start;margin:8px 0 4px}.stp .s{flex:1;position:relative;text-align:center;font-size:10px;color:var(--m);font-weight:600}
@@ -135,7 +135,7 @@ const navClose = () => document.body.classList.remove("nvo"), navOpen = () => do
 const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasin"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"], cmd: ["🛒", "Demandes d’achat"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
-let ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
+let UID = null, ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
 
 function lab(root = document) { root.querySelectorAll(".sc table").forEach(t => { const hs = [...t.querySelectorAll("tr:first-child th")].map(x => x.textContent); t.querySelectorAll("tr").forEach(r => { if (r.querySelector("th")) return; [...r.children].forEach((c, i) => { if (c.colSpan < 2 && hs[i]) c.dataset.l = hs[i]; }); }); }); }
 const setEl = () => { $("#el").innerHTML = eT(); lab($("#el")); };
@@ -183,7 +183,7 @@ async function start() {
   if (!session) return pageLogin();
   const { data: p } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
   if (!p || !p.actif) { await sb.auth.signOut(); return pageLogin("Compte non autorisé."); }
-  ME = p;
+  ME = p; UID = session.user.id;
   sb.rpc("marquer_connexion").then(() => { }, () => { });
   if (p.must_change) return pageChange();
   shell();
@@ -436,16 +436,19 @@ V.eff = async () => {
 };
 
 /* ---------- Situations à suivre (absentéisme) ---------- */
-let PM = "", PSD = null, SF = { dp: "", g: "", sv: "", per: "30", seuil: "1", et: "" };
+let PM = "", PSD = null, SF = { dp: "", g: "", sv: "", per: "30", seuil: "1", et: "", du: "", au: "" };
+const sfPer = () => SF.per == "perso" ? { d: SF.du || ymd(Date.now() - 30 * 864e5), f: SF.au || today() } : { d: ymd(Date.now() - +SF.per * 864e5), f: "" };
+const sfLab = () => { const p = sfPer(); return SF.per == "perso" ? `du ${fd(p.d)} au ${fd(p.f)}` : SF.per == "7" ? "7 derniers jours (1 semaine)" : SF.per + " derniers jours"; };
 const skp = (t, v, s, cl) => `<div class="card"><div class="m">${t}</div><div class="k" ${cl ? `style="color:${cl}"` : ""}>${v}</div><div class="m">${s || ""}</div></div>`;
 async function presSuivi() {
   const dOk = (ACC[ME.role] || []).includes("disc");
-  if (!PSD || PSD.per != SF.per || Date.now() - PSD.t > 120000) {
-    const since = ymd(Date.now() - +SF.per * 864e5);
-    const [rows, su, dc] = await Promise.all([allRows(() => sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since).order("jour", { ascending: false })), sb.from("suivi_absences").select("*"), dOk ? sb.from("discipline").select("matricule") : { data: [] }]);
+  const pp = sfPer(), pk = pp.d + "|" + pp.f;
+  if (!PSD || PSD.per != pk || Date.now() - PSD.t > 120000) {
+    const since = pp.d;
+    const [rows, su, dc] = await Promise.all([allRows(() => { let q = sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since); if (pp.f) q = q.lte("jour", pp.f); return q.order("jour", { ascending: false }); }), sb.from("suivi_absences").select("*"), dOk ? sb.from("discipline").select("matricule") : { data: [] }]);
     const sui = {}; (su.data || []).forEach(x => sui[x.matricule] = x);
     const dcn = {}; (dc.data || []).forEach(x => dcn[x.matricule] = (dcn[x.matricule] || 0) + 1);
-    PSD = { per: SF.per, t: Date.now(), rows, sui, dcn };
+    PSD = { per: pk, t: Date.now(), rows, sui, dcn };
   }
   const S = {}; PSD.rows.forEach(r => { const x = S[r.matricule] = S[r.matricule] || { nj: 0, j: 0, c: 0, mp: 0, last: null }; if (x[r.statut] != null) x[r.statut]++; if ((r.statut == "nj" || r.statut == "j") && (!x.last || r.jour > x.last)) x.last = r.jour; });
   const z = { nj: 0, j: 0, c: 0, mp: 0, last: null };
@@ -461,10 +464,10 @@ async function presSuivi() {
   const row = a => { const x = S[a.matricule] || z, sv = PSD.sui[a.matricule], g = grpOf(a), tl = a.tel ? a.tel.replace(/\s/g, "") : ""; return `<tr><td><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span> <span class="m">${E(a.matricule)}</span></td><td>${g.c}</td><td>${E(a.service)}</td><td><span class="bd ${x.nj > 1 ? "bad" : x.nj ? "warn" : "info"}">${x.nj}</span></td><td>${x.j}</td><td>${x.mp}</td>${dOk ? `<td>${PSD.dcn[a.matricule] || 0}</td>` : ""}<td>${x.last ? fd(x.last) : "—"}</td><td>${sv ? `<span class="bd ${SE[sv.etat][1]}">${SE[sv.etat][0]}</span>` : '<span class="bd bad">À suivre</span>'}</td><td style="white-space:nowrap">${tl ? `<a href="tel:${E(tl)}" title="Appeler">📞</a> <a href="https://wa.me/222${dg(a.tel)}" target="_blank" rel="noopener" title="WhatsApp">💬</a>` : "—"}</td></tr>`; };
   const ord = ["Groupe 1", "Groupe 2", "Groupe 3", "Journée (N4)", "Chauffeurs"];
   const sec = ord.map(g => { const R = L.filter(a => grpOf(a).g == g).sort((p, q) => (S[q.matricule]?.nj || 0) - (S[p.matricule]?.nj || 0) || (S[q.matricule]?.j || 0) - (S[p.matricule]?.j || 0)); if (!R.length) return ""; return `<div class="card sc"><h2>${g} <span class="m">— ${R.length} agent${R.length > 1 ? "s" : ""}</span></h2><table><tr><th>Agent</th><th>Équipe</th><th>Service</th><th>NJ</th><th>Justifiées</th><th>MAP</th>${dOk ? "<th>Dossiers disc.</th>" : ""}<th>Dernière abs.</th><th>Suivi</th><th>Contact</th></tr>${R.map(row).join("")}</table></div>`; }).join("");
-  return head("📌 Situations à suivre", `Agents absentéistes et situations à régulariser — ${SF.per} derniers jours`, `<button class="btn" data-a="pmode" data-v="">← Situation du jour</button>`)
+  return head("📌 Situations à suivre", `Agents absentéistes et situations à régulariser — ${sfLab()}`, `<button class="btn" data-a="pmode" data-v="">← Situation du jour</button>`)
     + `<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${chip("dp", "", "Tous services")}${chip("dp", "Nettoyage", "Nettoyage")}${chip("dp", "Manutention", "Manutention")}${chip("dp", "Chauffeurs", "Chauffeurs")}</div>
 <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${chip("g", "", "Tous les groupes")}${grs.map(g => chip("g", g, g)).join("")}</div>
-<div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${sel("sv", [["", "Tous les sous-services"], ...svs.map(x => [x, x])])}${sel("per", [["30", "30 derniers jours"], ["60", "60 derniers jours"], ["90", "90 derniers jours"]])}${sel("seuil", [["1", "≥ 1 abs. non justifiée"], ["2", "≥ 2 abs. non justifiées"], ["3", "≥ 3 abs. non justifiées"], ["t", "Toute absence (hors congé)"]])}${sel("et", [["", "Suivi : tous"], ["aucun", "Suivi : non ouvert"], ...Object.entries(SE).map(([k, v]) => [k, "Suivi : " + v[0]])])}</div></div>`
+<div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${sel("sv", [["", "Tous les sous-services"], ...svs.map(x => [x, x])])}${sel("per", [["7", "7 derniers jours (1 semaine)"], ["30", "30 derniers jours"], ["60", "60 derniers jours"], ["90", "90 derniers jours"], ["perso", "Période personnalisée…"]])}${SF.per == "perso" ? `<label style="display:flex;gap:6px;align-items:center;margin:0">Du <input type="date" data-sf="du" value="${E(pp.d)}" max="${today()}"></label><label style="display:flex;gap:6px;align-items:center;margin:0">au <input type="date" data-sf="au" value="${E(pp.f)}" max="${today()}"></label>` : ""}${sel("seuil", [["1", "≥ 1 abs. non justifiée"], ["2", "≥ 2 abs. non justifiées"], ["3", "≥ 3 abs. non justifiées"], ["t", "Toute absence (hors congé)"]])}${sel("et", [["", "Suivi : tous"], ["aucun", "Suivi : non ouvert"], ...Object.entries(SE).map(([k, v]) => [k, "Suivi : " + v[0]])])}</div></div>`
     + `<div class="g">${skp("Agents listés", L.length, "selon les filtres")}${skp("Abs. non justifiées", tnj, "cumul sur la période", tnj ? "#e11d48" : "")}${skp("À traiter", nOpen, "suivi non régularisé", nOpen ? "#d97706" : "")}${skp("Régularisés", nReg, "situation close")}</div>`
     + (sec || `<div class="card m">Aucun agent ne correspond à ces critères.</div>`)
     + `<div class="m">Touchez un nom pour ouvrir la carte de l’agent (appel, WhatsApp, embauche, antécédents, suivi). Un agent reste listé tant que son suivi n’est pas « Régularisé », même sous le seuil.</div>`;
@@ -476,11 +479,11 @@ V.pres = async () => {
   const since = ymd(Date.now() - 30 * 864e5);
   const [{ data: hs }, { data: rp }, { data: mi }] = await Promise.all([
     sb.from("statuts_jour").select("jour,matricule,statut").gte("jour", since).order("jour", { ascending: false }),
-    sb.from("situation_staff").select("*").order("cree_le", { ascending: false }).limit(40), sb.rpc("matricules_inconnus", { p_jours: 7 })]);
+    sb.from("situation_staff").select("*").gte("cree_le", new Date(Date.now() - 36 * H).toISOString().slice(0, 19).replace("T", " ")).order("cree_le", { ascending: false }).limit(40), sb.rpc("matricules_inconnus", { p_jours: 7 })]);
   const TM = ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4", "Chauffeurs", "Manutention 1", "Manutention 2", "Manutention 3"], hist = {}, rec = {};
   (hs || []).forEach(r => { (hist[r.jour] = hist[r.jour] || { nj: 0, j: 0, c: 0, mp: 0 })[r.statut]++; if (r.statut == "nj") rec[r.matricule] = (rec[r.matricule] || 0) + 1; });
-  const cd = e => { const t = team(e); if (!t.on) return `<div class="card"><b>${e}</b><div class="k">—</div><div class="m"><span class="bd info">Hors shift</span> · ${t.tot} agents · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c}</div></div>`; const p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; const g = e.slice(-1), ss = shiftStart().getTime() - 3 * H, dr = (rp || []).find(r => r.groupe == "Groupe " + g && r.service == (e.startsWith("Manut") ? "bagages" : "nettoyage") && new Date(T(r.cree_le)).getTime() >= ss), dp = dr && dr.present != null ? +dr.present : null, ec = dp == null ? null : dp - t.c.p;
-    return `<div class="card"><b>${e}</b><div class="k">${t.c.p} / ${t.tot}</div><div class="m">${p} % · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c} · MAP ${t.c.mp}</div>${dr ? `<div class="m" style="margin-top:6px">Déclaré (${hm(T(dr.cree_le))}) : <b>${dp ?? "?"}${dr.effectif ? "/" + dr.effectif : ""}</b> présents · renforts ${dr.renforts || 0}${ec != null && ec != 0 ? ` <span class="bd ${Math.abs(ec) > 2 ? "bad" : "warn"}">écart ${ec > 0 ? "+" : ""}${ec} avec le calculé</span>` : ec == 0 ? ' <span class="bd ok">cohérent</span>' : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; };
+  const cd = e => { const t = team(e); if (!t.on) return `<div class="card"><b>${e}</b><div class="k">—</div><div class="m"><span class="bd info">Hors shift</span> · ${t.tot} agents · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c}</div></div>`; const p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; const g = e.slice(-1), ss = shiftStart().getTime() - 3 * H, dr = (rp || []).find(r => gnum(r.groupe) == g && r.service == (e.startsWith("Manut") ? "bagages" : "nettoyage") && new Date(T(r.cree_le)).getTime() >= ss), dp = dr && dr.present != null ? +dr.present : null, ec = dp == null ? null : dp - t.c.p;
+    return `<div class="card"><b>${e}</b><div class="k">${t.c.p} / ${t.tot}</div><div class="m">${p} % · NJ ${t.c.nj} · J ${t.c.j} · Congés ${t.c.c} · MAP ${t.c.mp}</div>${dr ? `<div class="m" style="margin-top:6px">Déclaré (${hm(T(dr.cree_le))}) : <b>${dp ?? "?"}${dr.effectif ? "/" + dr.effectif : ""}</b> présents · renforts ${dr.renforts || 0}${ec != null && ec != 0 ? ` <span class="bd ${Math.abs(ec) > 2 ? "bad" : "warn"}">écart ${ec > 0 ? "+" : ""}${ec} avec le calculé</span>` : ec == 0 ? ' <span class="bd ok">cohérent</span>' : ""}</div>` : e == "Chauffeurs" ? "" : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; };
   const ab = AG.filter(a => ST[a.matricule]), nm = Object.fromEntries(AG.map(a => [a.matricule, a]));
   const top = Object.entries(rec).sort((a, b) => b[1] - a[1]).slice(0, 10);
   return head("Suivi présence", `Situation en temps réel — ${dmy(new Date())} ${hm(new Date())}`, `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn w" data-a="pmode" data-v="suivi">📌 Situations à suivre</button><button class="btn p" data-p="eff">Mettre à jour (annuaire)</button></div>`)
@@ -594,7 +597,7 @@ const moisC = (ref = new Date()) => { const y = ref.getUTCFullYear(), m = ref.ge
 const dstr = o => ymd(Date.now() + o * 864e5), WD = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const TS = { a_faire: "À faire", en_cours: "En cours", fait: "Fait", annule: "Annulé" }, TB = { a_faire: "warn", en_cours: "info", fait: "ok", annule: "bad" };
 const TMG = ["direction", "responsable_ops", "coordinateur_ops"];
-let TSV = "", TV = "jour";
+let TSV = "", TV = "jour", TVF = "";
 const SVL2 = { "": "Tous", N: "Nettoyage", M: "Manutention" };
 V.tach = async () => {
   const d0 = dstr(-1), d1 = dstr(6), sel = dstr(TD), s0 = new Date(sel + "T08:00:00Z"), s1 = new Date(s0.getTime() + 24 * H);
@@ -613,7 +616,7 @@ V.tach = async () => {
   /* les retards antérieurs à la 1re connexion de la personne ne comptent pas (remise à zéro) */
   const isLate = t => t.statut != "fait" && t.statut != "annule" && dueOf(t) < nw && !(t.assigne_uid && (DS[t.assigne_uid] == null || dueOf(t) < DS[t.assigne_uid]));
   const trow = t => `<div class="tkr" data-a="tfiche" data-i="${t.id}" style="cursor:pointer"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${isLate(t) ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div><div class="m">${t.categorie ? E(t.categorie) + " · " : ""}délai ${dmy(new Date(dueOf(t)))} ${t.echeance || t.heure ? hm(new Date(dueOf(t))) : ""}${t.lieu ? " · 📍 " + E(t.lieu) : ""}${t.assigne_nom ? " · 👤 " + E(t.assigne_nom) : ""}</div></div>`;
-  const MY = ASGL.filter(t => t.assigne_uid == uid), myOpen = MY.filter(t => t.statut != "fait"), myLate = myOpen.filter(isLate), myCur = myOpen.filter(t => !isLate(t) && (t.statut == "en_cours" || dueOf(t) < nw + 24 * 3600000)), myNext = myOpen.filter(t => !isLate(t) && !myCur.includes(t)), myDone = MY.filter(t => t.statut == "fait" && nw - new Date(t.maj_le || t.created_at).getTime() < 7 * 864e5);
+  const MY = ASGL.filter(t => t.assigne_uid == UID), myOpen = MY.filter(t => t.statut != "fait"), myLate = myOpen.filter(isLate), myCur = myOpen.filter(t => !isLate(t) && (t.statut == "en_cours" || dueOf(t) < nw + 24 * 3600000)), myNext = myOpen.filter(t => !isLate(t) && !myCur.includes(t)), myDone = MY.filter(t => t.statut == "fait" && nw - new Date(t.maj_le || t.created_at).getTime() < 7 * 864e5);
   const meB = (l, a, cl) => a.length ? `<h2 style="margin:10px 0 2px;font-size:14px;color:${cl}">${l} (${a.length})</h2>${a.sort((x, y) => dueOf(x) - dueOf(y)).map(trow).join("")}` : "";
   const mesTaches = `<div class="card"><h2>Mes tâches</h2><div class="m">${myLate.length} en retard · ${myCur.length} en cours / aujourd’hui · ${myNext.length} à venir · ${myDone.length} faite(s) sur 7 jours${MY.length ? "" : " — aucune tâche ne vous est assignée pour le moment."}</div>${meB("En retard", myLate, "#e11d48")}${meB("En cours / aujourd’hui", myCur, "var(--t)")}${meB("À venir", myNext, "var(--m)")}${meB("Faites récemment", myDone, "#16a34a")}</div>`;
   const grp = (key) => { const all = [...ASGL, ...TK.filter(t => !t.assigne_uid && !String(t.modele || "").startsWith("vol_fo:") && t.statut != "annule" && t.statut != "fait")], G = {}; all.forEach(t => { const k = key(t); (G[k] = G[k] || []).push(t); }); return Object.entries(G).sort((a, b) => b[1].filter(isLate).length - a[1].filter(isLate).length || a[0].localeCompare(b[0])).map(([k, L]) => { const o = L.filter(t => t.statut != "fait"), f = L.filter(t => t.statut == "fait").length; return `<div class="card"><div class="row"><h2>${E(k)}</h2><span class="m">${o.filter(isLate).length ? `<span class="bd bad">${o.filter(isLate).length} en retard</span> ` : ""}${o.length} en attente · ${f} faite(s)</span></div>${o.sort((x, y) => dueOf(x) - dueOf(y)).slice(0, 12).map(trow).join("") || '<div class="m">Rien en attente.</div>'}</div>`; }).join("") || `<div class="card m">Aucune tâche.</div>`; };
@@ -631,8 +634,9 @@ V.tach = async () => {
   const sb2 = (v, l) => `<button class="btn ${TSV == v ? "p" : ""}" data-a="tsv" data-v="${v}">${l}</button>`;
   const all = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:")), fait = all.filter(t => t.statut == "fait").length;
   const row = t => { const ec = t.echeance ? new Date(t.echeance).getTime() : null, late = t.statut != "fait" && t.statut != "annule" && ec && ec < now;
-    return `<div class="tkr"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${late ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div>${t.description ? `<div class="m">${E(t.description)}</div>` : ""}<div class="m">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${ec ? "échéance " + hm(new Date(ec)) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}${t.fait_le ? "fait " + hm(new Date(t.fait_le)) + " · " : ""}par ${E(t.cree_nom)}${t.maj_nom ? " · " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button class="btn" data-a="tfiche" data-i="${t.id}">Détails / info</button>${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button><button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>`}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`; };
-  const flight = v => {
+    return `<div class="tkr"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${/^⚠ Empêchement/.test(t.commentaire || "") && t.statut != "fait" ? '<span class="bd warn">Empêchement signalé</span> ' : ""}${late ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div>${t.description ? `<div class="m">${E(t.description)}</div>` : ""}<div class="m">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${ec ? "échéance " + hm(new Date(ec)) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}${t.fait_le ? "fait " + hm(new Date(t.fait_le)) + " · " : ""}par ${E(t.cree_nom)}${t.maj_nom ? " · " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button class="btn" data-a="tfiche" data-i="${t.id}">Détails / info</button>${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button>${TMG.includes(ME.role) ? `<button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="temp" data-i="${t.id}">⚠ Signaler un empêchement</button>`}` : TMG.includes(ME.role) || t.statut == "fait" ? `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>` : ""}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`; };
+  const fixe = SVN.includes(ME.role) ? "N" : SVM.includes(ME.role) ? "M" : "", fsv = fixe || TVF || TSV || "N";
+  const flight = v => { const mine = fsv;
     const A = v.sens == "A", ref = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue), it = [];
     chkItems(v).forEach(i => { if (!mine || mine == i.sv) { const dn = CK[v.id + "|" + i.k]; it.push({ t: i.d, sv: i.sv, l: i.l, k: i.k, un: i.un, done: dn, late: !dn && i.d.getTime() < now, btn: 1 }); } });
     if (!mine || mine == "M") {
@@ -650,6 +654,7 @@ V.tach = async () => {
     + mesTaches + vtabs + `<div class="dys">${dys}</div><div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}${SVN.includes(ME.role) || SVM.includes(ME.role) ? "" : " | " + sb2("", "Tous services") + sb2("N", "Nettoyage") + sb2("M", "Manutention")}</div>`
     + `<div class="card"><h2>Tâches du shift (${L.length})</h2>${L.map(row).join("") || `<div class="m">Aucune tâche ce jour-là.</div>`}</div>`
     + `<h2 style="margin:14px 2px 6px">Par vol — tâches et alertes selon l’approche / le décollage (${VL.length})</h2>`
+    + (fixe ? `<div class="m" style="margin:0 2px 6px">Service : <b>${fixe == "N" ? "Nettoyage" : "Manutention"}</b></div>` : `<div class="card row" style="justify-content:flex-start;gap:6px">${[["N", "🧹 Nettoyage"], ["M", "🧳 Manutention"]].map(([k, l]) => `<button class="btn ${fsv == k ? "p" : ""}" data-a="tvf" data-v="${k}">${l}</button>`).join("")}</div>`)
     + (VL.map(flight).join("") || `<div class="card m">Aucun vol enregistré sur ce shift (08h00 → 08h00).</div>`);
 };
 
@@ -687,7 +692,7 @@ V.tech = async () => {
   } else if (TQ == "int") {
     body = `<div class="card sc"><h2>Historique des interventions (${IVT.length})</h2><table><tr><th>Date</th><th>Matériel</th><th>Type</th><th>Statut</th><th>Compte rendu</th></tr>${IVT.map(i => { const e = EQ.find(x => x.id == i.equipement_id); return `<tr><td>${i.date_realisee ? dmy(i.date_realisee) + " " + hm(new Date(i.date_realisee)) : i.date_prevue ? "prévue " + fd(i.date_prevue) : "—"}</td><td><b>${E(e?.code)}</b> ${E(e?.designation)}</td><td>${IVTT[i.type]}</td><td><span class="bd ${i.statut == "faite" ? "ok" : "info"}">${IVS[i.statut]}</span>${i.etat_resultant ? `<div class="m">→ ${EQE[i.etat_resultant]}</div>` : ""}</td><td>${E(i.compte_rendu) || "—"}<div class="m">${E(i.auteur_nom || "")}</div></td></tr>`; }).join("") || `<tr><td colspan="5" class="m">Aucune intervention enregistrée.</td></tr>`}</table></div>`;
   } else {
-    const L = SG.filter(x => x.categorie == "Technique" || x.assigne_role == "responsable_technique" || (tech && x.cree_par == uid));
+    const L = SG.filter(x => x.categorie == "Technique" || x.assigne_role == "responsable_technique" || (tech && x.cree_par == UID));
     body = `<div class="card sc"><h2>Signalements techniques (${L.length})</h2><table><tr><th>Réf.</th><th>Objet</th><th>Matériel</th><th>Catégorie</th><th>Statut</th></tr>${L.map(x => { const e = EQ.find(q => q.id == x.equipement_id); return `<tr data-a="sigo" data-i="${x.id}" style="cursor:pointer"><td><b>${E(x.ref.replace("EPS/OPS/SIG/", ""))}</b></td><td><b>${E(x.objet)}</b><div class="m">${E(x.zone) || ""} · par ${E(x.cree_nom)} · ${dmy(x.created_at)}</div></td><td>${e ? E(e.code) : "—"}</td><td>${E(x.categorie)}${x.assigne_role == "direction" ? '<div class="m">→ Direction</div>' : ""}</td><td><span class="bd ${SG_B[x.statut]}">${SG_ST[x.statut]}</span></td></tr>`; }).join("") || `<tr><td colspan="5" class="m">Aucun signalement technique.</td></tr>`}</table></div>`;
   }
   return head("Technique", full ? "Matériel, inspections, interventions et signalements" : "Disponibilité du matériel", tech ? `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn w" data-a="eqint">+ Compte rendu</button><button class="btn" data-a="eqplan">+ Planifier</button><button class="btn" data-a="signew">+ Signalement / suggestion</button></div>` : (ME.role && full ? `<button class="btn w" data-a="signew">+ Signalement</button>` : ""))
@@ -948,8 +953,8 @@ async function decide(id, action, debut, jours, comm) {
 async function setSt(mat, v) {
   const a = AG.find(x => x.matricule == mat);
   const done = async j => {
-    const uid = (await sb.auth.getUser()).data.user.id;
-    const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", ymd(shiftStart())).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: ymd(shiftStart()), matricule: mat, statut: v, justification: j || null, saisi_par: uid, maj: new Date().toISOString() });
+    const UID = (await sb.auth.getUser()).data.user.id;
+    const q = v == "p" ? sb.from("statuts_jour").delete().eq("jour", ymd(shiftStart())).eq("matricule", mat) : sb.from("statuts_jour").upsert({ jour: ymd(shiftStart()), matricule: mat, statut: v, justification: j || null, saisi_par: UID, maj: new Date().toISOString() });
     const { error } = await q; if (error) toast("Refusé : " + error.message); else toast(a.nom + " : " + SL[v]);
     await loadST(); if ($("#el")) setEl();
   };
@@ -1050,6 +1055,16 @@ const ACT = {
   tday(b) { TD = +b.dataset.i; draw(); },
   tfl(b) { TFL = b.dataset.v; draw(); },
   async tst(b) { const w = b.dataset.w, go = async c => { const { error } = await sb.rpc("tache_statut", { p_id: +b.dataset.i, p_statut: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Tâche : " + TS[w]); draw(); }; if (w == "annule") ask("Motif d’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
+  temp(b) {
+    const id = +b.dataset.i, t = TK.find(x => x.id == id);
+    ask("Signaler un empêchement", [{ k: "x", l: "Empêchement ou contrainte (ce qui bloque, depuis quand, ce dont vous avez besoin)", t: "ta", r: 1 }], async v => {
+      const tx = v.x.trim(); if (!tx) return;
+      const { error } = await sb.from("taches_notes").insert({ tache_id: id, type: "empechement", texte: tx, auteur_nom: ME.nom });
+      if (error) return toast("Refusé : " + error.message);
+      await sb.rpc("tache_statut", { p_id: id, p_statut: t ? t.statut : "a_faire", p_comm: "⚠ Empêchement : " + tx });
+      toast("Empêchement signalé"); draw();
+    });
+  },
   async tdel(b) { if (!confirm("Supprimer cette tâche ?")) return; const { error } = await sb.from("taches").delete().eq("id", +b.dataset.i); toast(error ? "Refusé : " + error.message : "Tâche supprimée"); draw(); },
   async tnew() {
     const eqs = [...new Set(AG.map(a => a.equipe))].filter(Boolean).sort(), priv = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"].includes(ME.role);
@@ -1057,7 +1072,7 @@ const ACT = {
     ask("Nouvelle tâche", [
       { k: "ca", l: "1. Catégorie", o: [["", "— Choisir —"]].concat(SG_CATL.filter(x => !/^Externe/.test(x[1])).map(x => [x[0], x[1].replace("Interne — ", "")]).concat([["Réunion / administration", "Réunion / administration"], ["Évaluation", "Évaluation"], ["Planification / information", "Planification / information"], ["Intervention technique", "Intervention technique"]])) },
       { k: "ti", l: "Tâche", r: 1 }, { k: "de", l: "Détails (facultatif)", t: "ta" },
-      { k: "as", l: "Assigner à", o: [["", priv ? "— Personne (équipe / général) —" : "— Moi-même —"], ["me", "Moi-même"]].concat(co.filter(c => c.id != uid).map(c => [c.id, c.nom + " — " + (RL[c.role] || c.role)])) },
+      { k: "as", l: "Assigner à", o: [["", priv ? "— Personne (équipe / général) —" : "— Moi-même —"], ["me", "Moi-même"]].concat(co.filter(c => c.id != UID).map(c => [c.id, c.nom + " — " + (RL[c.role] || c.role)])) },
       { k: "j", l: "Date", t: "date", v: dstr(TD), r: 1 }, { k: "e", l: "Délai : date et heure limite (facultatif)", t: "datetime-local" }, { k: "h", l: "Heure (ex. 14h30)" },
       { k: "ci", l: "Équipe concernée", o: [["", "— Toutes / non précisée —"], ...eqs] },
       { k: "q", l: "Agent précis (ID ou nom, facultatif)" }, { k: "li", l: "Lieu / zone" },
@@ -1066,7 +1081,7 @@ const ACT = {
     ], async v => {
       if (!v.ca) return toast("Choisissez d’abord la catégorie");
       let m = null; if (v.q.trim()) { const r = findAg(v.q); if (r.length != 1) return toast(r.length ? "Plusieurs agents : précisez avec l’ID" : "Agent introuvable"); m = r[0].matricule; }
-      const au = v.as == "me" || (!priv && !v.as) ? uid : v.as || null, n = Math.min(Math.max(+v.n || 1, 1), 31), rows = [];
+      const au = v.as == "me" || (!priv && !v.as) ? UID : v.as || null, n = Math.min(Math.max(+v.n || 1, 1), 31), rows = [];
       for (let i = 0; i < n; i++) rows.push({ titre: v.ti.trim(), description: v.de.trim() || null, categorie: v.ca, jour: ymd(new Date(v.j + "T00:00:00Z").getTime() + i * 864e5), heure: v.h.trim() || null, echeance: v.e && n == 1 ? fromL(v.e) : null, cible: v.ci || null, assigne_matricule: m, assigne_uid: au, lieu: v.li.trim() || null, priorite: v.pr });
       const { error } = await sb.from("taches").insert(rows); toast(error ? "Refusé : " + error.message : n > 1 ? n + " tâches créées" : "Tâche créée"); draw();
     });
@@ -1102,15 +1117,15 @@ const ACT = {
   async tfiche(b) {
     const id = +b.dataset.i, { data: t } = await sb.from("taches").select("*").eq("id", id).single(), { data: N } = await sb.from("taches_notes").select("*").eq("tache_id", id).order("created_at");
     if (!t) return toast("Tâche introuvable");
-    const NT = { info: "Information", clarification: "Question / clarification", justification: "Justification", compte_rendu: "Compte rendu" };
+    const NT = { info: "Information", clarification: "Question / clarification", justification: "Justification", compte_rendu: "Compte rendu", empechement: "Empêchement / contrainte" };
     $("#mf").innerHTML = `<div class="row"><h2>${E(t.titre)}</h2><span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></div><div class="m">${E(t.ref || "sans n° (tâche système)")} · ${t.categorie ? E(t.categorie) + " · " : ""}jour ${fd(t.jour)}${t.echeance ? " · délai " + dmy(t.echeance) + " " + hm(new Date(t.echeance)) : t.heure ? " · " + E(t.heure) : ""}${t.lieu ? " · 📍 " + E(t.lieu) : ""}${t.assigne_nom ? " · 👤 " + E(t.assigne_nom) : t.cible ? " · 👥 " + E(t.cible) : ""} · créée par ${E(t.cree_nom || "")}</div>${t.description ? `<div>${E(t.description)}</div>` : ""}${t.commentaire ? `<div class="m">« ${E(t.commentaire)} »</div>` : ""}
 <h2 style="margin-top:6px">Échanges</h2>${(N || []).map(n => `<div class="li" style="align-items:flex-start"><div><b>${NT[n.type]}</b><div>${E(n.texte)}</div><div class="m">${E(n.auteur_nom || "")}</div></div><div class="m" style="white-space:nowrap">${dmy(n.created_at)} ${hm(new Date(n.created_at))}</div></div>`).join("") || '<div class="m">Aucun échange.</div>'}
 <div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button type="button" class="btn p" data-a="tnote" data-i="${id}">+ Info / question / justification</button>${t.statut == "a_faire" ? `<button type="button" class="btn" data-a="tst" data-w="en_cours" data-i="${id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button type="button" class="btn w" data-a="tst" data-w="fait" data-i="${id}">Terminé</button>` : ""}</div>
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
     $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = ev => ev.preventDefault(); $("#md").classList.add("on"); },
   tnote(b) { const id = +b.dataset.i; ask("Ajouter un message sur la tâche", [{ k: "t", l: "Nature", o: [["info", "Information / avancement"], ["clarification", "Question : information manquante ou clarification"], ["justification", "Justification (retard ou obstacle)"]] }, { k: "x", l: "Message (dictée possible)", t: "ta", r: 1 }], async v => { const { error } = await sb.from("taches_notes").insert({ tache_id: id, type: v.t, texte: v.x.trim(), auteur_nom: ME.nom }); toast(error ? "Refusé : " + error.message : "Message enregistré"); await draw(); ACT.tfiche({ dataset: { i: id } }); }); },
-  tsv(b) { TSV = b.dataset.v; draw(); },
-  async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: uid, etat: b.dataset.e || "fait" }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
+  tsv(b) { TSV = b.dataset.v; TVF = ""; draw(); }, tvf(b) { TVF = b.dataset.v; draw(); },
+  async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: UID, etat: b.dataset.e || "fait" }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
   async fichehtml(vid) {
     const { data: v } = await sb.from("vols").select("*").eq("id", vid).maybeSingle();
     if (!v) return "";
