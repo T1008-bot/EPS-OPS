@@ -82,6 +82,8 @@ header{position:relative}body.ldg header{overflow:hidden}body.ldg header::after{
 .vmain{display:flex;flex-direction:column;gap:16px}.vmain[hidden]{display:none}@media(max-width:700px){.vmain{gap:12px}}.vqs{position:relative}.vqs input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px 11px 38px;border:1px solid var(--b);border-radius:12px;background:var(--s);color:var(--t)}.vqs:before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.6}
 .vqh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 0}.vqc{padding:10px 12px;display:grid;gap:6px}.vqc+.vqc{margin-top:8px}
 .vwk{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.vwk div{text-align:center;border-radius:7px;padding:4px 0;font-size:11px;line-height:1.35;border:1px solid var(--b)}.vwk span{display:block;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--m)}.vwk .on{background:var(--pl);border-color:transparent}.vwk .off{opacity:.38}.vwk .a{color:var(--p);font-weight:700}.vwk .d{color:#b8740a;font-weight:700}
+.vwt{padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.vwt table{border-collapse:separate;border-spacing:0;font-size:11px;width:100%;min-width:600px;table-layout:fixed}.vwt th,.vwt td{border-bottom:1px solid var(--b);padding:4px 3px;vertical-align:top;text-align:left}.vwt tr:last-child td{border-bottom:0}.vwt th{font-size:10px;text-transform:uppercase;color:var(--m);text-align:center;font-weight:800}.vwt th small{display:block;font-weight:500;text-transform:none}.vwt th:first-child,.vwt td:first-child{position:sticky;left:0;z-index:1;background:var(--s);width:86px;min-width:86px;max-width:96px;border-right:1px solid var(--b);text-align:left}.vwt td:first-child b{display:block;font-size:11.5px;line-height:1.2}.vwt td:first-child small{color:var(--m)}.vwt .td{background:#e1ecfb80}.vwt th.td{color:var(--n)}
+.vwi{line-height:1.25;padding:2px 3px;border-radius:5px;border-left:3px solid #6d5bd0;background:#6d5bd00d}.vwi span{white-space:nowrap}.vwi+.vwi{margin-top:3px}.vwi.A{border-color:var(--p);background:#2f6fd00d}.vwi.D{border-color:#b8740a;background:#c27c0e0d}.vwi b{display:block;font-size:11px;white-space:nowrap}.vwi .a{color:var(--p);font-weight:700}.vwi .d{color:#b8740a;font-weight:700}.vwi sup{font-size:8px}
 .vrd{border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;cursor:pointer;min-width:0}
 .vrd span{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--m)}.vrd b{font-size:20px;line-height:1.1}.vrd small{font-size:10px;color:var(--m)}
 .vrd.on{background:var(--n);border-color:var(--n);color:#fff}.vrd.on span,.vrd.on small{color:#fff;opacity:.8}
@@ -520,6 +522,20 @@ function vSearchHTML() {
 ${L.map(card).join("") || `<div class="card m">Aucun vol régulier ne correspond. Essayez un numéro (AT511), une compagnie (Air France) ou une ville (Casablanca, CMN).</div>`}`;
 }
 document.addEventListener("input", e => { if (e.target.id != "vq") return; VQ = e.target.value; const r = document.getElementById("vqr"), m = document.getElementById("vmain"); if (r) r.innerHTML = vSearchHTML(); if (m) m.hidden = !!VQ.trim(); });
+/* semaine par compagnie : une ligne par compagnie, une colonne par jour (lundi → dimanche), numéros et heures prévues dans chaque case */
+function vWeekHTML(days, f) {
+  const ord = [1, 2, 3, 4, 5, 6, 0], C = {}, DW = {}, sem = days.slice(1, 8), tw = sem[0].w;
+  sem.forEach(D => { DW[D.w] = D; D.it.filter(f).forEach(x => { const c = x.pfx || x.cie; ((C[c] = C[c] || {})[D.w] = C[c][D.w] || []).push(x); }); });
+  const cos = Object.keys(C).sort((a, b) => a.localeCompare(b, "fr"));
+  if (!cos.length) return `<div class="card m">Aucun vol régulier pour ce filtre.</div>`;
+  /* AH4014 / AH4015 → AH4014/15 (notation courante des rotations) */
+  const sn = n => { const [a, b] = n.split(" / "); if (!b) return a; let c = 0; while (c < a.length && a[c] == b[c]) c++; return c < 2 ? a + "/" + b : a + "/" + b.slice(Math.max(2, Math.min(c, b.length - 2))); };
+  const h = (m, e) => `${e ? "≈" : ""}${hhm(m % 1440)}${m >= 1440 ? "<sup>+1</sup>" : ""}`;
+  const it = x => `<div class="vwi ${x.typ}"><b>${E(sn(x.num))}</b>${x.t1 != null ? `<span class="a">${h(x.t1, x.e1)}</span>` : ""}${x.t1 != null && x.t2 != null ? "–" : ""}${x.t2 != null ? `<span class="d">${h(x.t2, x.e2)}</span>` : ""}</div>`;
+  const mv = L => L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
+  return `<div class="card vwt"><table><thead><tr><th>Compagnie</th>${ord.map(w => `<th class="${w == tw ? "td" : ""}">${JSEM[w]}<small>${DW[w] ? DW[w].j.slice(8, 10) + "/" + DW[w].j.slice(5, 7) : ""}</small></th>`).join("")}</tr></thead><tbody>${cos.map(c => `<tr><td><b>${E(c)}</b><small>${mv(Object.values(C[c]).flat())} vols / sem.</small></td>${ord.map(w => `<td class="${w == tw ? "td" : ""}">${(C[c][w] || []).sort((a, b) => (a.t1 ?? a.t2) - (b.t1 ?? b.t2)).map(it).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+<div class="m" style="font-size:12px">Heures prévues : <span style="color:var(--p);font-weight:700">arrivée</span> – <span style="color:#b8740a;font-weight:700">départ</span> · « ≈ » estimée · <sup>+1</sup> lendemain · barre violette = rotation. Faites glisser le tableau horizontalement sur téléphone.</div>`;
+}
 const PERL = ["Nuit · 00h–06h", "Matin · 06h–12h", "Après-midi · 12h–18h", "Soir · 18h–24h"];
 const VTRL = [["heure", "Heure"], ["compagnie", "Compagnie"], ["creneau", "Créneau horaire"], ["type", "Type (rotation, arrivée, départ)"], ["cargo", "Passagers / cargo"]];
 const hhm = m => p2(Math.floor(m / 60) % 24) + ":" + p2(m % 60);
@@ -670,15 +686,15 @@ async function vregView() {
   const list = vGroup(its, VTRR.get()).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${mvC(xs)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier sur cette période.</div>`;
   const chip = (k, l) => `<button type="button" class="btn${VRF == k ? " p" : ""}" data-a="vrf" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
   const wb = (k, l) => `<button type="button" class="btn${VRW == k ? " p" : ""}" data-a="vrw" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
-  const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => inW(x, w0, w0 + 1440))), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" ? " on" : ""}" data-a="vrj" data-i="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
+  const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => inW(x, w0, w0 + 1440))), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" && VRW != "sem" ? " on" : ""}" data-a="vrj" data-i="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
   return head("Vols réguliers", `Semaine du ${dmy(R.lun)} · actualisée chaque lundi · STA/STD du Flight Allocation`, vspCard(VSP ? VSP.L.length : null))
     + `<div style="display:flex;gap:6px;flex-wrap:wrap">${back}</div>`
     + `<div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Heures prévues (STA / STD) du dernier Flight Allocation importé ; « ≈ » = heure prévue estimée, faute de Flight Allocation pour ce vol. Le suivi Flightradar24 (en vol, ETA, atterri, parti, ETD recalculée) s’affiche sous chaque vol. Des changements peuvent avoir lieu : <b>confirmez chaque jour</b> avec le programme du shift.</div>`
     + `<div class="vqs"><input id="vq" type="search" enterkeyhint="search" autocomplete="off" placeholder="Rechercher un vol : numéro, compagnie, destination…" value="${E(VQ)}"></div><div id="vqr">${vSearchHTML()}</div><div id="vmain" class="vmain"${VQ.trim() ? " hidden" : ""}><div class="vrs">${strip}</div>`
-    + `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${wb("shift", "Shift 08h → 08h")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-a="vrwm" style="padding:6px 10px;min-height:0">Voir plus ▾</button>`}</div>`
-    + `<div class="card"><div class="row" style="align-items:baseline"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${nR} rotations</span><span class="A">${nA} arrivées</span><span class="D">${nD} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>`
-    + `<div class="row" style="flex-wrap:wrap;gap:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${vTriSel("r", VTRR.get())}<button type="button" class="btn" data-a="vrcopy" style="padding:6px 10px;min-height:0">📋 Copier</button></div></div>`
-    + list + `</div>`;
+    + `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${wb("shift", "Shift 08h → 08h")}${wb("sem", "Semaine par compagnie")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-a="vrwm" style="padding:6px 10px;min-height:0">Voir plus ▾</button>`}</div>`
+    + `${VRW == "sem" ? "" : `<div class="card"><div class="row" style="align-items:baseline"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${nR} rotations</span><span class="A">${nA} arrivées</span><span class="D">${nD} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>`}`
+    + `<div class="row" style="flex-wrap:wrap;gap:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div>${VRW == "sem" ? "" : `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${vTriSel("r", VTRR.get())}<button type="button" class="btn" data-a="vrcopy" style="padding:6px 10px;min-height:0">📋 Copier</button></div>`}</div>`
+    + (VRW == "sem" ? vWeekHTML(R.days, x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF)) : list) + `</div>`;
 }
 
 function vTimeline(L, w0, w1, nowA) {
@@ -2324,7 +2340,7 @@ Object.assign(ACT, {
   vreg() { VM = "reg"; NAV = "vols"; draw(); scrollTo(0, 0); },
   vprog() { VM = "prog"; draw(); scrollTo(0, 0); },
   virr() { VM = "irr"; draw(); scrollTo(0, 0); },
-  vrj(b) { VRJ = +b.dataset.i; if (VRW == "passes") VRW = "shift"; draw(); },
+  vrj(b) { VRJ = +b.dataset.i; if (VRW == "passes" || VRW == "sem") VRW = "shift"; draw(); },
   vrw(b) { VRW = b.dataset.k; draw(); },
   vqf(b) { VQF = b.dataset.k; draw(); },
   vrwm() { VRWM = true; draw(); },
