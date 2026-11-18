@@ -427,7 +427,7 @@ const MT = ["PSM", "LDM", "CPM"], MSGR = ["direction", "responsable_ops", "coord
 const NETR = ["chef_nettoyage", "superviseur_nettoyage"], MANR = ["chef_bagages", "superviseur_bagages"];
 const svcRole = () => NETR.includes(ME.role) ? "N" : MANR.includes(ME.role) ? "M" : "";
 const pourMoi = titre => { const r = svcRole(), t = String(titre || ""); return !r || (r == "N" ? !/manutention|bagage|chargement|PSM|LDM|CPM|PMR|wheelchair/i.test(t) : !/nettoyage|cabine/i.test(t)); };
-const libSvc = t => String(t || "").replace(/Manutention bagages/gi, "Manutention").replace(/\(bagages\)/gi, "(manutention)");
+const libSvc = t => String(t || "");
 const nChips = (v, v2) => [v, v2].filter(Boolean).map(x => { const t = new Date(x.heure_estimee || x.heure_prevue).getTime(); return x.sens == "A" ? `<span class="bd info">🧹 Zone arrivée ${hm(t - 60 * 60000)}</span> <span class="bd info">Cabine ${hm(t - 30 * 60000)}</span>` : `<span class="bd warn">🧹 Zones départ ${hm(t - 200 * 60000)}</span>`; }).join(" ");
 let MSGS = {};
 const hh = d => hm(d).replace("h", ":");
@@ -1637,7 +1637,7 @@ ${fcard}${acard}${mcard}
       { k: "ob", l: "Objet (ex. Retard de dix heures et absence injustifiée - Shift du 24/09/2026)", r: 1 },
       { k: "fa", l: "Faits constatés", t: "ta", r: 1, v: "Il a été constaté que, " },
       { k: "qu", l: "Qualification / explication demandée (DE) ou qualification (MAP)", t: "ta", v: "Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur …, accompagnée de tout justificatif utile." },
-      { k: "af", l: "Affectation (ex. Manutention - AINO)" },
+      { k: "af", l: "Affectation (ex. Manutention bagages - AINO)" },
       { k: "dr", l: "MAP seulement : référence de la demande d’explication visée" },
       { k: "co", l: "MAP seulement : consignes à la reprise", t: "ta" },
       { k: "nj", l: "MAP seulement : nombre de jours proposé", t: "number" }
