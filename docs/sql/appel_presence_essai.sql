@@ -1,14 +1,13 @@
 -- EPS OPS — Module « Appel dans l'app » (en essai, désactivable).
--- À exécuter une fois dans Supabase : Dashboard → SQL Editor → New query → coller ce fichier → Run.
+-- Appliqué le 18/11/2026. À exécuter une fois dans Supabase : Dashboard → SQL Editor → New query → coller ce fichier → Run.
 -- Jotform reste la situation officielle : l'appel est enregistré à part (table appels) et ne modifie pas les statuts.
 -- Désactiver : update config_alertes set valeur = '{"actif": false}' where cle = 'appel_app';
 
 insert into public.config_alertes(cle, valeur, description) values ('appel_app', '{"actif": true}', 'Appel de l’équipe dans l’app (en essai). actif=false masque le module et coupe les relances ; la situation officielle reste Jotform.')
 on conflict (cle) do nothing;
 
-alter table public.statuts_jour drop constraint if exists statuts_jour_statut_check;
-alter table public.statuts_jour add constraint statuts_jour_statut_check check (statut = any (array['nj','j','c','mp','r']));
-alter table public.statuts_jour add column if not exists retard_heure text, add column if not exists retard_a_confirmer boolean not null default false;
+alter table public.statuts_jour add column if not exists retard boolean not null default false,
+  add column if not exists retard_heure text, add column if not exists retard_a_confirmer boolean not null default false;
 
 create table if not exists public.appels (
   id bigint generated always as identity primary key, jour date not null, equipe text not null, service text not null,
@@ -16,7 +15,6 @@ create table if not exists public.appels (
   effectif int, presents int, lignes jsonb not null default '[]', renforts jsonb not null default '[]', superviseurs text[], chefs text[],
   unique (jour, equipe));
 alter table public.appels enable row level security;
-drop policy if exists ap_r on public.appels;
 create policy ap_r on public.appels for select using (mon_role() is not null);
 
 create or replace function public.appel_actif() returns boolean language sql stable security definer set search_path to 'public' as $$
@@ -50,7 +48,7 @@ end $$;
 create or replace function public.retard_valider(p_jour date, p_matricule text, p_retard boolean, p_heure text) returns void language plpgsql security definer set search_path to 'public' as $$
 begin
   if mon_role() not in ('direction','responsable_ops','coordinateur_ops','superviseur_principal','superviseur_nettoyage','superviseur_bagages','chef_nettoyage','chef_bagages') then raise exception 'Non autorisé'; end if;
-  update statuts_jour set statut = case when p_retard then 'r' else statut end, retard_heure = case when p_retard then p_heure else retard_heure end,
+  update statuts_jour set retard = p_retard, retard_heure = case when p_retard then p_heure else retard_heure end,
     retard_a_confirmer = false, saisi_par = auth.uid(), maj = now(),
     justification = case when p_retard then 'Retard confirmé' || coalesce(' — arrivée ' || p_heure, '') else coalesce(justification,'') || ' (absence confirmée)' end
   where jour = p_jour and matricule = p_matricule;
@@ -68,7 +66,7 @@ begin
                     and substring(x.groupe from '(\d)\s*$') = right(a.equipe, 1)
                     and x.cree_le >= s.jour + time '16:00' and x.cree_le < s.jour + 1 + time '06:00'
                   order by x.cree_le desc limit 1) ev on true
-    where s.statut = 'nj' and not s.retard_a_confirmer and s.saisi_par is null and s.jour >= current_date - 2
+    where s.statut = 'nj' and not s.retard and not s.retard_a_confirmer and s.saisi_par is null and s.jour >= current_date - 2
   loop
     select array_agg(m[1]) into nums from rapports_staff r, jsonb_each(r.brut->'answers') q, regexp_matches(coalesce(q.value->>'answer',''), '(\d{2,5})', 'g') m
      where r.submission_id = c.submission_id and q.value->>'text' ~* '(absence|cong)';
