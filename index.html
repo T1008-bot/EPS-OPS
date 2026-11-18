@@ -435,7 +435,7 @@ document.addEventListener("change", async e => { if (e.target.id != "alf") retur
   } catch (x) { toast("Import impossible : " + (x.message || x)); } }, true);
 
 /* ---------- Vols réguliers : programme indicatif reconstitué à partir de l'historique Flightradar24 ---------- */
-let VM = "prog", VRD = null, VRJ = 0, VRF = "T", VRI = "T";
+let VM = "prog", VSP = null, VRD = null, VRJ = 0, VRF = "T", VRI = "T";
 const LSV = (k, d) => ({ get() { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(v) { try { localStorage.setItem(k, v); } catch (e) { } } });
 const VTRI = LSV("vtri", "heure"), VTRR = LSV("vtrir", "creneau"), VREGON = LSV("vreg", "1");
 const CIE2 = { L6: "Mauritania Airlines", AT: "Royal Air Maroc", KP: "ASKY Airlines", TK: "Turkish Airlines", AF: "Air France", AH: "Air Algérie", NT: "Binter Canarias", TU: "Tunisair", WT: "Swiftair", D0: "DHL", "2J": "Air Burkina", HC: "Air Sénégal", ET: "Ethiopian Airlines", SN: "Brussels Airlines" };
@@ -444,6 +444,8 @@ const vIata = n => /^([A-Z]{2}|[A-Z]\d|\d[A-Z])\d{1,4}[A-Z]?$/.test(n);
 const vAlias = n => { n = nvol(n); const m = n.match(/^SIV(\d+)$/); return m ? "D0" + m[1] : n; };
 const vCie = v => { const n = vAlias(v.numero); return (vIata(n) && CIE2[n.slice(0, 2)]) || CIE4[v.compagnie] || v.compagnie || "—"; };
 const vCargo = v => /^D0/.test(vAlias(v.numero)) || ["SET", "SIV", "DHK", "DHX", "BCS", "FDX", "UPS"].includes(v.compagnie);
+/* vol spécial : privé, État, affaires, navette MSS, indicatif technique, ou vol commercial d'une compagnie absente du programme régulier */
+const vSpecial = (v, R) => { if (vCat(v) != "com") return true; if (!R) return false; const n = vAlias(v.numero); return !R.regN.has(n) && !R.regP.has(n.slice(0, 2)); };
 const vMAI = v => /^L6/.test(vAlias(v.numero)) || v.compagnie == "MAI";
 const vCat = v => { const n = vAlias(v.numero); if (v.compagnie == "MSS" || /^MSS/.test(n)) return "nav"; if (vIata(n)) return "com"; if (/^[A-Z]{3}\d/.test(n)) return "aut"; return "prv"; };
 const VCAT = { occ: "Occasionnel", prv: "Privé / État / affaires", nav: "Navette MSS", aut: "Affrètement / technique" };
@@ -470,10 +472,18 @@ const vregBtn = () => VREGON.get() == "1" ? `<button type="button" class="vregb"
 
 async function vregData() {
   if (VRD && Date.now() - VRD.t < 6e5) return VRD;
+  /* programme de référence recalculé chaque lundi 00h : 3 semaines d'observations avant ce lundi */
   const s0 = new Date(); s0.setUTCHours(0, 0, 0, 0);
-  const since = new Date(s0.getTime() - 21 * 864e5);
-  const { data, error } = await sb.from("vols").select("numero,compagnie,immat,type_appareil,sens,provenance_destination,heure_prevue").eq("source", "fr24").gte("heure_prevue", since.toISOString()).lt("heure_prevue", s0.toISOString()).order("heure_prevue").limit(5000);
+  const lun = new Date(s0.getTime() - ((s0.getUTCDay() + 6) % 7) * 864e5), since = new Date(lun.getTime() - 21 * 864e5);
+  const [{ data, error }, { data: AL0 }] = await Promise.all([
+    sb.from("vols").select("numero,compagnie,immat,type_appareil,sens,provenance_destination,heure_prevue").eq("source", "fr24").gte("heure_prevue", since.toISOString()).lt("heure_prevue", lun.toISOString()).order("heure_prevue").limit(5000),
+    sb.from("allocation_vol").select("jour,sens,numero,numero_brut,heure_prevue").order("jour", { ascending: false }).limit(5000)]);
   if (error) throw error;
+  /* heures prévues (STA / STD) issues des Flight Allocation importés : la plus récente l'emporte */
+  const SCH = {};
+  (AL0 || []).forEach(x => { const m = String(x.heure_prevue || "").match(/(\d{1,2})[:h](\d{2})/); if (!m) return; const k = vAlias(x.numero_brut || x.numero) + "|" + x.sens, w = new Date(x.jour + "T00:00:00Z").getUTCDay(); (SCH[k] = SCH[k] || []).push({ jour: x.jour, w, m: +m[1] * 60 + +m[2] }); });
+  /* même jour de semaine d'abord ; sinon l'horaire d'un autre jour, s'il reste proche (± 90 min) de l'heure observée ce jour-là */
+  const sched = g => { const L = SCH[g.k] || [], o = [...g.occ].sort((a, b) => b.d - a.d)[0], dm = x => Math.min(Math.abs(x.m - o.m), 1440 - Math.abs(x.m - o.m)), x = L.find(y => y.w == g.w) || L.find(y => dm(y) <= 90); return x ? { m: x.m, src: "sta", jour: x.jour } : { m: o.m, src: "obs", jour: o.j }; };
   const O = (data || []).map(v => { const d = new Date(v.heure_prevue), n = vAlias(v.numero); return { ...v, n, d, j: ymd(d), w: d.getUTCDay(), m: d.getUTCHours() * 60 + d.getUTCMinutes(), cat: vCat(v), k: n + "|" + v.sens }; });
   /* jambes (numéro + sens) par jour de semaine */
   const LG = {};
@@ -513,22 +523,24 @@ async function vregData() {
   const days = [...Array(7)].map((_, i) => { const d = new Date(s0.getTime() + i * 864e5); return { d, j: ymd(d), w: d.getUTCDay(), it: [] }; });
   days.forEach(D => {
     (ROT[D.w] || []).forEach(({ a, d, off, g }) => {
-      let t2 = d.med + off * 1440; if (t2 <= a.med || t2 - a.med > 5 * 60) t2 = a.med + (g || 75);
-      const obs = [obsT(a, "Arrivée"), obsT(d, "Départ")];
+      const sa = sched(a), sd = sched(d), t1 = sa.m;
+      let t2 = sd.src == "obs" && g ? t1 + g : sd.m + off * 1440; if (t2 <= t1) t2 += 1440; if (t2 - t1 > 6 * 60) t2 = t1 + (g || 75);
+      const obs = [sa.src == "obs" || sd.src == "obs" ? `${sa.src == "obs" && sd.src == "obs" ? "heures" : sa.src == "obs" ? "heure d’arrivée" : "heure de départ"} observée (aucun Flight Allocation importé pour ce vol)` : ""];
       if (a.nd < 2 || d.nd < 2) obs.push(a.nd < 2 ? "arrivée relevée une seule fois" : "départ relevé une seule fois"); else if (Math.min(a.nd, d.nd) < 3) obs.push(vu(a.nd < d.nd ? a : d));
-      D.it.push({ typ: "R", t1: a.med, t2, md: a.med, k0: a.med, num: a.n == d.n ? a.n : a.n + " / " + d.n, cie: a.cie, route: `${ap(a.pd)} → NKC → ${ap(d.pd)}`, cargo: a.cargo || d.cargo, appareil: a.typ || d.typ, obs: obs.filter(Boolean) });
+      D.it.push({ typ: "R", t1, t2, e1: sa.src == "obs", e2: sd.src == "obs", md: t1, k0: t1, num: a.n == d.n ? a.n : a.n + " / " + d.n, cie: a.cie, route: `${ap(a.pd)} → NKC → ${ap(d.pd)}`, cargo: a.cargo || d.cargo, appareil: a.typ || d.typ, obs: obs.filter(Boolean) });
     });
     Object.values(LG).filter(g => g.w == D.w && !used.has(g.id) && g.nd >= 2).forEach(g => {
-      const obs = [obsT(g, "Heure"), vu(g)];
+      const sg = sched(g), obs = [sg.src == "obs" ? "heure observée (aucun Flight Allocation importé pour ce vol)" : "", vu(g)];
       if (g.sens == "A" && !g.mai && Object.entries(PG).some(([pk, c]) => c >= 3 && pk.startsWith(g.k + ">"))) obs.push("départ du même avion non relevé ce jour (rotation habituelle)");
-      if (g.sens == "A") { const ns = Object.values(NS[g.id] || {}).sort((x, y) => y.c - x.c)[0]; if (ns && ns.c >= 2) obs.push(`même avion repart en ${ns.n} vers ${hhm(vMed(ns.m))}${ns.off ? " le lendemain (night-stop)" : ""}`); }
-      D.it.push({ typ: g.sens, t1: g.sens == "A" ? g.med : null, t2: g.sens == "D" ? g.med : null, md: g.med, k0: g.med, num: g.n, cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
+      if (g.sens == "A") { const ns = Object.values(NS[g.id] || {}).sort((x, y) => y.c - x.c)[0]; if (ns && ns.c >= 2) obs.push(`même avion repart en ${ns.n}${ns.off ? " le lendemain (night-stop)" : ""}`); }
+      D.it.push({ typ: g.sens, t1: g.sens == "A" ? sg.m : null, t2: g.sens == "D" ? sg.m : null, e1: g.sens == "A" && sg.src == "obs", e2: g.sens == "D" && sg.src == "obs", md: sg.m, k0: sg.m, num: g.n, cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
     });
     D.mv = D.it.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
   });
-  /* vols non réguliers : privés, navettes, affrètements, et vols commerciaux vus une seule fois */
+  /* vols spéciaux : privés, navettes, affrètements, et vols commerciaux vus une seule fois */
   const IR = O.filter(o => o.cat != "com" || (!used.has(o.w + "|" + o.k) && (LG[o.w + "|" + o.k] || {}).nd < 2)).map(o => ({ ...o, cat: o.cat == "com" ? "occ" : o.cat })).sort((x, y) => y.d - x.d);
-  return VRD = { t: Date.now(), since, s0, days, IR, n: O.length };
+  const regN = new Set(Object.values(LG).filter(g => g.nd >= 2 || used.has(g.id)).map(g => g.n)), regP = new Set([...regN].map(n => n.slice(0, 2)));
+  return VRD = { t: Date.now(), since, s0, lun, days, IR, n: O.length, regN, regP, nsta: Object.keys(SCH).length };
 }
 
 function vTimeline(D, isT, nm) {
@@ -548,11 +560,11 @@ async function vregView() {
   const its = D.it.filter(x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF));
   let nx = "";
   if (isT) { const ev = []; D.it.forEach(x => { if (x.t1 != null) ev.push([x.t1, x.num.split(" / ")[0], "arrivée"]); if (x.t2 != null) ev.push([x.t2, x.num.split(" / ").pop(), "départ"]); }); const n = ev.filter(e => e[0] >= nm).sort((a, b) => a[0] - b[0])[0]; if (n) { const dm = n[0] - nm; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} vers <b>${hhm(n[0])}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
-  const row = x => `<div class="vrr ${x.typ}${isT && Math.max(x.t1 ?? 0, x.t2 ?? 0) < nm ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? `<span class="a">${hhm(x.t1)}</span>` : ""}${x.t2 != null ? `<span class="d">${hhm(x.t2)}${x.t2 >= 1440 ? "<sup>+1</sup>" : ""}</span>` : ""}</div><div class="vrv"><b>${E(x.num)}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${E(x.cie)} · ${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
+  const row = x => `<div class="vrr ${x.typ}${isT && Math.max(x.t1 ?? 0, x.t2 ?? 0) < nm ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? `<span class="a">${x.e1 ? "≈" : ""}${hhm(x.t1)}</span>` : ""}${x.t2 != null ? `<span class="d">${x.e2 ? "≈" : ""}${hhm(x.t2)}${x.t2 >= 1440 ? "<sup>+1</sup>" : ""}</span>` : ""}</div><div class="vrv"><b>${E(x.num)}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${E(x.cie)} · ${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
   const list = vGroup(its, VTRR.get()).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${xs.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier de ce type ce jour.</div>`;
   const chip = (k, l) => `<button type="button" class="btn${VRF == k ? " p" : ""}" data-a="vrf" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
-  return head("Vols réguliers", `Programme indicatif · ${dmy(R.days[0].d)} au ${dmy(R.days[6].d)}`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${back}<button class="btn" data-a="virr">Vols non réguliers (${R.IR.length})</button></div>`)
-    + `<div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Il est reconstitué à partir des vols observés par Flightradar24 sur les 3 dernières semaines (vol retenu s’il a été vu au moins 2 semaines sur 3 le même jour). Des changements peuvent avoir lieu : <b>confirmez chaque jour</b> avec le programme du shift et le Flight Allocation. Les vols Mauritania Airlines sont affichés un par un.</div>`
+  return head("Vols réguliers", `Programme de la semaine du ${dmy(R.lun)} · actualisé chaque lundi`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${back}<button class="btn" data-a="virr">✈️ Vols spéciaux</button></div>`)
+    + `<div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Les heures affichées sont les <b>heures prévues (STA / STD)</b> du dernier Flight Allocation importé, même si elles ont changé ces dernières semaines ; « ≈ » signale une heure observée, faute de Flight Allocation pour ce vol. La liste des vols est recalculée chaque lundi à partir des 3 semaines précédentes (vol retenu s’il a été vu au moins 2 semaines sur 3 le même jour). Des changements peuvent avoir lieu : <b>confirmez chaque jour</b> avec le programme du shift. Les vols Mauritania Airlines sont affichés un par un ; les vols privés, d’État, les navettes MSS et les vols occasionnels sont dans « Vols spéciaux ».</div>`
     + `<div class="vrs">${R.days.map((d, i) => `<button type="button" class="vrd${i == VRJ ? " on" : ""}" data-a="vrj" data-i="${i}"><span>${JSEM[d.w]}</span><b>${d.mv}</b><small>${dmy(d.d)}</small></button>`).join("")}</div>`
     + `<div class="card"><div class="row" style="align-items:baseline"><div><b style="font-size:22px">${D.mv} vols</b> <span class="m">${JSEML[D.w]} ${dmy(D.d)}</span></div><div class="vrk"><span class="R">${nR} rotations</span><span class="A">${nA} arrivées</span><span class="D">${nD} départs</span></div></div>${nx}${vTimeline(D, isT, nm)}</div>`
     + `<div class="row" style="flex-wrap:wrap;gap:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${vTriSel("r", VTRR.get())}<button type="button" class="btn" data-a="vrcopy" style="padding:6px 10px;min-height:0">📋 Copier</button></div></div>`
@@ -560,11 +572,13 @@ async function vregView() {
 }
 
 async function virrView() {
-  let R; try { R = await vregData(); } catch (x) { return head("Vols non réguliers", "", `<button class="btn" data-a="vreg">← Vols réguliers</button>`) + `<div class="card m">Chargement impossible : ${E(x.message || x)}</div>`; }
+  let R; try { R = await vregData(); } catch (x) { return head("Vols spéciaux", "", `<button class="btn" data-a="vprog">← Programme du shift</button>`) + `<div class="card m">Chargement impossible : ${E(x.message || x)}</div>`; }
   const cnt = k => R.IR.filter(o => o.cat == k).length, L = R.IR.filter(o => VRI == "T" || (VRI == "C" ? vCargo(o) : o.cat == VRI));
   const chip = (k, l) => `<button type="button" class="btn${VRI == k ? " p" : ""}" data-a="vri" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
-  return head("Vols non réguliers", `Vols privés, navettes, affrètements et occasionnels observés du ${dmy(R.since)} au ${dmy(R.s0.getTime() - 864e5)}`, `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-a="vreg">← Vols réguliers</button><button class="btn" data-a="vprog">Programme du shift</button></div>`)
-    + `<div class="card vrn">Ces vols n’entrent pas dans le programme régulier : vols privés, d’État ou d’affaires, navettes MSS, vols sous indicatif technique, et vols commerciaux vus une seule fois sur ce jour de la semaine.</div>`
+  const catOf = v => { const c = vCat(v); return c == "com" ? "occ" : c; }, tv = v => new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue);
+  const SH = VSP && VSP.L.length ? `<div class="vrg"><span>Shift du ${dmy(VSP.d)} 08h → ${dmy(VSP.f)} 08h</span><span>${VSP.L.length} vol${VSP.L.length > 1 ? "s" : ""}</span></div><div class="card vrl">${VSP.L.map(v => `<div class="vrr ${v.sens}"><i></i><div class="vrt"><span class="${v.sens == "A" ? "a" : "d"}">${hm(tv(v)).replace("h", ":")}</span></div><div class="vrv"><b>${E(vAlias(v.numero))}</b>${vCie(v) != "—" ? ` <span class="m">${E(vCie(v))}</span>` : ""}<div class="m">${v.sens == "A" ? "Arrivée · " + ap(v.provenance_destination) + " → NKC" : "Départ · NKC → " + ap(v.provenance_destination)}${v.immat ? " · " + E(v.immat) : ""}</div></div><span class="bd ${catOf(v) == "occ" ? "info" : "warn"}" style="font-size:10px">${VCAT[catOf(v)]}</span></div>`).join("")}</div><div class="vrg" style="margin-top:8px"><span>Historique des 3 semaines</span><span></span></div>` : "";
+  return head("Vols spéciaux", `Vols privés, d’État, navettes MSS, affrètements et vols occasionnels · historique du ${dmy(R.since)} au ${dmy(R.lun.getTime() - 864e5)}`, `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-a="vprog">← Programme du shift</button><button class="btn" data-a="vreg">Vols réguliers</button></div>`)
+    + `<div class="card vrn">Ces vols sont retirés du programme du shift et des vols réguliers, et ne comptent pas dans les chevauchements : vols privés, d’État ou d’affaires, navettes MSS, vols sous indicatif technique, et vols commerciaux occasionnels. Ils restent consultables ici.</div>` + SH
     + `<div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", `Tout (${R.IR.length})`)}${Object.entries(VCAT).map(([k, l]) => chip(k, `${l} (${cnt(k)})`)).join("")}${chip("C", "Cargo")}</div>`
     + (L.length ? Object.entries(L.reduce((G, o) => ((G[o.j] = G[o.j] || []).push(o), G), {})).map(([j, xs]) => `<div class="vrg"><span>${JSEML[xs[0].w]} ${dmy(xs[0].d)}</span><span>${xs.length} vol${xs.length > 1 ? "s" : ""}</span></div><div class="card vrl">${xs.sort((a, b) => a.m - b.m).map(o => `<div class="vrr ${o.sens}"><i></i><div class="vrt"><span class="${o.sens == "A" ? "a" : "d"}">${hhm(o.m)}</span></div><div class="vrv"><b>${E(o.n)}</b>${vCie(o) != "—" ? ` <span class="m">${E(vCie(o))}</span>` : ""}<div class="m">${o.sens == "A" ? "Arrivée · " + ap(o.provenance_destination) + " → NKC" : "Départ · NKC → " + ap(o.provenance_destination)}${o.type_appareil || o.immat ? " · " + E([o.type_appareil, o.immat].filter(Boolean).join(" ")) : ""}</div></div><span class="bd ${o.cat == "occ" ? "info" : "warn"}" style="font-size:10px">${VCAT[o.cat]}${vCargo(o) ? " · cargo" : ""}</span></div>`).join("")}</div>`).join("") : `<div class="card m">Aucun vol.</div>`);
 }
@@ -581,6 +595,9 @@ V.vols = async () => {
   let L = (vs || []).filter(v => t(v) >= d && t(v) < f);
   const real = new Set(L.filter(v => v.source != "prevision").map(v => v.numero + v.sens + ymd(t(v))));
   L = L.filter(v => v.source != "prevision" || !real.has(v.numero + v.sens + ymd(t(v)))).sort((a, b) => t(a) - t(b));
+  /* vols spéciaux (privés, État, navettes MSS, occasionnels) : retirés du programme, consultables via « Vols spéciaux » */
+  const RG = await vregData().catch(() => null), SPX = L.filter(v => (v.source == "fr24" || v.source == "prevision") && vSpecial(v, RG));
+  VSP = { d, f, L: SPX }; L = L.filter(v => !SPX.includes(v));
   const { data: MS } = await sb.from("messages_vol").select("id,type,vol_id,numero,jour,recu_le,parse,source,part").gte("recu_le", new Date(d.getTime() - 36 * H).toISOString()).lt("recu_le", new Date(f.getTime() + 60 * H).toISOString());
   const { data: ALC } = await sb.from("allocation_vol").select("*").gte("jour", ymd(d.getTime() - 864e5)).lte("jour", ymd(f.getTime() + 864e5));
   const alo = v => (ALC || []).find(x => x.sens == v.sens && nvol(x.numero_brut || x.numero) == nvol(v.numero) && x.jour == ymd(v.heure_prevue));
@@ -590,7 +607,7 @@ V.vols = async () => {
   const RWG = vGroup(RW.map(w => { const [a, b] = w.r, d0 = t(a); return { w, k0: d0.getTime(), md: d0.getUTCHours() * 60 + d0.getUTCMinutes(), cie: vCie(a), typ: b ? "R" : a.sens, cargo: vCargo(a) || (b && vCargo(b)) }; }), VTRI.get()).flatMap(([l, xs]) => [...(l ? [{ h: l, n: xs.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0) }] : []), ...xs.map(x => x.w)]);
   const etaOf = v => volEta(v, alo(v)), schOf = v => volSch(v, alo(v)), stv = v => volSt(v, alo(v), MS);
   const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
-  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""}</div>`)
+  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""} <button class="btn" data-a="virr">✈️ Vols spéciaux${SPX.length ? ` <span class="bd warn">${SPX.length}</span>` : ""}</button></div>`)
 
     + vregBtn() + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
 <div class="card sc"><div class="row" style="flex-wrap:wrap;gap:8px"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2>${vTriSel("p", VTRI.get())}</div><table class="vt"><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RWG.map(w => { if (w.h) return `<tr class="vg"><td colspan="7">${E(w.h)} · ${w.n} vol${w.n > 1 ? "s" : ""}</td></tr>`; const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; const tm = v => { const e = etaOf(v), s0 = schOf(v); return `<b>${s0}</b>${e && e != s0 ? ` <span class="m">ETA ${e}</span>` : ""}`; }; const bg = x => `<span class="bd ${x[1]}">${x[0]}</span>`; return `<tr class="vr" data-a="volfiche" data-i="${E(a.id)}" style="cursor:pointer"><td style="white-space:nowrap">${tm(a)}${one ? "" : `<div>→ ${tm(b)}</div>`}</td><td>${!one && nvol(a.numero) == nvol(b.numero) ? `<span class="lk" data-a="volfiche" data-i="${E(a.id)}" data-j="${E(b.id)}"><b>${E(a.numero)}</b></span>` : fl(a) + (one ? "" : "<div>" + fl(b) + "</div>")}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td style="white-space:nowrap">${one ? (a.sens == "A" ? ap(a.provenance_destination) + " → NKC" : "NKC → " + ap(a.provenance_destination)) : ap(a.provenance_destination) + " → NKC → " + ap(b.provenance_destination)}</td><td>${bg(st[0])}${one ? "" : "<div>" + bg(st[1]) + "</div>"}</td><td style="white-space:nowrap">${mchips(a, MS, b)}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
@@ -2150,8 +2167,8 @@ Object.assign(ACT, {
   rgvreg(b) { VREGON.set(b.dataset.k); ACT.rgl(); if (NAV == "vols") draw(); },
   async vrcopy() {
     const R = await vregData(), D = R.days[VRJ] || R.days[0];
-    const T = [`Vols réguliers NKC — ${JSEML[D.w]} ${dmy(D.d)} (${D.mv} vols)`, "Programme indicatif, sous réserve de changements : à confirmer avec le programme du jour.", ""];
-    vGroup(D.it, "heure")[0][1].forEach(x => T.push(`${x.typ == "R" ? hhm(x.t1) + " → " + hhm(x.t2) + (x.t2 >= 1440 ? " (J+1)" : "") : hhm(x.md)}  ${x.num}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
+    const T = [`Vols réguliers NKC — ${JSEML[D.w]} ${dmy(D.d)} (${D.mv} vols)`, "Programme indicatif (heures prévues), sous réserve de changements : à confirmer avec le programme du jour.", ""];
+    vGroup(D.it, "heure")[0][1].forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.t1) + " → " + (x.e2 ? "≈" : "") + hhm(x.t2) + (x.t2 >= 1440 ? " (J+1)" : "") : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.md)}  ${x.num}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
     try { await navigator.clipboard.writeText(T.join("\n")); toast("Programme copié"); } catch (e) { toast("Copie impossible sur cet appareil"); }
   }
 });
