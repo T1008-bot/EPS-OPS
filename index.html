@@ -1378,8 +1378,8 @@ const ACT = {
   tday(b) { TD = +b.dataset.i; draw(); },
   tfl(b) { TFL = b.dataset.v; draw(); },
   tind(b) {
-    const id = +b.dataset.i;
-    ask("Message indisponible", [{ k: "q", l: "Qu’est-ce qui n’a pas été envoyé ?", o: [["PSM et LDM non envoyés", "PSM et LDM non envoyés"], ["PSM non envoyé", "PSM non envoyé"], ["LDM non envoyé", "LDM non envoyé"]] }, { k: "c", l: "Précision (facultatif)" }], async v => {
+    const id = +b.dataset.i, t = TK.find(x => x.id == id), cargo = t && /^LDM/.test(t.titre || "");
+    ask("Message indisponible", [{ k: "q", l: "Qu’est-ce qui n’a pas été envoyé ?", o: cargo ? [["LDM non envoyé", "LDM non envoyé (vol cargo)"]] : [["PSM et LDM non envoyés", "PSM et LDM non envoyés"], ["PSM non envoyé", "PSM non envoyé"], ["LDM non envoyé", "LDM non envoyé"]] }, { k: "c", l: "Précision (facultatif)" }], async v => {
       const { error } = await sb.rpc("tache_statut", { p_id: id, p_statut: "fait", p_comm: "Indisponible : " + v.q + (v.c ? " — " + v.c : "") });
       toast(error ? "Refusé : " + error.message : "Noté : " + v.q); if (!error) $("#md").classList.remove("on"); draw();
     });
