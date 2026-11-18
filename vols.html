@@ -15,6 +15,11 @@
 .vwt{padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.vwt table{border-collapse:separate;border-spacing:0;font-size:11px;width:100%;min-width:600px;table-layout:fixed}.vwt th,.vwt td{border-bottom:1px solid var(--b);padding:4px 3px;vertical-align:top;text-align:left}.vwt tr:last-child td{border-bottom:0}.vwt th{font-size:10px;text-transform:uppercase;color:var(--m);text-align:center;font-weight:800}.vwt th small{display:block;font-weight:500;text-transform:none}.vwt th:first-child,.vwt td:first-child{position:sticky;left:0;z-index:1;background:var(--s);width:86px;min-width:86px;max-width:96px;border-right:1px solid var(--b);text-align:left}.vwt td:first-child b{display:block;font-size:11.5px;line-height:1.2}.vwt td:first-child small{color:var(--m)}.vwt .td{background:#e1ecfb80}.vwt th.td{color:var(--n)}
 .vwi{line-height:1.25;padding:2px 4px;border-radius:5px;border-left:3px solid #6d5bd0;background:#6d5bd00d;min-width:0;overflow:hidden}.vwi span{display:block;white-space:nowrap;font-variant-numeric:tabular-nums}.vwi em{display:block;font-style:normal;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--m)}.vwi+.vwi{margin-top:3px}.vwi.A{border-color:var(--p);background:#2f6fd00d}.vwi.D{border-color:#b8740a;background:#c27c0e0d}.vwi b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:clip}.vwi .a{color:var(--p);font-weight:700}.vwi .d{color:#b8740a;font-weight:700}.vwi sup{font-size:8px}
 .vwj{padding:8px;font-size:11px;overflow-x:auto;-webkit-overflow-scrolling:touch}.vwj>div{display:grid;grid-template-columns:repeat(7,minmax(78px,1fr));gap:4px;min-width:574px}.vwj section{min-width:0}.vwj section{display:flex;flex-direction:column;gap:3px;border-radius:8px;padding:3px}.vwj section.td{background:#e1ecfb80}.vwj h4{margin:0 0 2px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--m);font-weight:800;line-height:1.3}.vwj h4 small{display:block;font-weight:500;text-transform:none}.vwj section.td h4{color:var(--n)}.vwj .vwi+.vwi{margin-top:0}
+.vwi[data-vx]{cursor:pointer}.vwi[data-vx]:hover{filter:brightness(.96)}.vwi i{display:block;font-style:normal;font-size:9.5px;font-weight:600;color:var(--m);line-height:1.2;overflow-wrap:anywhere}
+.vdx{position:fixed;inset:0;z-index:999;background:#0b1a3366;display:flex;align-items:flex-end;justify-content:center;animation:vdf .15s}.vdx>div{background:var(--s);color:var(--t);width:min(520px,100%);max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px #0b1a3333;display:grid;gap:10px}@media(min-width:700px){.vdx{align-items:center}.vdx>div{border-radius:18px}}@keyframes vdf{from{opacity:0}}
+.vdh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.vdh h3{margin:0;font-size:19px}.vdc{border:0;background:var(--pl);color:var(--n);border-radius:10px;width:36px;height:36px;font-size:18px;cursor:pointer;flex:none}
+.vdl{border:1px solid var(--b);border-left:4px solid var(--p);border-radius:12px;padding:10px 12px;display:grid;gap:2px}.vdl.D{border-left-color:#b8740a}.vdl .k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--m)}.vdl .c{font-size:17px;font-weight:800}.vdl .t{font-size:15px}.vdl .t b{font-size:20px}.vdl.A .t b{color:var(--p)}.vdl.D .t b{color:#b8740a}
+.vdw{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.vdw span{text-align:center;font-size:11px;font-weight:700;padding:5px 0;border-radius:7px;border:1px solid var(--b);color:var(--m)}.vdw span.on{background:var(--pl);border-color:transparent;color:var(--n)}
 .vrd{border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;cursor:pointer;min-width:0}
 .vrd span{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--m)}.vrd b{font-size:20px;line-height:1.1}.vrd small{font-size:10px;color:var(--m)}
 .vrd.on{background:var(--n);border-color:var(--n);color:#fff}.vrd.on span,.vrd.on small{color:#fff;opacity:.8}
@@ -56,7 +61,7 @@ footer{font-size:11.5px;color:var(--m);padding:6px 2px}
 <script>
 const H = 36e5, p2 = n => String(n).padStart(2, "0");
 const ymd = d => new Date(d).toISOString().slice(0, 10);
-const IATA = { GMMN: "CMN", GOBD: "DSS", DTTA: "TUN", GABS: "BKO", GBYD: "BJL", LTFM: "IST", GQPP: "NDB", GCLP: "LPA", GUCY: "CKY", DAAG: "ALG", LFPG: "CDG", GQNO: "NKC", GQNI: "EMN", LPLA: "TER", GMFF: "FEZ", GQPZ: "OUZ", DIAP: "ABJ" };
+const IATA = { GMMN: "CMN", GOBD: "DSS", DTTA: "TUN", GABS: "BKO", GBYD: "BJL", LTFM: "IST", GQPP: "NDB", GCLP: "LPA", GUCY: "CKY", DAAG: "ALG", LFPG: "CDG", GQNO: "NKC", GQNI: "EMN", LPLA: "TER", GMFF: "FEZ", GQPZ: "OUZ", DIAP: "ABJ", DFFD: "OUA" };
 const ap = c => c ? (IATA[c] || c) : "—";
 const nvol = n => String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");;
 const CIE2 = { L6: "Mauritania Airlines", AT: "Royal Air Maroc", KP: "ASKY Airlines", TK: "Turkish Airlines", AF: "Air France", AH: "Air Algérie", NT: "Binter Canarias", TU: "Tunisair", WT: "Swiftair", D0: "DHL", "2J": "Air Burkina", HC: "Air Sénégal", ET: "Ethiopian Airlines", SN: "Brussels Airlines" };
@@ -102,9 +107,35 @@ function vSearchHTML() {
 ${L.map(card).join("") || `<div class="card m">Aucun vol régulier ne correspond. Essayez un numéro (AT511), une compagnie (Air France) ou une ville (Casablanca, CMN).</div>`}`;
 }
 document.addEventListener("input", e => { if (e.target.id != "vq") return; VQ = e.target.value; const r = document.getElementById("vqr"), m = document.getElementById("vmain"); if (r) r.innerHTML = vSearchHTML(); if (m) m.hidden = !!VQ.trim(); });
+/* aéroports desservis : ville et nom de l'aéroport (fiche détaillée d'un vol) */
+const AIRP = { NKC: ["Nouakchott", "Aéroport international de Nouakchott-Oumtounsy"], CMN: ["Casablanca", "Aéroport Mohammed V"], DSS: ["Dakar", "Aéroport international Blaise-Diagne"], TUN: ["Tunis", "Aéroport international de Tunis-Carthage"], BKO: ["Bamako", "Aéroport international Modibo-Keïta (Sénou)"], BJL: ["Banjul", "Aéroport international de Banjul (Yundum)"], IST: ["Istanbul", "Aéroport d'Istanbul"], NDB: ["Nouadhibou", "Aéroport international de Nouadhibou"], LPA: ["Las Palmas de Gran Canaria", "Aéroport de Gran Canaria"], CKY: ["Conakry", "Aéroport international Ahmed-Sékou-Touré (Gbessia)"], ALG: ["Alger", "Aéroport international Houari-Boumédiène"], CDG: ["Paris", "Aéroport Paris-Charles-de-Gaulle"], EMN: ["Néma", "Aéroport de Néma"], TER: ["Terceira (Açores)", "Aéroport de Lajes"], FEZ: ["Fès", "Aéroport Fès-Saïss"], OUZ: ["Zouérate", "Aéroport de Zouérate-Tazadit"], ABJ: ["Abidjan", "Aéroport international Félix-Houphouët-Boigny"], OUA: ["Ouagadougou", "Aéroport international de Ouagadougou"] };
+let VWX = {};
+function vDetail(k) {
+  const z = VWX[k]; if (!z) return; const { x, j } = z;
+  const dt = new Date(j + "T00:00:00Z"), cs = (x.route.match(/[A-Z0-9]{3,4}/g) || []);
+  const apt = c => { const a = AIRP[c]; return a ? `<div class="c">${E(a[0])} <span class="m" style="font-weight:600">(${E(c)})</span></div><div class="m">${E(a[1])}</div>` : `<div class="c">${E(c)}</div>`; };
+  const [na, nd] = x.typ == "R" && x.num.includes(" / ") ? x.num.split(" / ") : [x.num, x.num];
+  const tt = (m, e, l) => `<div class="t">${l} <b>${e ? "≈" : ""}${hhm(m % 1440)}</b>${m >= 1440 ? " <span class=\"m\">(lendemain)</span>" : ""}${e ? ` <span class="m">· heure estimée, pas encore dans le Flight Allocation</span>` : ""}</div>`;
+  const lA = x.t1 != null ? `<div class="vdl A"><div class="k">▾ Arrivée · vol ${E(vLab(x, na))}</div><div class="m">En provenance de</div>${apt(cs[0])}${tt(x.t1, x.e1, "STA")}</div>` : "";
+  const lD = x.t2 != null ? `<div class="vdl D"><div class="k">▴ Départ · vol ${E(vLab(x, nd))}</div><div class="m">À destination de</div>${apt(cs[cs.length - 1])}${tt(x.t2, x.e2, "STD")}</div>` : "";
+  const js = new Set(); (VQDAYS || []).slice(1, 8).forEach(D => { if (D.it.some(y => y.typ == x.typ && y.num == x.num)) js.add(D.w); });
+  const esc = x.typ == "R" && x.t1 != null && x.t2 != null ? x.t2 - x.t1 : null;
+  const d = document.createElement("div"); d.className = "vdx"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true");
+  d.innerHTML = `<div><div class="vdh"><div><div class="m" style="font-weight:700">${E(x.cie)}${x.cargo ? ` · <span class="bd warn">Cargo</span>` : ""}</div><h3>${E(vLab(x))}</h3><div class="m">${JSEML[dt.getUTCDay()]} ${E(j.slice(8, 10) + "/" + j.slice(5, 7) + "/" + j.slice(0, 4))} · ${{ R: "Rotation (arrivée puis départ)", A: "Arrivée", D: "Départ" }[x.typ]}</div></div><button type="button" class="vdc" data-vdc="1" aria-label="Fermer">✕</button></div>
+${lA}${esc != null ? `<div class="m" style="text-align:center">Escale à Nouakchott : <b>${Math.floor(esc / 60)} h ${p2(esc % 60)}</b></div>` : ""}${lD}
+${x.appareil ? `<div class="m">Appareil habituel : <b>${E(x.appareil)}</b></div>` : ""}${x.obs && x.obs.length ? `<div class="m">${E(x.obs.join(" · "))}</div>` : ""}
+<div><div class="m" style="margin-bottom:4px"><b>Jours d'opération</b> (${js.size} / semaine)</div><div class="vdw">${[1, 2, 3, 4, 5, 6, 0].map(w => `<span class="${js.has(w) ? "on" : ""}">${JSEM[w]}</span>`).join("")}</div></div>
+<div class="m" style="font-size:12px">Programme indicatif : heures prévues (STA / STD) du Flight Allocation, à confirmer chaque jour auprès de l'exploitation.</div></div>`;
+  document.body.appendChild(d); d.querySelector(".vdc").focus();
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest(".vdx"); if (c && (e.target == c || e.target.closest("[data-vdc]"))) { c.remove(); return; }
+  const v = e.target.closest("[data-vx]"); if (v) { e.stopPropagation(); vDetail(v.dataset.vx); }
+}, true);
+document.addEventListener("keydown", e => { if (e.key == "Escape") document.querySelectorAll(".vdx").forEach(n => n.remove()); else if ((e.key == "Enter" || e.key == " ") && e.target.dataset && e.target.dataset.vx) { e.preventDefault(); vDetail(e.target.dataset.vx); } });
 /* semaine par compagnie : une ligne par compagnie, une colonne par jour (lundi → dimanche), numéros et heures prévues dans chaque case */
 function vWeekHTML(days, f, mode, rot2) {
-  const ord = [1, 2, 3, 4, 5, 6, 0], C = {}, DW = {}, sem = days.slice(1, 8), tw = sem[0].w;
+  const ord = [1, 2, 3, 4, 5, 6, 0], C = {}, DW = {}, sem = days.slice(1, 8), tw = sem[0].w; VWX = {};
   sem.forEach(D => { DW[D.w] = D; D.it.filter(f).forEach(x => { const c = x.pfx || x.cie; ((C[c] = C[c] || {})[D.w] = C[c][D.w] || []).push(x); }); });
   const cos = Object.keys(C).sort((a, b) => a.localeCompare(b, "fr"));
   if (!cos.length) return `<div class="card m">Aucun vol régulier pour ce filtre.</div>`;
@@ -112,15 +143,14 @@ function vWeekHTML(days, f, mode, rot2) {
   const sn = n => { const [a, b] = n.split(" / "); if (!b) return a; let c = 0; while (c < a.length && a[c] == b[c]) c++; return c < 2 ? a + "/" + b : a + "/" + b.slice(Math.max(2, Math.min(c, b.length - 2))); };
   const h = (m, e) => `${e ? "≈" : ""}${hhm(m % 1440)}${m >= 1440 ? "<sup>+1</sup>" : ""}`;
   /* une information par ligne : compagnie cargo, numéro, arrivée, départ — rien ne déborde de la colonne */
-  const it = (x, pf) => `<div class="vwi ${x.typ}">${pf && x.pfx ? `<em>${E(x.pfx)}</em>` : ""}<b>${E(sn(x.num))}</b>${x.t1 != null ? `<span class="a">${x.t2 != null ? "▾ " : ""}${h(x.t1, x.e1)}</span>` : ""}${x.t2 != null ? `<span class="d">${x.t1 != null ? "▴ " : ""}${h(x.t2, x.e2)}</span>` : ""}</div>`;
+  const it = (x, pf, j) => { const k = j + "|" + x.typ + "|" + x.num; VWX[k] = { x, j }; return `<div class="vwi ${x.typ}" data-vx="${E(k)}" role="button" tabindex="0" title="Détails du vol">${pf ? `<i>${E(x.pfx || x.cie)}</i>` : ""}<b>${E(sn(x.num))}</b>${x.t1 != null ? `<span class="a">${x.t2 != null ? "▾ " : ""}${h(x.t1, x.e1)}</span>` : ""}${x.t2 != null ? `<span class="d">${x.t1 != null ? "▴ " : ""}${h(x.t2, x.e2)}</span>` : ""}</div>`; };
   const mv = L => L.reduce((s, x) => s + (x.typ == "R" && rot2 ? 2 : 1), 0), byT = (a, b) => (a.t1 ?? a.t2) - (b.t1 ?? b.t2);
-  const leg = `<div class="m" style="font-size:12px">Heures prévues : <span style="color:var(--p);font-weight:700">▾ arrivée</span> · <span style="color:#b8740a;font-weight:700">▴ départ</span> · « ≈ » estimée · <sup>+1</sup> lendemain · barre violette = rotation${rot2 ? "" : " (comptée comme un seul vol)"}. Faites glisser le tableau horizontalement sur téléphone.</div>`;
+  const leg = `<div class="m" style="font-size:12px">Heures prévues : <span style="color:var(--p);font-weight:700">▾ arrivée</span> · <span style="color:#b8740a;font-weight:700">▴ départ</span> · « ≈ » estimée · <sup>+1</sup> lendemain · barre violette = rotation${rot2 ? "" : " (comptée comme un seul vol)"}. Touchez un vol pour le détail (provenance, destination, aéroports). Faites glisser le tableau horizontalement sur téléphone.</div>`;
   if (mode == "semj") {
     /* sans colonne compagnie : chaque jour en ordre chronologique */
-    const itj = x => it(x, true);
-    return `<div class="card vwj"><div>${ord.map(w => { const L = sem.find(D => D.w == w).it.filter(f).sort(byT); return `<section class="${w == tw ? "td" : ""}"><h4>${JSEM[w]}<small>${DW[w].j.slice(8, 10)}/${DW[w].j.slice(5, 7)} · ${mv(L)} vol${mv(L) > 1 ? "s" : ""}</small></h4>${L.map(itj).join("")}</section>`; }).join("")}</div></div>${leg}`;
+    return `<div class="card vwj"><div>${ord.map(w => { const L = sem.find(D => D.w == w).it.filter(f).sort(byT); return `<section class="${w == tw ? "td" : ""}"><h4>${JSEM[w]}<small>${DW[w].j.slice(8, 10)}/${DW[w].j.slice(5, 7)} · ${mv(L)} vol${mv(L) > 1 ? "s" : ""}</small></h4>${L.map(x => it(x, true, DW[w].j)).join("")}</section>`; }).join("")}</div></div>${leg}`;
   }
-  return `<div class="card vwt"><table><thead><tr><th>Compagnie</th>${ord.map(w => `<th class="${w == tw ? "td" : ""}">${JSEM[w]}<small>${DW[w] ? DW[w].j.slice(8, 10) + "/" + DW[w].j.slice(5, 7) : ""}</small></th>`).join("")}</tr></thead><tbody>${cos.map(c => `<tr><td><b>${E(c)}</b><small>${mv(Object.values(C[c]).flat())} vols / sem.</small></td>${ord.map(w => `<td class="${w == tw ? "td" : ""}">${(C[c][w] || []).sort(byT).map(x => it(x)).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+  return `<div class="card vwt"><table><thead><tr><th>Compagnie</th>${ord.map(w => `<th class="${w == tw ? "td" : ""}">${JSEM[w]}<small>${DW[w] ? DW[w].j.slice(8, 10) + "/" + DW[w].j.slice(5, 7) : ""}</small></th>`).join("")}</tr></thead><tbody>${cos.map(c => `<tr><td><b>${E(c)}</b><small>${mv(Object.values(C[c]).flat())} vols / sem.</small></td>${ord.map(w => `<td class="${w == tw ? "td" : ""}">${(C[c][w] || []).sort(byT).map(x => it(x, false, DW[w].j)).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
 ${leg}`;
 }
 const PERL = ["Nuit · 00h–06h", "Matin · 06h–12h", "Après-midi · 12h–18h", "Soir · 18h–24h"];
