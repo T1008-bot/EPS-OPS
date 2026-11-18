@@ -393,7 +393,7 @@ V.shift = async () => {
   const rn = last("nettoyage", "Groupe " + g), rb = last("bagages", "Groupe " + g), ref = rn || rb;
   const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])], LB = e => e == "Équipe 4" ? "Nettoyage · N4" : "Nettoyage · N" + e.slice(-1);
   const card = e => effCard(e, LB(e), e == "Équipe 4" ? "08h–16h · descend à 16h" : "24 h", last("nettoyage", "Groupe " + e.slice(-1)));
-  const open = AL.filter(a => a.statut == "ouverte" || a.statut == "prise_en_charge");
+  const open = AL.filter(a => (a.statut == "ouverte" || a.statut == "prise_en_charge") && pourMoi(a.titre));
   return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
 <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><div><h2>${shLab(SHV, s)}</h2>${SHV < 0 ? `<div class="m">Shift à venir : affichage prévisionnel</div>` : ""}</div><div class="shn"><button class="btn" data-a="shv" data-i="${SHV + 1}" aria-label="Shift précédent">‹</button><input type="date" id="shd" value="${ymd(s)}" aria-label="Choisir la date du shift"><button class="btn" data-a="shv" data-i="${SHV - 1}" aria-label="Shift suivant">›</button>${SHV ? `<button class="btn p" data-a="shv" data-i="0">Shift en cours</button>` : ""}</div></div><div class="dys shd">${shStrip()}</div><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.map(LB).join(" + ").replace(/Nettoyage · /g, "")} + M${g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${SHV ? "" : h4 ? "(en service)" : "(hors service)"}</div></div></div>
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(nl((rp || []).find(r => r.sup_principal)?.sup_principal)) || "—"}</b></div></div>
@@ -405,16 +405,16 @@ ${sxCards("shift", ["vols"])}
 ${SHV ? "" : interditsCard()}
 ${sxCards("shift", null, ["vols"])}
 ${SHV ? "" : RA.map(raCard).join("")}<div class="g">${teams.map(card).join("")}${effCard("Manutention " + g, "Manutention · M" + g, "24 h", rb)}</div>
-${SHV ? "" : `<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>`}
+${SHV ? "" : `<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(libSvc(a.titre))}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>`}
 ${ME.role == "responsable_ops" && !SHV ? `<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>` : ""}`;
   } finally { ST = ST0; }
 };
 
 V.alertes = async () => {
   await loadAL(); await loadRA();
-  const now = Date.now(), SVL = { N: "Nettoyage", M: "Manutention" }, win = CHK.filter(c => c.done ? c.d.getTime() > now - 3 * H : c.d.getTime() < now + 4 * H && c.d.getTime() > now - 6 * H);
+  const now = Date.now(), SVL = { N: "Nettoyage", M: "Manutention" }, win = CHK.filter(c => (!svcRole() || c.sv == svcRole())).filter(c => c.done ? c.d.getTime() > now - 3 * H : c.d.getTime() < now + 4 * H && c.d.getTime() > now - 6 * H);
   const ckb = `<div class="card sc"><h2>Rappels & checklists par vol</h2><div class="m">Nettoyage et manutention sont séparés. Cochez chaque action une fois réalisée (horodaté, avec le nom).</div><table><tr><th>Avant</th><th>Vol</th><th>Service</th><th>Action</th><th></th></tr>${win.map(c => { const late = !c.done && c.d.getTime() < now; return `<tr><td><b>${hm(c.d)}</b></td><td>${E(c.v.numero)} <span class="m">${c.v.sens == "A" ? "Arr." : "Dép."} ${hm(new Date(c.v.heure_estimee || c.v.heure_prevue))}</span></td><td><span class="bd ${c.sv == "N" ? "info" : "warn"}">${SVL[c.sv]}</span></td><td style="white-space:pre-line">${E(c.l)}${c.done ? `<div class="m">Fait ${hm(new Date(c.done.fait_le))} — ${E(c.done.fait_nom || "")}</div>` : ""}</td><td>${c.done ? `<button class="btn" data-a="chk" data-v="${c.v.id}" data-k="${c.k}" data-u="1">${c.done.etat == "indisponible" ? "Indisponible (annuler)" : "✓ Fait"}</button>` : `<button class="btn ${late ? "w" : "p"}" data-a="chk" data-v="${c.v.id}" data-k="${c.k}">${late ? "En retard — valider" : "Valider"}</button>${c.un ? ` <button class="btn" data-a="chk" data-v="${c.v.id}" data-k="${c.k}" data-e="indisponible">Indisponible</button>` : ""}`}</td></tr>`; }).join("") || `<tr><td colspan="5" class="m">Aucun rappel dans la fenêtre (−6 h / +4 h).</td></tr>`}</table></div>`;
-  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + RA.map(raCard).join("") + ckb + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
+  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + RA.map(raCard).join("") + ckb + (AL.filter(a => pourMoi(a.titre)).map(a => `<div class="card"><div class="row"><div><b>${E(libSvc(a.titre))}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
 };
 
 const IATA = { GMMN: "CMN", GOBD: "DSS", DTTA: "TUN", GABS: "BKO", GBYD: "BJL", LTFM: "IST", GQPP: "NDB", GCLP: "LPA", GUCY: "CKY", DAAG: "ALG", LFPG: "CDG", GQNO: "NKC", GQNI: "EMN", LPLA: "TER", GMFF: "FEZ", GQPZ: "OUZ", DIAP: "ABJ", DFFD: "OUA" };
@@ -422,12 +422,18 @@ const ap = c => c ? (IATA[c] || c) : "—";
 
 /* ---------- Messages de vol (PSM / LDM / CPM) & flight allocation ---------- */
 const nvol = n => String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])0+(?=[0-9])/, "$1");
-const MT = ["PSM", "LDM", "CPM"], MSGR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const MT = ["PSM", "LDM", "CPM"], MSGR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_bagages", "chef_bagages"];
+/* chaque service ne voit que ce qui le concerne : le nettoyage n'a ni PSM, ni LDM, ni CPM, ni chargement / PMR */
+const NETR = ["chef_nettoyage", "superviseur_nettoyage"], MANR = ["chef_bagages", "superviseur_bagages"];
+const svcRole = () => NETR.includes(ME.role) ? "N" : MANR.includes(ME.role) ? "M" : "";
+const pourMoi = titre => { const r = svcRole(), t = String(titre || ""); return !r || (r == "N" ? !/manutention|bagage|chargement|PSM|LDM|CPM|PMR|wheelchair/i.test(t) : !/nettoyage|cabine/i.test(t)); };
+const libSvc = t => String(t || "").replace(/Manutention bagages/gi, "Manutention").replace(/\(bagages\)/gi, "(manutention)");
+const nChips = (v, v2) => [v, v2].filter(Boolean).map(x => { const t = new Date(x.heure_estimee || x.heure_prevue).getTime(); return x.sens == "A" ? `<span class="bd info">🧹 Zone arrivée ${hm(t - 60 * 60000)}</span> <span class="bd info">Cabine ${hm(t - 30 * 60000)}</span>` : `<span class="bd warn">🧹 Zones départ ${hm(t - 200 * 60000)}</span>`; }).join(" ");
 let MSGS = {};
 const hh = d => hm(d).replace("h", ":");
 const msgOf = (v, ms) => (ms || []).filter(m => m.vol_id == v.id || (nvol(m.numero) == nvol(v.numero) && m.jour == ymd(v.heure_prevue)));
 const mdue = v => v.source != "prevision" && v.statut != "annule" && Date.now() > new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue).getTime() + (v.sens == "D" ? 20 * 60000 : 0);
-const mchips = (v, ms, v2) => { const legs = v2 ? [v, v2] : [v], c = `chp" data-a="volfiche" data-i="${E(v.id)}${v2 ? `" data-j="${E(v2.id)}` : ""}`;
+const mchips = (v, ms, v2) => { if (svcRole() == "N") return nChips(v, v2); const legs = v2 ? [v, v2] : [v], c = `chp" data-a="volfiche" data-i="${E(v.id)}${v2 ? `" data-j="${E(v2.id)}` : ""}`;
   return MT.map(k => { const ml = legs.map(x => msgOf(x, ms).filter(y => y.type == k)), st = legs.map((x, n) => ml[n].length ? "ok" : mdue(x) ? "bad" : "info"), s = st.includes("bad") ? "bad" : st.includes("ok") ? "ok" : "info", au = ml.every(m => m.length && m.every(y => y.parse && y.parse.aucun));
     return `<span class="bd ${s} ${c}" style="${s == "info" ? "opacity:.55" : ""}" title="${{ bad: "Non reçu", ok: "Reçu", info: "Pas encore attendu" }[s]}">${k}${au ? " ∅" : ""}</span>`; }).join(" "); };
 const mmiss = (v, ms) => { const L = msgOf(v, ms); return mdue(v) ? MT.filter(k => !L.some(x => x.type == k)) : []; };
@@ -1055,7 +1061,7 @@ V.tach = async () => {
   const ord = { en_cours: 0, a_faire: 1, fait: 2, annule: 3 };
   /* tâche PSM / LDM d'un vol : visible à partir du décollage (heure sur le shift 08h → 08h) */
   const vis = t => { if (!String(t.modele || "").startsWith("psm:") || t.statut != "a_faire") return true; const m = String(t.heure || "").match(/(\d{1,2}):(\d{2})/); if (!m) return true; let mn = +m[1] * 60 + +m[2]; if (mn < 480) mn += 1440; return new Date(t.jour + "T00:00:00Z").getTime() + mn * 6e4 <= now; };
-  const svOf = t => /nettoy/i.test(t.service || t.cible || "") ? "N" : /manut|bagage/i.test(t.service || t.cible || "") ? "M" : "";
+  const svOf = t => /nettoy/i.test(t.service || t.cible || "") ? "N" : /manut|bagage/i.test(t.service || t.cible || "") || /PSM|LDM|CPM|chargement|wheelchair|PMR|flight ops/i.test(t.titre || "") ? "M" : "";
   const L = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:") && vis(t) && (!TFL || t.statut == TFL) && (!mine || !svOf(t) || svOf(t) == mine)).sort((a, b) => ord[a.statut] - ord[b.statut] || String(a.heure || "99").localeCompare(String(b.heure || "99")));
   const fb = (v, l) => `<button class="btn ${TFL == v ? "p" : ""}" data-a="tfl" data-v="${v}">${l}</button>`;
   const sb2 = (v, l) => `<button class="btn ${TSV == v ? "p" : ""}" data-a="tsv" data-v="${v}">${l}</button>`;
@@ -1182,7 +1188,7 @@ const IRS = { brouillon: "Brouillon", en_preparation: "En préparation", attente
 const IRB = { brouillon: "info", en_preparation: "info", attente_verification: "warn", attente_approbation: "warn", approuve: "ok", emis: "ok", annule: "bad", archive: "info" };
 const IRSEC = [["sec_a", "A: Introduction", "Présentation de l’incident et de son contexte."], ["sec_b", "B: Technical Details", "Location, Time and Date, Detected By, Concerned Area, Findings (une ligne par rubrique : « - Location: … »)."], ["sec_c", "C: Breakdown / Incident History", "Historique chronologique des faits, observations, interventions."], ["sec_d", "D: Root Causes", "Causes probables et facteurs contributifs (« 1- Titre: explication »). Distinguer faits confirmés et hypothèses."], ["sec_e", "E: Risks & Potential Impact", "« Risque: conséquence » (une ligne par risque)."], ["sec_f", "F: Immediate Actions Taken", "Uniquement les mesures réellement prises."], ["sec_g", "G: Recommendations", "Une recommandation par ligne (« • … »)."]];
 const IRA = ["direction", "responsable_ops"], IRV = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"];
-const RLE = { direction: "EPS - Operations Director", responsable_ops: "EPS - Operations Manager", coordinateur_ops: "EPS - Operations Coordinator", superviseur_principal: "EPS – Principal Supervisor", superviseur_nettoyage: "EPS – Cleaning Supervisor", superviseur_bagages: "EPS – Baggage Handling Supervisor" };
+const RLE = { direction: "EPS - Operations Director", responsable_ops: "EPS - Operations Manager", coordinateur_ops: "EPS - Operations Coordinator", superviseur_principal: "EPS – Principal Supervisor", superviseur_nettoyage: "EPS – Cleaning Supervisor", superviseur_bagages: "EPS – Ground Handling Supervisor" };
 let IRL = [], IRQ = "", IRFS = "", IRP = [];
 const fdm = d => d ? String(d).slice(8, 10) + "-" + String(d).slice(5, 7) + "-" + String(d).slice(0, 4) : "";
 const irNum = r => r.numero || ("Brouillon #" + r.id);
@@ -1631,7 +1637,7 @@ ${fcard}${acard}${mcard}
       { k: "ob", l: "Objet (ex. Retard de dix heures et absence injustifiée - Shift du 24/09/2026)", r: 1 },
       { k: "fa", l: "Faits constatés", t: "ta", r: 1, v: "Il a été constaté que, " },
       { k: "qu", l: "Qualification / explication demandée (DE) ou qualification (MAP)", t: "ta", v: "Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur …, accompagnée de tout justificatif utile." },
-      { k: "af", l: "Affectation (ex. Manutention bagages - AINO)" },
+      { k: "af", l: "Affectation (ex. Manutention - AINO)" },
       { k: "dr", l: "MAP seulement : référence de la demande d’explication visée" },
       { k: "co", l: "MAP seulement : consignes à la reprise", t: "ta" },
       { k: "nj", l: "MAP seulement : nombre de jours proposé", t: "number" }
