@@ -240,19 +240,23 @@ const effCard = (e, lab, bdg, r) => {
   const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0, ab = t.tot - t.c.p;
   return `<div class="card"><div class="row"><h2>${lab}</h2><span class="bd info">${bdg}</span></div><div class="m">Chef(s) d’équipe : <b>${E(t.chefs)}</b></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m"><b>${ab}</b> absent${ab > 1 ? "s" : ""} · Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${ecartTxt(e, t.tot)}${absL(t)}${r ? `<div class="m" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--b)">Source · dernier rapport ${hm(T(r.cree_le))} · ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renfort ${r.renforts || 0}${r.renforts_detail && !/^\s*0?\s*$/.test(r.renforts_detail) ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
 };
-const raCard = x => `<div class="card" style="border-left:4px solid var(--red)"><div class="row" style="flex-wrap:wrap;gap:8px"><b>⚠ ${E(x.t)}</b>${RLC.includes(ME.role) ? `<button type="button" class="btn w" data-a="relance" data-s="${x.sv}" data-n="${E(x.nom)}">🔔 Relancer le chef d’équipe</button>` : ""}</div></div>`;
+const raCard = x => `<div class="card" style="border-left:4px solid var(--red)"><div class="row" style="flex-wrap:wrap;gap:8px"><b>⚠ ${E(x.t)}</b>${RLC.includes(ME.role) ? `<button type="button" class="btn w" data-a="relance" data-s="${x.sv}" data-n="${E(x.nom)}" data-m="${E(x.m || "Rapport de situation du staff " + x.nom + " non reçu")}">🔔 Relancer le chef d’équipe</button>` : ""}</div></div>`;
 const RLC = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
 
 const gnum = x => { const m = String(x || "").trim().match(/^(?:[ÉéEe]quipe|Groupe|G)?\s*[MN]?\s*(\d)\s*$/i); return m ? m[1] : ""; };
 async function loadRA() {
   const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
-  const { data } = await sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " "));
+  const [{ data }, { data: dsp }] = await Promise.all([sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " ")),
+    sb.from("rapports_staff").select("recu_le,brut").eq("categorie", "dispatching").gte("recu_le", new Date(t0 - 2 * H).toISOString())]);
   const rows = (data || []).filter(r => gnum(r.groupe) == String(g)), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
   RA = [];
   [["nettoyage", "Nettoyage N" + g], ["bagages", "Manutention M" + g]].forEach(([sv, nom]) => {
     if (now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push({ sv, nom, t: `⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe` });
     if (now >= t0 + 9 * H && !has(sv, 8, 16)) RA.push({ sv, nom, t: now >= t0 + 9.5 * H ? `⚠ Rapport de situation ${nom} (17h–17h30) non reçu — en RETARD, 2e rappel : relancer le chef d’équipe` : `Rappel : rapport de situation ${nom} à remettre entre 17h00 et 17h30 (même sans renfort)` });
   });
+  /* Staff Dispatching nettoyage : attendu avant 09h00, alerte à partir de 09h30 puis toutes les 60 min */
+  const dOk = (dsp || []).some(r => { const a = (r.brut && r.brut.answers) || {}, gr = Object.values(a).find(x => /groupe en service/i.test(x.text || "")); return !gr || gnum(gr.answer) == String(g); });
+  if (now >= t0 + 1.5 * H && !dOk) RA.push({ sv: "nettoyage", nom: "Nettoyage N" + g, m: `Staff Dispatching Nettoyage N${g} non soumis`, t: `⏱ Staff Dispatching Nettoyage N${g} (attendu avant 09h00) non soumis — rappel n°${Math.floor((now - t0 - 1.5 * H) / H) + 1} : relancer le chef d’équipe` });
   const nj = Object.entries(ST).filter(([m, r]) => r.statut == "nj" && AG.some(a => a.matricule == m && onDuty(a))).length;
   BC.pres = RA.length + nj; setB();
 }
@@ -1545,7 +1549,7 @@ const ZN_DL = { urgente: 15, haute: 30, normale: 60, basse: 120 };
 const ZN_W = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "chef_nettoyage"];
 const ZN_ADM = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"];
 const ZN_V = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
-let ZG = [], ZP = [], ZL = [], ZD = [], ZS = [], ZT = "sig", ZJ = null, ZF = "";
+let ZG = [], ZP = [], ZL = [], ZD = [], ZS = [], ZJR = [], ZT = "sig", ZJ = null, ZF = "";
 const zjCur = () => shiftStart().toISOString().slice(0, 10);
 const zjOf = t => shiftStart(new Date(t)).toISOString().slice(0, 10);
 const zjAdd = (j, n) => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -1556,9 +1560,10 @@ const zLieu = c => ZL.find(l => l.code == c) || {};
 const zPoste = c => ZP.find(p => p.code == c) || {};
 async function zLoad() {
   ZJ = ZJ || zjCur();
-  const R = await Promise.all([sb.from("zones_globales").select("*").order("ordre"), sb.from("postes").select("*").order("ordre"), sb.from("lieux").select("*").order("ordre"), sb.from("dispatch").select("*").eq("jour_shift", ZJ), sb.from("signalements_zone").select("*").order("created_at", { ascending: false }).limit(500)]);
+  const R = await Promise.all([sb.from("zones_globales").select("*").order("ordre"), sb.from("postes").select("*").order("ordre"), sb.from("lieux").select("*").order("ordre"), sb.from("dispatch").select("*").eq("jour_shift", ZJ), sb.from("signalements_zone").select("*").order("created_at", { ascending: false }).limit(500),
+    sb.from("rapports_staff").select("recu_le,brut,pdf_url").eq("categorie", "dispatching").gte("recu_le", new Date(Date.parse(ZJ + "T08:00:00Z") - 2 * H).toISOString()).lt("recu_le", new Date(Date.parse(ZJ + "T08:00:00Z") + 24 * H).toISOString()).order("recu_le", { ascending: false })]);
   R.forEach(r => { if (r.error) throw r.error; });
-  [ZG, ZP, ZL, ZD, ZS] = R.map(r => r.data || []);
+  [ZG, ZP, ZL, ZD, ZS, ZJR] = R.map(r => r.data || []);
 }
 /* Même règle que la base : toilettes/ablutions → agent T, sinon agent S, sinon agent unique */
 function zRole(p, nat) { if (!p || !p.code || p.type != "fixe" || p.statut != "ouvert") return null; const R = p.roles || []; return ZN_WC.includes(nat) && R.includes("T") ? "T" : !ZN_WC.includes(nat) && R.includes("S") ? "S" : R.includes("A") ? "A" : R.includes("A1") ? "A1" : R[0]; }
@@ -1573,6 +1578,17 @@ function zSig() {
   const L = ZS.filter(s => !ZF || s.statut == ZF);
   const f = (k, l) => `<button class="btn ${ZF == k ? "p" : ""}" data-a="zsf" data-k="${k}">${l}</button>`;
   return `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${f("", "Tous")}${Object.entries(ZN_ST).map(([k, l]) => f(k, l)).join("")}</div><div class="card sc"><table><tr><th>Réf.</th><th>Constat</th><th>Zone / localisation</th><th>Nature</th><th>Agent responsable</th><th>Délai</th><th>Statut</th></tr>${L.map(s => `<tr data-a="zso" data-i="${s.id}" style="cursor:pointer"><td><b>${E(s.ref.replace("EPS/OPS/SZ/", ""))}</b></td><td>${dt(s.constat_le)}</td><td><b>${E(s.objet)}</b><div class="m">${E(zZone(s.zone_code).libelle)} · ${E(s.lieu_code ? zLieu(s.lieu_code).libelle : s.lieu_autre || "à préciser")}</div></td><td>${E(s.nature == "Autre" ? "Autre : " + (s.nature_autre || "") : s.nature)}</td><td>${zResp(s)}</td><td>${zDelai(s)}</td><td><span class="bd ${ZN_B[s.statut]}">${ZN_ST[s.statut]}</span></td></tr>`).join("") || `<tr><td colspan="7" class="m">Aucun signalement.</td></tr>`}</table></div>`;
+}
+/* rapport Jotform « Staff Dispatching » du shift affiché : secteurs → agents */
+function zJot() {
+  const g = zGarde(ZJ), L = (ZJR || []).filter(r => { const a = (r.brut && r.brut.answers) || {}, gr = Object.values(a).find(x => /groupe en service/i.test(x.text || "")); return !gr || gnum(gr.answer) == String(g); });
+  if (!L.length) return `<div class="card" style="border-left:4px solid var(--red)"><div class="row" style="flex-wrap:wrap;gap:8px"><b>⚠ Staff Dispatching Nettoyage N${g} non soumis pour ce shift (attendu avant 09h00)</b>${RLC.includes(ME.role) && ZJ == zjCur() ? `<button type="button" class="btn w" data-a="relance" data-s="nettoyage" data-n="Nettoyage N${g}" data-m="Staff Dispatching Nettoyage N${g} non soumis">🔔 Relancer le chef d’équipe</button>` : ""}</div></div>`;
+  const r = L[0], A = (r.brut && r.brut.answers) || {}, val = x => { let v = x && x.answer; if (typeof v == "string") { try { v = JSON.parse(v); } catch (e) { } } return v; };
+  const txt = re => { const x = Object.values(A).find(y => re.test(y.text || "")); const v = val(x); return Array.isArray(v) ? v.filter(Boolean).join(", ") : v && typeof v == "object" ? (v.first || "") : v || ""; };
+  const sec = Object.entries(A).sort((a, b) => +a[0] - +b[0]).map(([, x]) => [x.text, val(x)]).filter(([, v]) => Array.isArray(v) && v.some(Array.isArray)).map(([t, v]) => [t, v.map(row => row.map(c => String(c || "").trim()).filter(Boolean).join(" ")).filter(Boolean)]).filter(([, n]) => n.length);
+  const rest = txt(/agents? restant/i), nb = sec.reduce((s, [, n]) => s + n.length, 0);
+  return `<div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><h2>Staff Dispatching · Nettoyage N${g}</h2><span class="bd ok">Reçu ${dmy(r.recu_le)} ${hm(new Date(r.recu_le))}</span></div><div class="m">${E(txt(/nombre d.agents/i)) || "?"} agents présents déclarés · ${nb} affecté(s) · chef(s) d’équipe : ${E(txt(/chefs? d.?.quipe/i)) || "—"} · superviseurs : ${E(txt(/superviseurs? nettoyage/i)) || "—"}${r.pdf_url ? ` · <a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}</div>
+<div class="sc"><table><tr><th>Secteur</th><th>Agents</th></tr>${sec.map(([t, n]) => `<tr><td data-l="Secteur"><b>${E(t)}</b> <span class="m">(${n.length})</span></td><td data-l="Agents">${n.map(E).join(" · ")}</td></tr>`).join("")}${rest ? `<tr><td data-l="Secteur"><b>Agents restants</b></td><td data-l="Agents">${E(rest)}</td></tr>` : ""}</table></div>${L.length > 1 ? `<div class="m">${L.length} rapports reçus pour ce shift : le plus récent est affiché.</div>` : ""}</div>`;
 }
 function zDisp() {
   const w = ZN_W.includes(ME.role), g = zGarde(ZJ), F = ZP.filter(p => p.type == "fixe"), D = ZP.filter(p => p.type == "demande");
@@ -1598,7 +1614,7 @@ V.zon = async () => {
   await zLoad();
   const tab = (k, l) => `<button class="btn ${ZT == k ? "p" : ""}" data-a="zt" data-k="${k}">${l}</button>`, n = ZS.filter(s => s.statut == "ouvert").length;
   return head("Zones & dispatching", "Signalements par zone, agent responsable et délais", `<button class="btn w" data-a="zsnew">+ Signalement</button>`)
-    + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${tab("sig", `Signalements (${n} ouvert${n > 1 ? "s" : ""})`)}${tab("disp", "Dispatching")}${tab("ref", "Zones & postes")}</div>` + (ZT == "disp" ? zDisp() : ZT == "ref" ? zRef() : zSig());
+    + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${tab("sig", `Signalements (${n} ouvert${n > 1 ? "s" : ""})`)}${tab("disp", "Dispatching")}${tab("ref", "Zones & postes")}</div>` + (ZT == "disp" ? zJot() + zDisp() : ZT == "ref" ? zRef() : zSig());
 };
 Object.assign(ACT, {
   zt(b) { ZT = b.dataset.k; draw(); },
@@ -2224,7 +2240,7 @@ async function shell() {
 Object.assign(ACT, {
   async relance(b) {
     const sv = b.dataset.s, nom = b.dataset.n; b.disabled = true;
-    const { data, error } = await sb.rpc("relancer_chefs", { p_service: sv, p_motif: `Rapport de situation du staff ${nom} non reçu` });
+    const { data, error } = await sb.rpc("relancer_chefs", { p_service: sv, p_motif: b.dataset.m || `Rapport de situation du staff ${nom} non reçu` });
     b.disabled = false; toast(error ? "Relance impossible : " + error.message : `Relance envoyée à ${data} chef(s) d’équipe ${nom}`);
   },
   vreg() { VM = "reg"; NAV = "vols"; draw(); scrollTo(0, 0); },
