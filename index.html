@@ -76,6 +76,7 @@ header{position:relative}body.ldg header{overflow:hidden}body.ldg header::after{
 @media(min-width:801px) and (max-width:1000px){nav{width:208px}}
 .vregb{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--s);border:1.5px dashed var(--p);border-radius:14px;padding:12px 14px;color:var(--t);font:inherit;cursor:pointer;box-shadow:var(--sh)}
 .vregb>span:first-child{font-size:22px}.vregb>span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:2px}.vregb small{color:var(--m);font-size:12px}.vregb>span:last-child{font-size:24px;color:var(--p)}
+.vspc{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 10px;text-align:left;background:var(--s);border:1px solid var(--b);border-radius:12px;padding:6px 12px;color:var(--t);font:inherit;cursor:pointer;box-shadow:var(--sh);min-width:150px}.vspc span{font-size:12px;font-weight:700}.vspc b{grid-row:1/3;grid-column:2;font-size:20px;color:#b8740a}.vspc small{font-size:10px;color:var(--m)}
 .vrn{border-left:4px solid #f59e0b;font-size:13px;line-height:1.45}
 .vrs{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:sticky;top:0;z-index:4;background:var(--bg);padding:4px 0}
 .vrd{border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;cursor:pointer;min-width:0}
@@ -228,6 +229,20 @@ function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
 let RA = [];
+/* effectif prévu par équipe et situation du recrutement (config_alertes) */
+let EFFP = { nettoyage: 31, nettoyage_n4: 33, manutention: 28 }, RECR = {};
+async function loadCFG() { const { data } = await sb.from("config_alertes").select("cle,valeur").in("cle", ["effectif_prevu", "recrutement"]); (data || []).forEach(r => { if (r.cle == "effectif_prevu") EFFP = { ...EFFP, ...(r.valeur || {}) }; else RECR = r.valeur || {}; }); }
+const effPrev = e => /^Manut/.test(e) ? EFFP.manutention : e == "Équipe 4" ? EFFP.nettoyage_n4 : /^Équipe/.test(e) ? EFFP.nettoyage : null;
+const RECL = { a_effectuer: "recrutement à effectuer", en_cours: "recrutement en cours", effectue: "recrutement effectué" };
+const ecartTxt = (e, tot) => { const pv = effPrev(e); if (!pv || tot >= pv) return ""; return `<div class="m"><span class="bd warn">Écart ${pv - tot}</span> (${RECL[RECR[e]] || "besoin de recrutement"}) · effectif prévu ${pv}, inscrits ${tot}</div>`; };
+/* carte d'effectif d'équipe (nettoyage et manutention, même présentation) ; r = dernier rapport de situation du staff */
+const effCard = (e, lab, bdg, r) => {
+  const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0, ab = t.tot - t.c.p;
+  return `<div class="card"><div class="row"><h2>${lab}</h2><span class="bd info">${bdg}</span></div><div class="m">Chef(s) d’équipe : <b>${E(t.chefs)}</b></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m"><b>${ab}</b> absent${ab > 1 ? "s" : ""} · Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${ecartTxt(e, t.tot)}${absL(t)}${r ? `<div class="m" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--b)">Source · dernier rapport ${hm(T(r.cree_le))} · ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renfort ${r.renforts || 0}${r.renforts_detail && !/^\s*0?\s*$/.test(r.renforts_detail) ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
+};
+const raCard = x => `<div class="card" style="border-left:4px solid var(--red)"><div class="row" style="flex-wrap:wrap;gap:8px"><b>⚠ ${E(x.t)}</b>${RLC.includes(ME.role) ? `<button type="button" class="btn w" data-a="relance" data-s="${x.sv}" data-n="${E(x.nom)}">🔔 Relancer le chef d’équipe</button>` : ""}</div></div>`;
+const RLC = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+
 const gnum = x => { const m = String(x || "").trim().match(/^(?:[ÉéEe]quipe|Groupe|G)?\s*[MN]?\s*(\d)\s*$/i); return m ? m[1] : ""; };
 async function loadRA() {
   const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
@@ -235,8 +250,8 @@ async function loadRA() {
   const rows = (data || []).filter(r => gnum(r.groupe) == String(g)), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
   RA = [];
   [["nettoyage", "Nettoyage N" + g], ["bagages", "Manutention M" + g]].forEach(([sv, nom]) => {
-    if (now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push(`⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe`);
-    if (now >= t0 + 9 * H && !has(sv, 8, 16)) RA.push(now >= t0 + 9.5 * H ? `⚠ Rapport de situation ${nom} (17h–17h30) non reçu — en RETARD, 2e rappel : relancer le chef d’équipe` : `Rappel : rapport de situation ${nom} à remettre entre 17h00 et 17h30 (même sans renfort)`);
+    if (now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push({ sv, nom, t: `⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe` });
+    if (now >= t0 + 9 * H && !has(sv, 8, 16)) RA.push({ sv, nom, t: now >= t0 + 9.5 * H ? `⚠ Rapport de situation ${nom} (17h–17h30) non reçu — en RETARD, 2e rappel : relancer le chef d’équipe` : `Rappel : rapport de situation ${nom} à remettre entre 17h00 et 17h30 (même sans renfort)` });
   });
   const nj = Object.entries(ST).filter(([m, r]) => r.statut == "nj" && AG.some(a => a.matricule == m && onDuty(a))).length;
   BC.pres = RA.length + nj; setB();
@@ -346,10 +361,7 @@ V.shift = async () => {
   const last = (sv, gr) => (rp || []).find(r => r.service == sv && gnum(r.groupe) == String(gr).replace(/\D/g, ""));
   const rn = last("nettoyage", "Groupe " + g), rb = last("bagages", "Groupe " + g), ref = rn || rb;
   const teams = ["Équipe " + g, ...(h4 ? ["Équipe 4"] : [])], LB = e => e == "Équipe 4" ? "Nettoyage · N4" : "Nettoyage · N" + e.slice(-1);
-  const card = e => {
-    const t = team(e), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0, r = last("nettoyage", "Groupe " + e.slice(-1));
-    return `<div class="card"><div class="row"><h2>${LB(e)}</h2><span class="bd info">${e == "Équipe 4" ? "08h–16h · descend à 16h" : "24 h"}</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:6px 0"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">Chefs : ${E(t.chefs)}</div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${absL(t)}${r ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(r.cree_le))} : ${r.present ?? "?"}${r.effectif ? "/" + r.effectif : ""} présents · renforts : ${r.renforts || 0}${r.renforts_detail && !/^\s*0?\s*$/.test(r.renforts_detail) ? " (" + E(r.renforts_detail) + ")" : ""}</div>` : ""}</div>`;
-  };
+  const card = e => effCard(e, LB(e), e == "Équipe 4" ? "08h–16h · descend à 16h" : "24 h", last("nettoyage", "Groupe " + e.slice(-1)));
   const open = AL.filter(a => a.statut == "ouverte" || a.statut == "prise_en_charge");
   return `<div class="card row"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div></div>
 <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><div><h2>${shLab(SHV, s)}</h2>${SHV < 0 ? `<div class="m">Shift à venir : affichage prévisionnel</div>` : ""}</div><div class="shn"><button class="btn" data-a="shv" data-i="${SHV + 1}" aria-label="Shift précédent">‹</button><input type="date" id="shd" value="${ymd(s)}" aria-label="Choisir la date du shift"><button class="btn" data-a="shv" data-i="${SHV - 1}" aria-label="Shift suivant">›</button>${SHV ? `<button class="btn p" data-a="shv" data-i="0">Shift en cours</button>` : ""}</div></div><div class="dys shd">${shStrip()}</div><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${teams.map(LB).join(" + ").replace(/Nettoyage · /g, "")} + M${g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${SHV ? "" : h4 ? "(en service)" : "(hors service)"}</div></div></div>
@@ -357,9 +369,10 @@ V.shift = async () => {
 <div class="svl"><div class="svt">Manutention · M${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rb?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rb?.chefs)) || "—"}</b></div></div></div>
 ${rb ? "" : `<div class="m"><span class="bd warn">Rapport de situation Manutention non reçu pour ce shift</span></div>`}
 <div class="svl"><div class="svt">Nettoyage · N${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rn?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rn?.chefs)) || "—"}</b></div></div></div></div>
+${sxCards("shift", ["vols"])}
 ${SHV ? "" : interditsCard()}
-${sxCards("shift")}
-${SHV ? "" : RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("")}<div class="g">${teams.map(card).join("")}${(() => { const t = team("Manutention " + g), p = t.tot ? Math.round(t.c.p / t.tot * 100) : 0; return `<div class="card"><div class="row"><h2>Manutention · M${g}</h2><span class="bd info">24 h</span></div><div class="k">${t.c.p} / ${t.tot} <span class="m">(${p} %)</span></div><div class="m">Abs. non just. <b>${t.c.nj}</b> · Abs. just. <b>${t.c.j}</b> · Congés <b>${t.c.c}</b> · Mises à pied <b>${t.c.mp}</b></div>${absL(t)}${rb ? `<div class="m" style="margin-top:6px">Dernier rapport ${hm(T(rb.cree_le))} : ${rb.present ?? "?"}${rb.effectif ? "/" + rb.effectif : ""} présents · renforts : ${rb.renforts || 0}${rb.renforts_detail && !/^\s*0?\s*$/.test(rb.renforts_detail) ? " (" + E(rb.renforts_detail) + ")" : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`; })()}</div>
+${sxCards("shift", null, ["vols"])}
+${SHV ? "" : RA.map(raCard).join("")}<div class="g">${teams.map(card).join("")}${effCard("Manutention " + g, "Manutention · M" + g, "24 h", rb)}</div>
 ${SHV ? "" : `<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(a.titre)}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>`}
 ${ME.role == "responsable_ops" && !SHV ? `<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>` : ""}`;
   } finally { ST = ST0; }
@@ -369,7 +382,7 @@ V.alertes = async () => {
   await loadAL(); await loadRA();
   const now = Date.now(), SVL = { N: "Nettoyage", M: "Manutention" }, win = CHK.filter(c => c.done ? c.d.getTime() > now - 3 * H : c.d.getTime() < now + 4 * H && c.d.getTime() > now - 6 * H);
   const ckb = `<div class="card sc"><h2>Rappels & checklists par vol</h2><div class="m">Nettoyage et manutention sont séparés. Cochez chaque action une fois réalisée (horodaté, avec le nom).</div><table><tr><th>Avant</th><th>Vol</th><th>Service</th><th>Action</th><th></th></tr>${win.map(c => { const late = !c.done && c.d.getTime() < now; return `<tr><td><b>${hm(c.d)}</b></td><td>${E(c.v.numero)} <span class="m">${c.v.sens == "A" ? "Arr." : "Dép."} ${hm(new Date(c.v.heure_estimee || c.v.heure_prevue))}</span></td><td><span class="bd ${c.sv == "N" ? "info" : "warn"}">${SVL[c.sv]}</span></td><td style="white-space:pre-line">${E(c.l)}${c.done ? `<div class="m">Fait ${hm(new Date(c.done.fait_le))} — ${E(c.done.fait_nom || "")}</div>` : ""}</td><td>${c.done ? `<button class="btn" data-a="chk" data-v="${c.v.id}" data-k="${c.k}" data-u="1">${c.done.etat == "indisponible" ? "Indisponible (annuler)" : "✓ Fait"}</button>` : `<button class="btn ${late ? "w" : "p"}" data-a="chk" data-v="${c.v.id}" data-k="${c.k}">${late ? "En retard — valider" : "Valider"}</button>${c.un ? ` <button class="btn" data-a="chk" data-v="${c.v.id}" data-k="${c.k}" data-e="indisponible">Indisponible</button>` : ""}`}</td></tr>`; }).join("") || `<tr><td colspan="5" class="m">Aucun rappel dans la fenêtre (−6 h / +4 h).</td></tr>`}</table></div>`;
-  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + RA.map(x => `<div class="card" style="border-left:4px solid var(--red)"><b>⚠ ${E(x)}</b></div>`).join("") + ckb + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
+  return head("Alertes vols & effectifs", "Anticipation des chevauchements — confirmez la prise en charge") + RA.map(raCard).join("") + ckb + (AL.map(a => `<div class="card"><div class="row"><div><b>${E(a.titre)}</b> <span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span> <span class="bd ${a.statut == "ouverte" ? "bad" : a.statut == "prise_en_charge" ? "info" : "ok"}">${SA[a.statut]}</span></div><span class="m">Shift du ${dmy(a.shift_debut)} · émise ${dmy(a.creee_le)} ${hm(a.creee_le)}</span></div><pre>${E(a.message)}</pre><div class="row" style="justify-content:flex-start;gap:6px">${a.statut == "ouverte" ? `<button class="btn p" data-a="pec" data-i="${a.id}">Prendre en charge</button>` : ""}${a.statut != "close" && a.statut != "remplacee" ? `<button class="btn" data-a="clo" data-i="${a.id}">Clôturer</button>` : ""}<button class="btn" data-a="cop" data-i="${a.id}">Copier le message</button><button class="btn" data-a="dst" data-i="${a.id}">Destinataires WhatsApp</button><button class="btn" data-p="eff">Effectifs</button></div><div id="d${a.id}"></div></div>`).join("") || `<div class="card m">Aucune alerte sur les 3 derniers jours.</div>`);
 };
 
 const IATA = { GMMN: "CMN", GOBD: "DSS", DTTA: "TUN", GABS: "BKO", GBYD: "BJL", LTFM: "IST", GQPP: "NDB", GCLP: "LPA", GUCY: "CKY", DAAG: "ALG", LFPG: "CDG", GQNO: "NKC", GQNI: "EMN", LPLA: "TER", GMFF: "FEZ", GQPZ: "OUZ", DIAP: "ABJ" };
@@ -435,7 +448,7 @@ document.addEventListener("change", async e => { if (e.target.id != "alf") retur
   } catch (x) { toast("Import impossible : " + (x.message || x)); } }, true);
 
 /* ---------- Vols réguliers : programme indicatif reconstitué à partir de l'historique Flightradar24 ---------- */
-let VM = "prog", VSP = null, VRD = null, VRJ = 0, VRF = "T", VRI = "T";
+let VM = "prog", VSP = null, VRD = null, VRW = "shift", VRWM = false, VRLAST = null, VRJ = 0, VRF = "T", VRI = "T";
 const LSV = (k, d) => ({ get() { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(v) { try { localStorage.setItem(k, v); } catch (e) { } } });
 const VTRI = LSV("vtri", "heure"), VTRR = LSV("vtrir", "creneau"), VREGON = LSV("vreg", "1");
 const CIE2 = { L6: "Mauritania Airlines", AT: "Royal Air Maroc", KP: "ASKY Airlines", TK: "Turkish Airlines", AF: "Air France", AH: "Air Algérie", NT: "Binter Canarias", TU: "Tunisair", WT: "Swiftair", D0: "DHL", "2J": "Air Burkina", HC: "Air Sénégal", ET: "Ethiopian Airlines", SN: "Brussels Airlines" };
@@ -457,7 +470,7 @@ const vMed = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(
 const vMode = a => { const c = {}; a.forEach(x => c[x] = (c[x] || 0) + 1); return Object.keys(c).sort((x, y) => c[y] - c[x])[0] || null; };
 const VGRP = {
   compagnie: x => [x.cie, x.cie],
-  creneau: x => { const p = Math.min(3, Math.floor(x.md / 360)); return [p, PERL[p]]; },
+  creneau: x => { if (x.ck != null) return [x.ck, x.cl]; const p = Math.min(3, Math.floor(x.md / 360)); return [p, PERL[p]]; },
   type: x => [{ R: 0, A: 1, D: 2 }[x.typ], { R: "Rotations", A: "Arrivées", D: "Départs" }[x.typ]],
   cargo: x => [x.cargo ? 1 : 0, x.cargo ? "Cargo" : "Passagers"]
 };
@@ -468,6 +481,7 @@ function vGroup(items, mode) {
   return [...G.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0).map(([, v]) => v);
 }
 const vTriSel = (w, cur) => `<label class="m" style="display:flex;align-items:center;gap:6px;white-space:nowrap">Trier par <select data-vtri="${w}" style="width:auto;padding:6px 8px">${VTRL.map(([k, l]) => `<option value="${k}" ${cur == k ? "selected" : ""}>${l}</option>`).join("")}</select></label>`;
+const vspCard = n => `<button type="button" class="vspc" data-a="virr"><span>✈️ Vols spéciaux</span><b>${n == null ? "›" : n}</b><small>privés · MSS · occasionnels</small></button>`;
 const vregBtn = () => VREGON.get() == "1" ? `<button type="button" class="vregb" data-a="vreg"><span>📅</span><span><b>Vols réguliers</b><small>Programme indicatif des 7 prochains jours · à confirmer chaque jour</small></span><span>›</span></button>` : "";
 
 async function vregData() {
@@ -526,7 +540,8 @@ async function vregData() {
   const obsT = (g, l) => g.occ.filter(o => Math.abs(o.m - g.med) > 45).length >= (g.nd >= 3 ? 2 : 1) ? `${l} variable (${hhm(g.min)} à ${hhm(g.max)})` : "";
   const vu = g => g.nd < 3 ? `vu ${g.nd} semaine${g.nd > 1 ? "s" : ""} sur 3` : "";
   const SIX = {};
-  const days = [...Array(7)].map((_, i) => { const d = new Date(s0.getTime() + i * 864e5); return { d, j: ymd(d), w: d.getUTCDay(), it: [] }; });
+  const d0 = new Date(s0.getTime() - 864e5);
+  const days = [...Array(9)].map((_, i) => { const d = new Date(d0.getTime() + i * 864e5); return { d, j: ymd(d), w: d.getUTCDay(), it: [] }; });
   days.forEach(D => {
     (ROT[D.w] || []).forEach(({ a, d, off, g }) => {
       const sa = sched(a), sd = sched(d), t1 = sa.m;
@@ -534,11 +549,10 @@ async function vregData() {
       /* STD estimée incohérente avec l'escale habituelle du même avion : on retient STA + durée d'escale observée */
       if (t2 - t1 > 6 * 60 || (sd.src == "est" && g && Math.abs(t2 - t1 - g) > 90)) t2 = t1 + Math.round((g || 75) / 5) * 5;
       const obs = [sa.src == "est" || sd.src == "est" ? `${sa.src == "est" && sd.src == "est" ? "STA et STD estimées" : sa.src == "est" ? "STA estimée" : "STD estimée"} : pas encore de Flight Allocation pour ce vol` : ""];
-      if (a.nd < 2 || d.nd < 2) obs.push(a.nd < 2 ? "arrivée relevée une seule fois" : "départ relevé une seule fois"); else if (Math.min(a.nd, d.nd) < 3) obs.push(vu(a.nd < d.nd ? a : d));
       D.it.push({ typ: "R", t1, t2, e1: sa.src == "est", e2: sd.src == "est", sens2: "R", md: t1, k0: t1, num: a.n == d.n ? a.n : a.n + " / " + d.n, cie: a.cie, route: `${ap(a.pd)} → NKC → ${ap(d.pd)}`, cargo: a.cargo || d.cargo, appareil: a.typ || d.typ, obs: obs.filter(Boolean) });
     });
     Object.values(LG).filter(g => g.w == D.w && !used.has(g.id) && g.nd >= 2).forEach(g => {
-      const sg = sched(g), obs = [sg.src == "est" ? `${g.sens == "A" ? "STA" : "STD"} estimée : pas encore de Flight Allocation pour ce vol` : "", vu(g)];
+      const sg = sched(g), obs = [sg.src == "est" ? `${g.sens == "A" ? "STA" : "STD"} estimée : pas encore de Flight Allocation pour ce vol` : ""];
       if (g.sens == "A" && !g.mai && Object.entries(PG).some(([pk, c]) => c >= 3 && pk.startsWith(g.k + ">"))) obs.push("départ du même avion non relevé ce jour (rotation habituelle)");
       if (g.sens == "A") { const ns = Object.values(NS[g.id] || {}).sort((x, y) => y.c - x.c)[0]; if (ns && ns.c >= 2) obs.push(`même avion repart en ${ns.n}${ns.off ? " le lendemain (night-stop)" : ""}`); }
       D.it.push({ typ: g.sens, t1: g.sens == "A" ? sg.m : null, t2: g.sens == "D" ? sg.m : null, e1: g.sens == "A" && sg.src == "est", e2: g.sens == "D" && sg.src == "est", md: sg.m, k0: sg.m, num: g.n, cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
@@ -551,47 +565,62 @@ async function vregData() {
   /* vols spéciaux : privés, navettes, affrètements, et vols commerciaux vus une seule fois */
   const IR = O.filter(o => o.cat != "com" || (!used.has(o.w + "|" + o.k) && (LG[o.w + "|" + o.k] || {}).nd < 2)).map(o => ({ ...o, cat: o.cat == "com" ? "occ" : o.cat })).sort((x, y) => y.d - x.d);
   const regN = new Set(Object.values(LG).filter(g => g.nd >= 2 || used.has(g.id)).map(g => g.n)), regP = new Set([...regN].map(n => n.slice(0, 2)));
-  return VRD = { t: Date.now(), since, s0, lun, days, IR, n: O.length, regN, regP, SIX, nsta: Object.keys(SCH).length };
-}
-
-function vTimeline(D, isT, nm) {
-  const P = m => (Math.min(m, 1440) / 1440 * 100).toFixed(2) + "%";
-  let g = "";
-  for (let x = 3; x < 24; x += 3) g += `<i class="vgl${x % 6 ? "" : " g6"}" style="left:${P(x * 60)}"></i>`;
-  D.it.forEach(x => { const tip = E(`${x.num} · ${[x.t1, x.t2].filter(v => v != null).map(hhm).join(" → ")}`); g += x.typ == "R" ? `<b class="vmk vmR" style="left:${P(x.t1)};width:${P(Math.max(Math.min(x.t2, 1440) - x.t1, 20))}" title="${tip}"></b>` : `<b class="vmk vm${x.typ}" style="left:${P(x.md)}" title="${tip}"></b>`; });
-  if (isT) g += `<i class="vnw" style="left:${P(nm)}"></i>`;
-  return `<div class="vtl"><div class="vtb">${g}</div><div class="vtx">${[0, 6, 12, 18, 24].map(h => `<span style="left:${P(h * 60)}">${p2(h)}h</span>`).join("")}</div></div>`;
+  return VRD = { t: Date.now(), since, s0, d0, lun, days, IR, n: O.length, regN, regP, SIX, nsta: Object.keys(SCH).length };
 }
 
 async function vregView() {
   const back = `<button class="btn" data-a="vprog">← Programme du shift</button>`;
   let R; try { R = await vregData(); } catch (x) { return head("Vols réguliers", "", back) + `<div class="card m">Chargement impossible : ${E(x.message || x)}</div>`; }
   /* suivi Flightradar24 : ETA en vol, atterrissage, décollage, ETD recalculée si l'avion de la rotation arrive en retard */
-  const { data: LV } = await sb.from("vols").select("numero,sens,heure_prevue,heure_estimee,heure_reelle,phase,decolle_le,statut").gte("heure_prevue", new Date(R.s0.getTime() - 8 * H).toISOString()).lt("heure_prevue", new Date(R.s0.getTime() + 3 * 864e5).toISOString());
+  const { data: LV } = await sb.from("vols").select("numero,sens,heure_prevue,heure_estimee,heure_reelle,phase,decolle_le,statut").gte("heure_prevue", new Date(R.d0.getTime() - 8 * H).toISOString()).lt("heure_prevue", new Date(R.s0.getTime() + 3 * 864e5).toISOString());
   const LVN = {}; (LV || []).forEach(v => { v.sc = (v.phase ? 2 : 0) + (v.heure_reelle ? 2 : 0) + (v.heure_estimee ? 1 : 0); (LVN[vAlias(v.numero) + "|" + v.sens] = LVN[vAlias(v.numero) + "|" + v.sens] || []).push(v); });
-  const live = (x, D) => {
-    if (D.j > ymd(Date.now() + 864e5)) return "";
+  const AT = a => new Date(R.d0.getTime() + a * 6e4), tmax = Date.now() + 36 * H;
+  const live = x => {
+    if (AT(x.a0) > tmax) return "";
     const [na, nd] = x.typ == "R" && x.num.includes(" / ") ? x.num.split(" / ") : [x.num, x.num], out = [];
-    const pick = (n, sn, m) => { const T = D.d.getTime() + m * 6e4; return (LVN[n + "|" + sn] || []).filter(v => Math.abs(new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue) - T) < 8 * H).sort((a, b) => b.sc - a.sc)[0]; };
+    const pick = (n, sn, a) => { const T0 = AT(a).getTime(); return (LVN[n + "|" + sn] || []).filter(v => Math.abs(new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue) - T0) < 8 * H).sort((p, q) => q.sc - p.sc)[0]; };
     let arr = null;
-    if (x.t1 != null) { const v = pick(na, "A", x.t1); if (v) { if (v.statut == "annule") out.push(["bad", "Arrivée annulée"]); else if (v.phase == "atterri" || (v.heure_reelle && v.phase != "live")) { out.push(["ok", "Atterri" + (v.heure_reelle ? " " + hh(v.heure_reelle) : "")]); if (v.heure_reelle) arr = new Date(v.heure_reelle); } else if (v.phase == "live") { out.push([v.heure_estimee && new Date(v.heure_estimee) - (D.d.getTime() + x.t1 * 6e4) > 15 * 6e4 ? "warn" : "info", "En vol" + (v.heure_estimee ? " · ETA " + hh(v.heure_estimee) : "")]); if (v.heure_estimee) arr = new Date(v.heure_estimee); } } }
-    if (x.t2 != null) { const v = pick(nd, "D", x.t2); if (v && v.statut == "annule") out.push(["bad", "Départ annulé"]); else if (v && v.phase == "parti") out.push(["ok", "Parti " + hh(v.heure_reelle || v.decolle_le || v.heure_prevue)]); else if (x.typ == "R" && arr) { const std = D.d.getTime() + x.t2 * 6e4, etd = Math.max(std, arr.getTime() + 45 * 6e4); if (etd > std + 5 * 6e4) out.push(["warn", "ETD ≈ " + hh(etd) + " (arrivée tardive)"]); } }
+    if (x.t1 != null) { const v = pick(na, "A", x.a0); if (v) { if (v.statut == "annule") out.push(["bad", "Arrivée annulée"]); else if (v.phase == "atterri" || (v.heure_reelle && v.phase != "live")) { out.push(["ok", "Atterri" + (v.heure_reelle ? " " + hh(v.heure_reelle) : "")]); if (v.heure_reelle) arr = new Date(v.heure_reelle); } else if (v.phase == "live") { out.push([v.heure_estimee && new Date(v.heure_estimee) - AT(x.a0) > 15 * 6e4 ? "warn" : "info", "En vol" + (v.heure_estimee ? " · ETA " + hh(v.heure_estimee) : "")]); if (v.heure_estimee) arr = new Date(v.heure_estimee); } } }
+    if (x.t2 != null) { const v = pick(nd, "D", x.a1); if (v && v.statut == "annule") out.push(["bad", "Départ annulé"]); else if (v && v.phase == "parti") out.push(["ok", "Parti " + hh(v.heure_reelle || v.decolle_le || v.heure_prevue)]); else if (x.typ == "R" && arr) { const std = AT(x.a1).getTime(), etd = Math.max(std, arr.getTime() + 45 * 6e4); if (etd > std + 5 * 6e4) out.push(["warn", "ETD ≈ " + hh(etd) + " (arrivée tardive)"]); } }
     return out.length ? `<div class="vlv">${out.map(([c, t]) => `<span class="bd ${c}">${E(t)}</span>`).join(" ")}</div>` : "";
   };
-  const D = R.days[VRJ] || R.days[0], now = new Date(), nm = now.getUTCHours() * 60 + now.getUTCMinutes(), isT = D.j == ymd(now);
-  const nR = D.it.filter(x => x.typ == "R").length, nA = D.it.filter(x => x.t1 != null).length, nD = D.it.filter(x => x.t2 != null).length;
-  const its = D.it.filter(x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF));
+  /* tous les vols de la période, en minutes depuis R.d0 (veille à 00h) */
+  const ALL = R.days.flatMap((D, j) => D.it.map(x => { const a0 = j * 1440 + (x.t1 ?? x.t2), a1 = j * 1440 + (x.t2 ?? x.t1); return { ...x, a0, a1, k0: a0, md: a0 % 1440 }; }));
+  const nowA = Math.floor((Date.now() - R.d0.getTime()) / 6e4), cur = Math.floor((nowA - 480) / 1440); /* index du jour du shift en cours */
+  const sd = cur + VRJ, W = { shift: [sd * 1440 + 480, sd * 1440 + 1920, "Shift 08h → 08h"], jour: [sd * 1440, sd * 1440 + 1440, "Journée 00h → 24h"], h48: [sd * 1440 + 480, sd * 1440 + 3360, "48 h (2 shifts)"], passes: [cur * 1440 + 480, nowA, "Vols passés du shift en cours"] }[VRW] || [sd * 1440 + 480, sd * 1440 + 1920, "Shift 08h → 08h"];
+  const inW = (x, w0, w1) => x.a0 < w1 && x.a1 >= w0 && (VRW != "passes" || x.a1 < nowA);
+  const dayLab = a => { const d = AT(a); return `${JSEM[d.getUTCDay()]} ${dmy(d)}`; };
+  const WI = ALL.filter(x => inW(x, W[0], W[1])).map(x => { const k = Math.floor(x.a0 / 360); return { ...x, ck: k, cl: PERL[k % 4] + (W[1] - W[0] > 1440 || VRW == "shift" ? " · " + dayLab(x.a0) : "") }; });
+  const its = WI.filter(x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF)); VRLAST = { lab: W[2], d: AT(W[0]), its };
+  const mvC = L => L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
+  const nR = WI.filter(x => x.typ == "R").length, nA = WI.filter(x => x.t1 != null).length, nD = WI.filter(x => x.t2 != null).length;
   let nx = "";
-  if (isT) { const ev = []; D.it.forEach(x => { if (x.t1 != null) ev.push([x.t1, x.num.split(" / ")[0], "arrivée"]); if (x.t2 != null) ev.push([x.t2, x.num.split(" / ").pop(), "départ"]); }); const n = ev.filter(e => e[0] >= nm).sort((a, b) => a[0] - b[0])[0]; if (n) { const dm = n[0] - nm; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} vers <b>${hhm(n[0])}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
-  const row = x => `<div class="vrr ${x.typ}${isT && Math.max(x.t1 ?? 0, x.t2 ?? 0) < nm ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? `<span class="a">${x.e1 ? "≈" : ""}${hhm(x.t1)}</span>` : ""}${x.t2 != null ? `<span class="d">${x.e2 ? "≈" : ""}${hhm(x.t2)}${x.t2 >= 1440 ? "<sup>+1</sup>" : ""}</span>` : ""}</div><div class="vrv"><b>${E(x.num)}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${E(x.cie)} · ${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}${live(x, D)}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
-  const list = vGroup(its, VTRR.get()).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${xs.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier de ce type ce jour.</div>`;
+  if (nowA >= W[0] && nowA < W[1] + 1440) { const ev = []; WI.forEach(x => { if (x.t1 != null) ev.push([x.a0, x.num.split(" / ")[0], "arrivée"]); if (x.t2 != null) ev.push([x.a1, x.num.split(" / ").pop(), "départ"]); }); const n = ev.filter(e => e[0] >= nowA).sort((a, b) => a[0] - b[0])[0]; if (n) { const dm = n[0] - nowA; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} à <b>${hhm(n[0] % 1440)}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
+  const tm = (a, e, cl) => `<span class="${cl}">${e ? "≈" : ""}${hhm(a % 1440)}${Math.floor(a / 1440) > Math.floor(W[0] / 1440) ? "<sup>+1</sup>" : ""}</span>`;
+  const row = x => `<div class="vrr ${x.typ}${x.a1 < nowA ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? tm(x.a0, x.e1, "a") : ""}${x.t2 != null ? tm(x.a1, x.e2, "d") : ""}</div><div class="vrv"><b>${E(x.num)}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${E(x.cie)} · ${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}${live(x)}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
+  const list = vGroup(its, VTRR.get()).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${mvC(xs)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier sur cette période.</div>`;
   const chip = (k, l) => `<button type="button" class="btn${VRF == k ? " p" : ""}" data-a="vrf" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
-  return head("Vols réguliers", `Programme de la semaine du ${dmy(R.lun)} · actualisé chaque lundi`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${back}<button class="btn" data-a="virr">✈️ Vols spéciaux</button></div>`)
-    + `<div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Les heures affichées sont les <b>heures prévues (STA / STD)</b> : celles du dernier Flight Allocation importé, même si elles ont changé ces dernières semaines ; « ≈ » signale une heure prévue estimée (Flightradar24 ne publie pas les horaires : estimation sur 3 semaines de décollages et d’atterrissages, corrigée de l’écart habituel constaté avec le Flight Allocation). Aujourd’hui et demain, le suivi Flightradar24 s’affiche sous chaque vol : en vol avec ETA, atterri, parti, et ETD recalculée quand l’avion de la rotation arrive en retard. La liste des vols est recalculée chaque lundi à partir des 3 semaines précédentes (vol retenu s’il a été vu au moins 2 semaines sur 3 le même jour). Des changements peuvent avoir lieu : <b>confirmez chaque jour</b> avec le programme du shift. Les vols Mauritania Airlines sont affichés un par un ; les vols privés, d’État, les navettes MSS et les vols occasionnels sont dans « Vols spéciaux ».</div>`
-    + `<div class="vrs">${R.days.map((d, i) => `<button type="button" class="vrd${i == VRJ ? " on" : ""}" data-a="vrj" data-i="${i}"><span>${JSEM[d.w]}</span><b>${d.mv}</b><small>${dmy(d.d)}</small></button>`).join("")}</div>`
-    + `<div class="card"><div class="row" style="align-items:baseline"><div><b style="font-size:22px">${D.mv} vols</b> <span class="m">${JSEML[D.w]} ${dmy(D.d)}</span></div><div class="vrk"><span class="R">${nR} rotations</span><span class="A">${nA} arrivées</span><span class="D">${nD} départs</span></div></div>${nx}${vTimeline(D, isT, nm)}</div>`
+  const wb = (k, l) => `<button type="button" class="btn${VRW == k ? " p" : ""}" data-a="vrw" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
+  const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => inW(x, w0, w0 + 1440))), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" ? " on" : ""}" data-a="vrj" data-i="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
+  return head("Vols réguliers", `Semaine du ${dmy(R.lun)} · actualisée chaque lundi · STA/STD du Flight Allocation`, vspCard(VSP ? VSP.L.length : null))
+    + `<div style="display:flex;gap:6px;flex-wrap:wrap">${back}</div>`
+    + `<div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Heures prévues (STA / STD) du dernier Flight Allocation importé ; « ≈ » = heure prévue estimée, faute de Flight Allocation pour ce vol. Le suivi Flightradar24 (en vol, ETA, atterri, parti, ETD recalculée) s’affiche sous chaque vol. Des changements peuvent avoir lieu : <b>confirmez chaque jour</b> avec le programme du shift.</div>`
+    + `<div class="vrs">${strip}</div>`
+    + `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${wb("shift", "Shift 08h → 08h")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-a="vrwm" style="padding:6px 10px;min-height:0">Voir plus ▾</button>`}</div>`
+    + `<div class="card"><div class="row" style="align-items:baseline"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${nR} rotations</span><span class="A">${nA} arrivées</span><span class="D">${nD} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>`
     + `<div class="row" style="flex-wrap:wrap;gap:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${vTriSel("r", VTRR.get())}<button type="button" class="btn" data-a="vrcopy" style="padding:6px 10px;min-height:0">📋 Copier</button></div></div>`
     + list;
+}
+
+function vTimeline(L, w0, w1, nowA) {
+  const span = w1 - w0, P = a => (Math.max(0, Math.min(span, a - w0)) / span * 100).toFixed(2) + "%";
+  let g = "";
+  const step = span > 1440 ? 360 : 180;
+  for (let a = Math.ceil(w0 / step) * step; a < w1; a += step) if (a > w0) g += `<i class="vgl${a % 360 ? "" : " g6"}" style="left:${P(a)}"></i>`;
+  L.forEach(x => { const tip = E(`${x.num} · ${[x.t1 != null ? x.a0 : null, x.t2 != null ? x.a1 : null].filter(v => v != null).map(v => hhm(v % 1440)).join(" → ")}`); g += x.typ == "R" ? `<b class="vmk vmR" style="left:${P(x.a0)};width:calc(${P(x.a1)} - ${P(x.a0)})" title="${tip}"></b>` : `<b class="vmk vm${x.typ}" style="left:${P(x.a0)}" title="${tip}"></b>`; });
+  if (nowA >= w0 && nowA <= w1) g += `<i class="vnw" style="left:${P(nowA)}"></i>`;
+  const labs = []; for (let a = w0; a <= w1; a += span > 1440 ? 720 : 360) labs.push(`<span style="left:${P(a)}">${p2(Math.floor(a % 1440 / 60))}h</span>`);
+  return `<div class="vtl"><div class="vtb">${g}</div><div class="vtx">${labs.join("")}</div></div>`;
 }
 
 async function virrView() {
@@ -630,7 +659,7 @@ V.vols = async () => {
   const RWG = vGroup(RW.map(w => { const [a, b] = w.r, d0 = t(a); return { w, k0: d0.getTime(), md: d0.getUTCHours() * 60 + d0.getUTCMinutes(), cie: vCie(a), typ: b ? "R" : a.sens, cargo: vCargo(a) || (b && vCargo(b)) }; }), VTRI.get()).flatMap(([l, xs]) => [...(l ? [{ h: l, n: xs.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0) }] : []), ...xs.map(x => x.w)]);
   const etaOf = v => volEta(v, alo(v)), schOf = v => volSch(v, alo(v)), stv = v => volSt(v, alo(v), MS);
   const tb = (i, l) => `<button class="btn ${VD == i ? "p" : ""}" data-a="vd" data-i="${i}">${l}</button>`;
-  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""} <button class="btn" data-a="virr">✈️ Vols spéciaux${SPX.length ? ` <span class="bd warn">${SPX.length}</span>` : ""}</button></div>`)
+  return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, vspCard(SPX.length)) + `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""}</div>`
 
     + vregBtn() + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
 <div class="card sc"><div class="row" style="flex-wrap:wrap;gap:8px"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2>${vTriSel("p", VTRI.get())}</div><table class="vt"><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RWG.map(w => { if (w.h) return `<tr class="vg"><td colspan="7">${E(w.h)} · ${w.n} vol${w.n > 1 ? "s" : ""}</td></tr>`; const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; const tm = (v, inb) => { const e = etaOf(v), s0 = schOf(v); let x = e && e != s0 ? ` <span class="m">ETA ${e}</span>` : "";
@@ -708,7 +737,7 @@ function supCard(sj) {
 }
 function tCard(e, sh, st, rr) {
   const p = st.tot ? Math.round(st.c.p / st.tot * 100) : 0, r = rr[0];
-  return `<div class="card tcd" data-a="tcard" data-e="${E(e)}" role="button" tabindex="0"><div class="row" style="gap:6px"><b style="font-size:15px">${teqLab(e)}</b>${sh.on ? '<span class="bd ok">● En service</span>' : '<span class="bd info">Dernier shift</span>'}</div><div class="m">${tPer(sh)}</div><div class="k">${st.c.p} / ${st.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:4px 0 6px"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">NJ ${st.c.nj} · J ${st.c.j} · Congés ${st.c.c} · MAP ${st.c.mp}</div>${e == "Chauffeurs" ? "" : r ? `<div class="m" style="margin-top:6px">${tRepLine(r, st)}${rr.length > 1 ? ` · ${rr.length} rapports` : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
+  return `<div class="card tcd" data-a="tcard" data-e="${E(e)}" role="button" tabindex="0"><div class="row" style="gap:6px"><b style="font-size:15px">${teqLab(e)}</b>${sh.on ? '<span class="bd ok">● En service</span>' : '<span class="bd info">Dernier shift</span>'}</div><div class="m">${tPer(sh)}</div><div class="k">${st.c.p} / ${st.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:4px 0 6px"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">NJ ${st.c.nj} · J ${st.c.j} · Congés ${st.c.c} · MAP ${st.c.mp}</div>${ecartTxt(e, st.tot)}${e == "Chauffeurs" ? "" : r ? `<div class="m" style="margin-top:6px">${tRepLine(r, st)}${rr.length > 1 ? ` · ${rr.length} rapports` : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
 }
 let TCE = "", TCK = 0;
 async function tDetail() {
@@ -744,7 +773,7 @@ V.pres = async () => {
   const ab = AG.filter(a => ST[a.matricule]), nm = Object.fromEntries(AG.map(a => [a.matricule, a]));
   const top = Object.entries(rec).sort((a, b) => b[1] - a[1]).slice(0, 10);
   return head("Suivi présence", `Situation en temps réel — ${dmy(new Date())} ${hm(new Date())}`, `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn w" data-a="pmode" data-v="suivi">📌 Situations à suivre</button><button class="btn p" data-p="eff">Mettre à jour (annuaire)</button></div>`)
-    + `<div class="m">Touchez une équipe pour le détail (présents, absents, rapports de situation) et les shifts précédents.</div><div class="g">${TEQ.map(x => cd(x[0])).join("")}${supCard(SJ[ymd(shiftStart())] || {})}</div>${(mi || []).length ? `<div class="card" style="border-left:4px solid #d97706"><b>⚠ Matricule(s) déclaré(s) dans un rapport mais absent(s) de l’annuaire (7 jours)</b><div class="m">Ces absences ne sont pas comptabilisées tant que l’agent n’est pas ajouté à l’annuaire ou que le matricule n’est pas corrigé dans la liste du formulaire.</div>${mi.map(x => `<div class="li"><div><b>${E(x.matricule)}</b> <span class="m">${x.service == "bagages" ? "Manutention" : "Nettoyage"} · ${E(x.champ)}</span></div><span class="m">${dmy(x.recu_le)} ${hm(x.recu_le)}</span></div>`).join("")}</div>` : ""}
+    + `<div class="m">Touchez une équipe pour le détail (présents, absents, rapports de situation) et les shifts précédents.</div><div class="g">${TEQ.map(x => x[0]).sort((a, b) => tShift(b, 0).on - tShift(a, 0).on).map(cd).join("")}${supCard(SJ[ymd(shiftStart())] || {})}</div>${(mi || []).length ? `<div class="card" style="border-left:4px solid #d97706"><b>⚠ Matricule(s) déclaré(s) dans un rapport mais absent(s) de l’annuaire (7 jours)</b><div class="m">Ces absences ne sont pas comptabilisées tant que l’agent n’est pas ajouté à l’annuaire ou que le matricule n’est pas corrigé dans la liste du formulaire.</div>${mi.map(x => `<div class="li"><div><b>${E(x.matricule)}</b> <span class="m">${x.service == "bagages" ? "Manutention" : "Nettoyage"} · ${E(x.champ)}</span></div><span class="m">${dmy(x.recu_le)} ${hm(x.recu_le)}</span></div>`).join("")}</div>` : ""}
 <div class="card sc"><h2>Absents du jour</h2><table><tr><th>Agent</th><th>Équipe</th><th>Statut</th><th>Justification</th></tr>${ab.map(a => `<tr><td><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span> <span class="m">${E(a.matricule)}</span></td><td>${E(a.equipe)}</td><td><span class="bd ${ST[a.matricule].statut == "nj" ? "bad" : "info"}">${SL[ST[a.matricule].statut]}</span></td><td>${E(JU(ST[a.matricule].justification)) || "—"}</td></tr>`).join("") || `<tr><td colspan="4" class="m">Aucune absence saisie aujourd’hui.</td></tr>`}</table></div>
 <div class="card sc"><h2>Historique des journées saisies (30 jours)</h2><table><tr><th>Date</th><th>Non justifiées</th><th>Justifiées</th><th>Congés</th><th>Mises à pied</th></tr>${Object.entries(hist).map(([d, c]) => `<tr><td>${dmy(d)}</td><td>${c.nj}</td><td>${c.j}</td><td>${c.c}</td><td>${c.mp}</td></tr>`).join("") || `<tr><td colspan="5" class="m">L’historique se constitue au fil des saisies.</td></tr>`}</table></div>
 <div class="card sc"><h2>Absences non justifiées récurrentes (30 jours)</h2><table><tr><th>Agent</th><th>Équipe</th><th>Nb</th></tr>${top.map(([m, n]) => `<tr><td>${nm[m] ? `<span class="lk" data-a="fiche" data-m="${E(m)}">${E(nm[m].nom)}</span>` : E(m)}</td><td>${E(nm[m]?.equipe || "")}</td><td><span class="bd ${n > 1 ? "bad" : "info"}">${n}</span></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucune.</td></tr>`}</table></div>
@@ -900,13 +929,15 @@ V.tach = async () => {
   TK.forEach(t => { if ((t.statut == "a_faire" || t.statut == "en_cours") && !String(t.modele || "").startsWith("vol_fo:")) cnt[t.jour] = (cnt[t.jour] || 0) + 1; });
   const dys = [-1, 0, 1, 2, 3, 4, 5, 6].map(o => { const d = dstr(o); return `<button class="dy ${o == TD ? "on" : ""}" data-a="tday" data-i="${o}">${o == 0 ? "Auj." : WD[new Date(d + "T00:00:00Z").getUTCDay()]}<b>${d.slice(8)}</b>${cnt[d] ? `<i>${cnt[d]}</i>` : ""}</button>`; }).join("");
   const ord = { en_cours: 0, a_faire: 1, fait: 2, annule: 3 };
+  /* tâche PSM / LDM d'un vol : visible à partir du décollage (heure sur le shift 08h → 08h) */
+  const vis = t => { if (!String(t.modele || "").startsWith("psm:") || t.statut != "a_faire") return true; const m = String(t.heure || "").match(/(\d{1,2}):(\d{2})/); if (!m) return true; let mn = +m[1] * 60 + +m[2]; if (mn < 480) mn += 1440; return new Date(t.jour + "T00:00:00Z").getTime() + mn * 6e4 <= now; };
   const svOf = t => /nettoy/i.test(t.service || t.cible || "") ? "N" : /manut|bagage/i.test(t.service || t.cible || "") ? "M" : "";
-  const L = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:") && (!TFL || t.statut == TFL) && (!mine || !svOf(t) || svOf(t) == mine)).sort((a, b) => ord[a.statut] - ord[b.statut] || String(a.heure || "99").localeCompare(String(b.heure || "99")));
+  const L = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:") && vis(t) && (!TFL || t.statut == TFL) && (!mine || !svOf(t) || svOf(t) == mine)).sort((a, b) => ord[a.statut] - ord[b.statut] || String(a.heure || "99").localeCompare(String(b.heure || "99")));
   const fb = (v, l) => `<button class="btn ${TFL == v ? "p" : ""}" data-a="tfl" data-v="${v}">${l}</button>`;
   const sb2 = (v, l) => `<button class="btn ${TSV == v ? "p" : ""}" data-a="tsv" data-v="${v}">${l}</button>`;
-  const all = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:")), fait = all.filter(t => t.statut == "fait").length;
+  const all = TK.filter(t => t.jour == sel && !String(t.modele || "").startsWith("vol_fo:") && t.statut != "annule" && vis(t) && (!mine || !svOf(t) || svOf(t) == mine)), fait = all.filter(t => t.statut == "fait").length;
   const row = t => { const ec = t.echeance ? new Date(t.echeance).getTime() : null, late = t.statut != "fait" && t.statut != "annule" && ec && ec < now;
-    return `<div class="tkr"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${/^⚠ Empêchement/.test(t.commentaire || "") && t.statut != "fait" ? '<span class="bd warn">Empêchement signalé</span> ' : ""}${late ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div>${t.description ? `<div class="m">${E(t.description)}</div>` : ""}<div class="m">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${ec ? "échéance " + hm(new Date(ec)) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}${t.fait_le ? "fait " + hm(new Date(t.fait_le)) + " · " : ""}par ${E(t.cree_nom)}${t.maj_nom ? " · " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button class="btn" data-a="tfiche" data-i="${t.id}">Détails / info</button>${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button>${TMG.includes(ME.role) ? `<button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="temp" data-i="${t.id}">⚠ Signaler un empêchement</button>`}` : TMG.includes(ME.role) || t.statut == "fait" ? `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>` : ""}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`; };
+    return `<div class="tkr"><div class="tkh"><span>${t.ref ? `<span class="m">${E(t.ref.replace("EPS/OPS/TCH/", "N° "))}</span> ` : ""}<b>${E(t.titre)}</b></span><span>${/^⚠ Empêchement/.test(t.commentaire || "") && t.statut != "fait" ? '<span class="bd warn">Empêchement signalé</span> ' : ""}${late ? '<span class="bd bad">En retard</span> ' : ""}<span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></span></div>${t.description ? `<div class="m">${E(t.description)}</div>` : ""}<div class="m">${t.heure ? "⏰ " + E(t.heure) + " · " : ""}${ec ? "échéance " + hm(new Date(ec)) + " · " : ""}${t.cible ? "👥 " + E(t.cible) + " · " : ""}${t.agents ? "👤 " + E(t.agents.nom) + " · " : ""}${t.lieu ? "📍 " + E(t.lieu) + " · " : ""}${t.fait_le ? "fait " + hm(new Date(t.fait_le)) + " · " : ""}par ${E(t.cree_nom)}${t.maj_nom ? " · " + E(t.maj_nom) : ""}${t.commentaire ? " · « " + E(t.commentaire) + " »" : ""}</div><div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button class="btn" data-a="tfiche" data-i="${t.id}">Détails / info</button>${t.statut == "a_faire" ? `<button class="btn p" data-a="tst" data-w="en_cours" data-i="${t.id}">Démarrer</button>` : ""}${t.statut == "en_cours" && String(t.modele || "").startsWith("psm:") ? `<button class="btn" data-a="tind" data-i="${t.id}">Indisponible</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button class="btn w" data-a="tst" data-w="fait" data-i="${t.id}">Terminé</button>${TMG.includes(ME.role) ? `<button class="btn" data-a="tst" data-w="annule" data-i="${t.id}">Annuler</button>` : `<button class="btn" data-a="temp" data-i="${t.id}">⚠ Signaler un empêchement</button>`}` : TMG.includes(ME.role) || t.statut == "fait" ? `<button class="btn" data-a="tst" data-w="a_faire" data-i="${t.id}">Rouvrir</button>` : ""}${TMG.includes(ME.role) ? `<button class="btn d" data-a="tdel" data-i="${t.id}">Supprimer</button>` : ""}</div></div>`; };
   const fixe = SVN.includes(ME.role) ? "N" : SVM.includes(ME.role) ? "M" : "", fsv = fixe || TVF || TSV || "N";
   const flight = v => { const mine = fsv;
     const A = v.sens == "A", ref = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue), it = [];
@@ -924,7 +955,7 @@ V.tach = async () => {
   return head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} tâches faites · ${VL.length} vol(s)`, `<button class="btn w" data-a="tnew">+ Tâche</button>`)
     + `<style>.tkr{padding:10px 0;border-top:1px solid var(--b)}.tkr:first-of-type{border-top:0}.tkh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ft td,.ft th{vertical-align:top}</style>`
     + mesTaches + vtabs + `<div class="dys">${dys}</div><div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}${SVN.includes(ME.role) || SVM.includes(ME.role) ? "" : " | " + sb2("", "Tous services") + sb2("N", "Nettoyage") + sb2("M", "Manutention")}</div>`
-    + `<div class="card"><h2>Tâches du shift (${L.length})</h2>${L.map(row).join("") || `<div class="m">Aucune tâche ce jour-là.</div>`}</div>`
+    + `<div class="card"><div class="row"><h2>Tâches du shift</h2><span class="bd ${fait == all.length && all.length ? "ok" : "info"}" style="font-size:13px">${fait}/${all.length} faite${fait > 1 ? "s" : ""}</span></div>${L.map(row).join("") || `<div class="m">Aucune tâche ce jour-là.</div>`}</div>`
     + `<h2 style="margin:14px 2px 6px">Par vol — tâches et alertes selon l’approche / le décollage (${VL.length})</h2>`
     + (fixe ? `<div class="m" style="margin:0 2px 6px">Service : <b>${fixe == "N" ? "Nettoyage" : "Manutention"}</b></div>` : `<div class="card row" style="justify-content:flex-start;gap:6px">${[["N", "🧹 Nettoyage"], ["M", "🧳 Manutention"]].map(([k, l]) => `<button class="btn ${fsv == k ? "p" : ""}" data-a="tvf" data-v="${k}">${l}</button>`).join("")}</div>`)
     + (VL.map(flight).join("") || `<div class="card m">Aucun vol enregistré sur ce shift (08h00 → 08h00).</div>`);
@@ -1326,7 +1357,14 @@ const ACT = {
   sf(b) { SF[b.dataset.k] = b.dataset.v; if (b.dataset.k == "dp") { SF.g = ""; SF.sv = ""; } draw(); },
   tday(b) { TD = +b.dataset.i; draw(); },
   tfl(b) { TFL = b.dataset.v; draw(); },
-  async tst(b) { const w = b.dataset.w, go = async c => { const { error } = await sb.rpc("tache_statut", { p_id: +b.dataset.i, p_statut: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Tâche : " + TS[w]); draw(); }; if (w == "annule") ask("Motif d’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
+  tind(b) {
+    const id = +b.dataset.i;
+    ask("Message indisponible", [{ k: "q", l: "Qu’est-ce qui n’a pas été envoyé ?", o: [["PSM et LDM non envoyés", "PSM et LDM non envoyés"], ["PSM non envoyé", "PSM non envoyé"], ["LDM non envoyé", "LDM non envoyé"]] }, { k: "c", l: "Précision (facultatif)" }], async v => {
+      const { error } = await sb.rpc("tache_statut", { p_id: id, p_statut: "fait", p_comm: "Indisponible : " + v.q + (v.c ? " — " + v.c : "") });
+      toast(error ? "Refusé : " + error.message : "Noté : " + v.q); if (!error) $("#md").classList.remove("on"); draw();
+    });
+  },
+  async tst(b) { const w = b.dataset.w, go = async c => { const { error } = await sb.rpc("tache_statut", { p_id: +b.dataset.i, p_statut: w, p_comm: c || null }); toast(error ? "Refusé : " + error.message : "Tâche : " + TS[w]); if (!error) { $("#md").classList.remove("on"); if (TFL && TFL != w) TFL = ""; } draw(); }; if (w == "annule") ask("Motif d’annulation", [{ k: "c", l: "Motif", r: 1 }], v => go(v.c)); else go(); },
   temp(b) {
     const id = +b.dataset.i, t = TK.find(x => x.id == id);
     ask("Signaler un empêchement", [{ k: "x", l: "Empêchement ou contrainte (ce qui bloque, depuis quand, ce dont vous avez besoin)", t: "ta", r: 1 }], async v => {
@@ -1392,7 +1430,7 @@ const ACT = {
     const NT = { info: "Information", clarification: "Question / clarification", justification: "Justification", compte_rendu: "Compte rendu", empechement: "Empêchement / contrainte" };
     $("#mf").innerHTML = `<div class="row"><h2>${E(t.titre)}</h2><span class="bd ${TB[t.statut]}">${TS[t.statut]}</span></div><div class="m">${E(t.ref || "sans n° (tâche système)")} · ${t.categorie ? E(t.categorie) + " · " : ""}jour ${fd(t.jour)}${t.echeance ? " · délai " + dmy(t.echeance) + " " + hm(new Date(t.echeance)) : t.heure ? " · " + E(t.heure) : ""}${t.lieu ? " · 📍 " + E(t.lieu) : ""}${t.assigne_nom ? " · 👤 " + E(t.assigne_nom) : t.cible ? " · 👥 " + E(t.cible) : ""} · créée par ${E(t.cree_nom || "")}</div>${t.description ? `<div>${E(t.description)}</div>` : ""}${t.commentaire ? `<div class="m">« ${E(t.commentaire)} »</div>` : ""}
 <h2 style="margin-top:6px">Échanges</h2>${(N || []).map(n => `<div class="li" style="align-items:flex-start"><div><b>${NT[n.type]}</b><div>${E(n.texte)}</div><div class="m">${E(n.auteur_nom || "")}</div></div><div class="m" style="white-space:nowrap">${dmy(n.created_at)} ${hm(new Date(n.created_at))}</div></div>`).join("") || '<div class="m">Aucun échange.</div>'}
-<div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button type="button" class="btn p" data-a="tnote" data-i="${id}">+ Info / question / justification</button>${t.statut == "a_faire" ? `<button type="button" class="btn" data-a="tst" data-w="en_cours" data-i="${id}">Démarrer</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button type="button" class="btn w" data-a="tst" data-w="fait" data-i="${id}">Terminé</button>` : ""}</div>
+<div class="row" style="justify-content:flex-start;gap:6px;margin-top:6px"><button type="button" class="btn p" data-a="tnote" data-i="${id}">+ Info / question / justification</button>${t.statut == "a_faire" ? `<button type="button" class="btn" data-a="tst" data-w="en_cours" data-i="${id}">Démarrer</button>` : ""}${t.statut == "en_cours" && String(t.modele || "").startsWith("psm:") ? `<button type="button" class="btn" data-a="tind" data-i="${id}">Indisponible</button>` : ""}${t.statut == "a_faire" || t.statut == "en_cours" ? `<button type="button" class="btn w" data-a="tst" data-w="fait" data-i="${id}">Terminé</button>` : ""}</div>
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
     $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = ev => ev.preventDefault(); $("#md").classList.add("on"); },
   tnote(b) { const id = +b.dataset.i; ask("Ajouter un message sur la tâche", [{ k: "t", l: "Nature", o: [["info", "Information / avancement"], ["clarification", "Question : information manquante ou clarification"], ["justification", "Justification (retard ou obstacle)"]] }, { k: "x", l: "Message (dictée possible)", t: "ta", r: 1 }], async v => { const { error } = await sb.from("taches_notes").insert({ tache_id: id, type: v.t, texte: v.x.trim(), auteur_nom: ME.nom }); toast(error ? "Refusé : " + error.message : "Message enregistré"); await draw(); ACT.tfiche({ dataset: { i: id } }); }); },
@@ -2126,11 +2164,12 @@ const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "sh
 let BOOT = Promise.resolve(), DG = 0, SHOWN = "", SXA = null, SXS = null;
 const VC = {}, SXC = {}, LDG = `<div class="ld"><i></i>Chargement…</div>`;
 const SXOPEN = new Set((() => { try { return JSON.parse(localStorage.getItem("sxo") || "[]"); } catch (e) { return []; } })());
+SXOPEN.delete("vols"); /* les vols s'ouvrent uniquement au clic */
 const sxSave = () => { try { localStorage.setItem("sxo", JSON.stringify([...SXOPEN])); } catch (e) { } };
 const sxHost = k => { const h = SXH[k], ok = ACC[ME.role] || []; if (k == "shr") return ok.includes("shift") && SHRR.includes(ME.role) ? "shift" : null; return h && ok.includes(h) && ok.includes(k) ? h : null; };
 V.shr = async () => { SHO = SHV; return await shiftRep(); };
-function sxCards(h) {
-  return Object.keys(SXH).filter(k => sxHost(k) == h).map(k => { const o = SXOPEN.has(k); return `<section class="sx ${o ? "on" : ""}" data-sx="${k}"><button class="sxh" data-a="sxt" data-k="${k}" aria-expanded="${o}">${ic(IC[k] ? k : "ir")}<span>${SXL[k] || P[k][1]}</span><i class="nbd" data-b="${k}"></i><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><div class="sxb" id="sx-${k}">${o ? SXC[k] || LDG : ""}</div></section>`; }).join("");
+function sxCards(h, only, sauf) {
+  return Object.keys(SXH).filter(k => sxHost(k) == h && (!only || only.includes(k)) && (!sauf || !sauf.includes(k))).map(k => { const o = SXOPEN.has(k); return `<section class="sx ${o ? "on" : ""}" data-sx="${k}"><button class="sxh" data-a="sxt" data-k="${k}" aria-expanded="${o}">${ic(IC[k] ? k : "ir")}<span>${SXL[k] || P[k][1]}</span><i class="nbd" data-b="${k}"></i><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><div class="sxb" id="sx-${k}">${o ? SXC[k] || LDG : ""}</div></section>`; }).join("");
 }
 function post(root) {
   lab(root); if (root.querySelector("#sl")) sigList(); if (root.querySelector("#irl")) irList();
@@ -2177,23 +2216,31 @@ async function shell() {
   $("#pg").addEventListener("click", e => { if (navOpen()) { e.preventDefault(); e.stopPropagation(); navClose(); } }, true);
   $("#mn").addEventListener("scroll", () => $("header").classList.toggle("st", $("#mn").scrollTop > 40), { passive: true });
   $("#rg").onclick = () => ACT.rgl();
-  SHOWN = ""; BOOT = Promise.all([loadAG(), loadST(), loadAL()]); BOOT.catch(() => { }); setInterval(() => { loadST(); loadAL(); }, 60000);
+  SHOWN = ""; BOOT = Promise.all([loadAG(), loadST(), loadAL(), loadCFG().catch(() => { })]); BOOT.catch(() => { }); setInterval(() => { loadST(); loadAL(); }, 60000);
   sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(2); })
     .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(2); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
   draw(); ntInit();
 }
 Object.assign(ACT, {
+  async relance(b) {
+    const sv = b.dataset.s, nom = b.dataset.n; b.disabled = true;
+    const { data, error } = await sb.rpc("relancer_chefs", { p_service: sv, p_motif: `Rapport de situation du staff ${nom} non reçu` });
+    b.disabled = false; toast(error ? "Relance impossible : " + error.message : `Relance envoyée à ${data} chef(s) d’équipe ${nom}`);
+  },
   vreg() { VM = "reg"; NAV = "vols"; draw(); scrollTo(0, 0); },
   vprog() { VM = "prog"; draw(); scrollTo(0, 0); },
   virr() { VM = "irr"; draw(); scrollTo(0, 0); },
-  vrj(b) { VRJ = +b.dataset.i; draw(); },
+  vrj(b) { VRJ = +b.dataset.i; if (VRW == "passes") VRW = "shift"; draw(); },
+  vrw(b) { VRW = b.dataset.k; draw(); },
+  vrwm() { VRWM = true; draw(); },
   vrf(b) { VRF = b.dataset.k; draw(); },
   vri(b) { VRI = b.dataset.k; draw(); },
   rgvreg(b) { VREGON.set(b.dataset.k); ACT.rgl(); if (NAV == "vols") draw(); },
   async vrcopy() {
-    const R = await vregData(), D = R.days[VRJ] || R.days[0];
-    const T = [`Vols réguliers NKC — ${JSEML[D.w]} ${dmy(D.d)} (${D.mv} vols)`, "Programme indicatif (heures prévues), sous réserve de changements : à confirmer avec le programme du jour.", ""];
-    vGroup(D.it, "heure")[0][1].forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.t1) + " → " + (x.e2 ? "≈" : "") + hhm(x.t2) + (x.t2 >= 1440 ? " (J+1)" : "") : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.md)}  ${x.num}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
+    if (!VRLAST) return toast("Rien à copier");
+    const L = vGroup(VRLAST.its, "heure")[0][1], n = L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
+    const T = [`Vols réguliers NKC — ${VRLAST.lab} du ${JSEML[VRLAST.d.getUTCDay()]} ${dmy(VRLAST.d)} (${n} vols)`, "Programme indicatif (heures prévues), sous réserve de changements : à confirmer avec le programme du jour.", ""];
+    L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${x.num}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
     try { await navigator.clipboard.writeText(T.join("\n")); toast("Programme copié"); } catch (e) { toast("Copie impossible sur cet appareil"); }
   }
 });
