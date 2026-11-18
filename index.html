@@ -68,6 +68,7 @@ label{font-size:12px;font-weight:600;display:block;margin-bottom:4px}
 header{position:relative}body.ldg header{overflow:hidden}body.ldg header::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:35%;background:#ff7a6b;animation:pgb 1s ease-in-out infinite}@keyframes pgb{from{transform:translateX(-100%)}to{transform:translateX(290%)}}
 .li.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:start}
 .dsl{display:flex;flex-direction:column;gap:4px;margin-top:4px}.dsg{display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer}.dsg:hover,.dsg:active{background:var(--pl)}
+#vuebar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#f59e0b;color:#1f1300;padding:8px 16px;font-size:13px;font-weight:600}#vuebar .btn{min-height:32px;padding:5px 10px}
 .svl{border-top:1px solid var(--b);padding:8px 0}.svt{font-size:12px;font-weight:800;color:var(--p);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}.svg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.tsc table{min-width:520px}.sxb>.card:first-child>.row:first-child>h2{display:none}.card{min-width:0}
 .tcd{cursor:pointer;transition:transform .2s var(--sp),box-shadow .2s}.tcd:hover{box-shadow:0 0 0 2px var(--p)}
@@ -1758,6 +1759,7 @@ ${rgB("ntpar", "🎛 Paramètres des notifications")}
 <div style="margin-top:10px"><b>Notifications push (sur le téléphone)</b><div class="m">${E(pe.txt)}</div>${pe.ok ? (pe.on ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn" data-a="nttest">Envoyer un test</button><button type="button" class="btn" data-a="ntoff">Désactiver sur cet appareil</button></div>` : `<button type="button" class="btn p" data-a="nton" style="margin-top:6px">Activer les notifications push</button>`) : ""}</div></div>
 <div class="card"><h2>🎨 Affichage</h2><div class="m">Thème</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${tb("bleu", "Bleu EPS")}${tb("clair", "Clair")}${tb("nuit", "🌙 Mode nuit")}</div><div class="m">Taille du texte</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${zb(1, "Normale")}${zb(1.1, "Grande")}${zb(1.2, "Très grande")}</div></div>
 <div class="card"><h2>✈️ Vols</h2><div class="m">Bouton « Vols réguliers » dans le volet Vols (programme indicatif de la semaine)</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${[["1", "Affiché"], ["0", "Masqué"]].map(([v, l]) => `<button type="button" class="btn ${VREGON.get() == v ? "p" : ""}" data-a="rgvreg" data-k="${v}">${l}</button>`).join("")}</div></div>
+${vueAutorise() ? `<div class="card"><h2>👁 Voir comme</h2><div class="m">Afficher l’app comme un superviseur ou un chef d’équipe (lecture seule).</div>${VUE ? `<div class="m">En cours : <b>${E(VUE.nom)}</b></div><button type="button" class="btn p" data-a="vuequit">Revenir à mon compte</button>` : rgB("vuechoix", "👁 Choisir un compte à consulter")}</div>` : ""}
 <div class="card"><h2>📱 Application</h2>${DIP ? rgB("rgins", "⬇️ Installer EPS OPS sur cet appareil") : ""}${rgB("rgprof", "👤 Mon profil et mot de passe")}${rgB("rgrel", "↻ Actualiser l’application")}</div>
 ${rgB("rglo", "⎋ Se déconnecter", "d")}`);
   },
@@ -2189,6 +2191,47 @@ Object.assign(ACT, {
       async v => { const { error } = await sb.rpc("agent_presentation", { p_matricule: m, p_autorise: v.r == "1", p_note: v.n || null }); toast(error ? "Refusé : " + error.message : "Confirmation envoyée aux RH et au responsable des opérations"); }); },
   inlev(b) { const m = b.dataset.m; ask("Lever l’interdiction de prise de service", [{ k: "n", l: "Décision / motif (ex. entretien du 18/11, reprise autorisée)", r: 1 }],
     async v => { const { error } = await sb.rpc("agent_lever_interdit", { p_matricule: m, p_note: v.n }); if (error) return toast("Refusé : " + error.message); await loadAG(); toast("Interdiction levée : encadrement prévenu"); draw(); }); }
+});
+
+/* ---------- « Voir comme » : compte du responsable des opérations uniquement, en lecture seule ---------- */
+const VUE_UID = "ecb07109-40c1-48d8-bf91-50166dea6212", VUE_ROLES = ["superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const VUE_RPC_LECTURE = ["collaborateurs", "mon_profil", "matricules_inconnus", "analyser_chevauchements", "vapid_public"];
+let VUE = null, ME0 = null, UID0 = null;
+const vueMsg = () => "Lecture seule : vous consultez le compte de " + (VUE ? VUE.nom : "");
+const vueErr = () => ({ data: null, error: { message: vueMsg() } });
+const vueChaine = () => { const p = new Proxy(function () { }, { get: (t, k) => k == "then" ? (ok, ko) => Promise.resolve(vueErr()).then(ok, ko) : () => p, apply: () => p }); return p; };
+/* toute écriture est bloquée tant qu'on consulte un autre compte */
+(() => {
+  const f = sb.from.bind(sb), r = sb.rpc.bind(sb), st = sb.storage.from.bind(sb.storage), fi = sb.functions.invoke.bind(sb.functions);
+  sb.from = t => { const q = f(t); if (!VUE) return q; ["insert", "update", "upsert", "delete"].forEach(m => { q[m] = () => { toast(vueMsg()); return vueChaine(); }; }); return q; };
+  sb.rpc = (n, a, o) => { if (VUE && !VUE_RPC_LECTURE.includes(n)) { toast(vueMsg()); return vueChaine(); } return r(n, a, o); };
+  sb.storage.from = b => { const x = st(b); if (!VUE) return x; ["upload", "copy", "remove", "move", "update"].forEach(m => { x[m] = async () => { toast(vueMsg()); return vueErr(); }; }); return x; };
+  sb.functions.invoke = (n, o) => VUE && n != "ia-texte" ? (toast(vueMsg()), Promise.resolve(vueErr())) : fi(n, o);
+})();
+const vueAutorise = () => (ME0 ? UID0 : UID) == VUE_UID;
+function vueRaz() {
+  Object.keys(VC).forEach(k => delete VC[k]); Object.keys(SXC).forEach(k => delete SXC[k]); SHOWN = ""; SXA = null;
+  const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
+  const un = $("#un"); if (un) un.textContent = ME.nom;
+  let b = $("#vuebar"); if (VUE && !b) { b = document.createElement("div"); b.id = "vuebar"; $("#pg").insertBefore(b, $("#mn")); } if (!VUE && b) b.remove();
+  if (VUE) b.innerHTML = `<span>👁 Vue du compte de <b>${E(VUE.nom)}</b> · ${E(RL[VUE.role] || VUE.role)} · lecture seule</span><button type="button" class="btn" data-a="vuequit">Revenir à mon compte</button>`;
+  draw(1);
+}
+async function vueChoisir() {
+  if (!vueAutorise()) return;
+  const { data, error } = await sb.from("profiles").select("id,nom,role,matricule").in("role", VUE_ROLES).eq("actif", true).order("nom");
+  if (error) return toast("Liste indisponible : " + error.message);
+  const L = data || [];
+  mdOpen(`<div class="row"><h2>👁 Voir comme…</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m">L’app s’affiche comme pour la personne choisie : menus, Mon shift, tâches, alertes. Lecture seule : aucune action n’est enregistrée. Les données restent celles auxquelles votre propre compte a accès.</div>
+${VUE_ROLES.map(r => { const G = L.filter(p => p.role == r); return G.length ? `<div><div class="m" style="font-weight:700;margin:6px 0 4px">${E(RL[r] || r)}</div>${G.map(p => `<button type="button" class="dsg" data-a="vueset" data-i="${p.id}"><b>${E(p.nom)}</b><span class="m">${p.matricule ? "ID " + E(p.matricule) : ""}</span></button>`).join("")}</div>` : ""; }).join("")}`);
+  $("#no").onclick = () => $("#md").classList.remove("on");
+  vueChoisir.L = L;
+}
+Object.assign(ACT, {
+  vuechoix() { vueChoisir(); },
+  vueset(b) { const p = (vueChoisir.L || []).find(x => x.id == b.dataset.i); if (!p || !vueAutorise()) return; if (!ME0) { ME0 = ME; UID0 = UID; } VUE = p; ME = { ...ME0, id: p.id, nom: p.nom, role: p.role, matricule: p.matricule, must_change: false }; UID = p.id; $("#md").classList.remove("on"); toast("Vue de " + p.nom + " (lecture seule)"); vueRaz(); },
+  vuequit() { if (!ME0) return; ME = ME0; UID = UID0; VUE = null; ME0 = null; UID0 = null; toast("Retour à votre compte"); vueRaz(); }
 });
 
 /* Onglets intégrés comme cartes dépliables dans une page hôte */
