@@ -476,7 +476,14 @@ const CIE4 = { MAI: "Mauritania Airlines", RAM: "Royal Air Maroc", ETH: "ASKY Ai
 const vIata = n => /^([A-Z]{2}|[A-Z]\d|\d[A-Z])\d{1,4}[A-Z]?$/.test(n);
 const vAlias = n => { n = nvol(n); const m = n.match(/^SIV(\d+)$/); return m ? "D0" + m[1] : n; };
 const vCie = v => { const n = vAlias(v.numero); return (vIata(n) && CIE2[n.slice(0, 2)]) || CIE4[v.compagnie] || v.compagnie || "—"; };
-const vCargo = v => /^D0/.test(vAlias(v.numero)) || ["SET", "SIV", "DHK", "DHX", "BCS", "FDX", "UPS"].includes(v.compagnie);
+const vCargo = v => /^(D0|WT)/.test(vAlias(v.numero)) || ["SET", "SIV", "SWT", "DHK", "DHX", "BCS", "FDX", "UPS"].includes(v.compagnie);
+/* vols cargo : nom de la compagnie devant le numéro (DHL D0104, Swiftair WT193) */
+const vCpx = v => { const n = vAlias(v.numero || ""); return /^D0/.test(n) || ["SET", "SIV"].includes(v.compagnie) ? "DHL" : /^WT/.test(n) || v.compagnie == "SWT" ? "Swiftair" : vCargo(v) ? vCie(v) : ""; };
+const vLab = (x, n) => (x.pfx ? x.pfx + " " : "") + (n == null ? x.num : n);
+const vNum = v => { const p = vCpx(v); return (p ? p + " " : "") + (v.numero || ""); };
+/* retours confirmés par l'exploitation : AH4014 → AH4015, et plus généralement Air Algérie N (pair) → N+1 */
+const VRET = { AH4014: "AH4015" };
+const vRet = n => { if (VRET[n]) return VRET[n]; const m = /^AH(\d+)$/.exec(n || ""); return m && +m[1] % 2 == 0 ? "AH" + (+m[1] + 1) : null; };
 /* vol spécial : privé, État, affaires, navette MSS, indicatif technique, ou vol commercial d'une compagnie absente du programme régulier */
 const vSpecial = (v, R) => { if (vCat(v) != "com") return true; if (!R) return false; const n = vAlias(v.numero); return !R.regN.has(n) && !R.regP.has(n.slice(0, 2)); };
 const vMAI = v => /^L6/.test(vAlias(v.numero)) || v.compagnie == "MAI";
@@ -553,6 +560,18 @@ async function vregData() {
       for (const off of [0, 1]) { const dl = LG[((w + off) % 7) + "|" + dk]; if (dl && (off ? dl.med < a.med : dl.med > a.med) && (a.nd >= 2 || dl.nd >= 2)) CAND.push({ a, dl, off, g: null, sc: Math.min(a.nd, dl.nd) }); }
     });
   });
+  /* rotations confirmées (AH4014 → AH4015…) : toujours regroupées, même si le départ n'a pas été relevé */
+  const FRT = new Set();
+  Object.values(LG).filter(g => g.sens == "A" && g.nd >= 2 && vRet(g.n)).forEach(a => {
+    const rn = vRet(a.n), rk = rn + "|D", gs = [];
+    a.occ.forEach(o => { const d = O.find(x => x.n == rn && x.sens == "D" && x.d > o.d && x.d - o.d < 16 * H); if (d) gs.push(Math.round((d.d - o.d) / 6e4)); });
+    const gap = gs.length ? vMed(gs) : 60;
+    let dl = [[a.w, 0], [(a.w + 1) % 7, 1]].map(([w, off]) => ({ g: LG[w + "|" + rk], off })).find(z => { if (!z.g || used.has(z.g.id)) return false; const dm = z.g.med + z.off * 1440 - a.med; return dm > 0 && dm <= 360; });
+    /* le départ est calé sur l'arrivée (STA + escale habituelle) : son Flight Allocation est cherché à cette date */
+    const m = a.med + gap, off = m >= 1440 ? 1 : 0, f = dl && dl.g;
+    dl = { off, g: { id: f ? f.id : "F|" + a.w + "|" + rk, w: (a.w + off) % 7, k: rk, n: rn, sens: "D", occ: f ? f.occ : [], nd: f ? f.nd : 0, med: m % 1440, min: m % 1440, max: m % 1440, pd: (f && f.pd) || a.pd, cie: a.cie, cargo: a.cargo, mai: false, typ: (f && f.typ) || a.typ } };
+    used.add(a.id); used.add(dl.g.id); FRT.add(rn); (ROT[a.w] = ROT[a.w] || []).push({ a, d: dl.g, off: dl.off, g: gap });
+  });
   CAND.sort((x, y) => y.sc - x.sc).forEach(({ a, dl, off, g }) => {
     if (used.has(a.id) || used.has(dl.id)) return;
     used.add(a.id); used.add(dl.id); (ROT[a.w] = ROT[a.w] || []).push({ a, d: dl, off, g });
@@ -569,13 +588,13 @@ async function vregData() {
       /* STD estimée incohérente avec l'escale habituelle du même avion : on retient STA + durée d'escale observée */
       if (t2 - t1 > 6 * 60 || (sd.src == "est" && g && Math.abs(t2 - t1 - g) > 90)) t2 = t1 + Math.round((g || 75) / 5) * 5;
       const obs = [sa.src == "est" || sd.src == "est" ? `${sa.src == "est" && sd.src == "est" ? "STA et STD estimées" : sa.src == "est" ? "STA estimée" : "STD estimée"} : pas encore de Flight Allocation pour ce vol` : ""];
-      D.it.push({ typ: "R", t1, t2, e1: sa.src == "est", e2: sd.src == "est", sens2: "R", md: t1, k0: t1, num: a.n == d.n ? a.n : a.n + " / " + d.n, cie: a.cie, route: `${ap(a.pd)} → NKC → ${ap(d.pd)}`, cargo: a.cargo || d.cargo, appareil: a.typ || d.typ, obs: obs.filter(Boolean) });
+      D.it.push({ typ: "R", t1, t2, e1: sa.src == "est", e2: sd.src == "est", sens2: "R", md: t1, k0: t1, num: a.n == d.n ? a.n : a.n + " / " + d.n, pfx: a.cargo || d.cargo ? vCpx(a.occ[0] || d.occ[0] || { numero: a.n }) : "", cie: a.cie, route: `${ap(a.pd)} → NKC → ${ap(d.pd)}`, cargo: a.cargo || d.cargo, appareil: a.typ || d.typ, obs: obs.filter(Boolean) });
     });
-    Object.values(LG).filter(g => g.w == D.w && !used.has(g.id) && g.nd >= 2).forEach(g => {
+    Object.values(LG).filter(g => g.w == D.w && !used.has(g.id) && g.nd >= 2 && !(g.sens == "D" && FRT.has(g.n))).forEach(g => {
       const sg = sched(g), obs = [sg.src == "est" ? `${g.sens == "A" ? "STA" : "STD"} estimée : pas encore de Flight Allocation pour ce vol` : ""];
       if (g.sens == "A" && !g.mai && Object.entries(PG).some(([pk, c]) => c >= 3 && pk.startsWith(g.k + ">"))) obs.push("départ du même avion non relevé ce jour (rotation habituelle)");
       if (g.sens == "A") { const ns = Object.values(NS[g.id] || {}).sort((x, y) => y.c - x.c)[0]; if (ns && ns.c >= 2) obs.push(`même avion repart en ${ns.n}${ns.off ? " le lendemain (night-stop)" : ""}`); }
-      D.it.push({ typ: g.sens, t1: g.sens == "A" ? sg.m : null, t2: g.sens == "D" ? sg.m : null, e1: g.sens == "A" && sg.src == "est", e2: g.sens == "D" && sg.src == "est", md: sg.m, k0: sg.m, num: g.n, cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
+      D.it.push({ typ: g.sens, t1: g.sens == "A" ? sg.m : null, t2: g.sens == "D" ? sg.m : null, e1: g.sens == "A" && sg.src == "est", e2: g.sens == "D" && sg.src == "est", md: sg.m, k0: sg.m, num: g.n, pfx: g.cargo ? vCpx(g.occ[0]) : "", cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
     });
     D.mv = D.it.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
     D.it.forEach(x => { const [na, nd] = x.typ == "R" ? (x.num.includes(" / ") ? x.num.split(" / ") : [x.num, x.num]) : [x.num, x.num];
@@ -583,8 +602,8 @@ async function vregData() {
       if (x.t2 != null) SIX[((D.w + (x.t2 >= 1440 ? 1 : 0)) % 7) + "|" + nd + "|D"] = (x.e2 ? "≈" : "") + hhm(x.t2); });
   });
   /* vols spéciaux : privés, navettes, affrètements, et vols commerciaux vus une seule fois */
-  const IR = O.filter(o => o.cat != "com" || (!used.has(o.w + "|" + o.k) && (LG[o.w + "|" + o.k] || {}).nd < 2)).map(o => ({ ...o, cat: o.cat == "com" ? "occ" : o.cat })).sort((x, y) => y.d - x.d);
-  const regN = new Set(Object.values(LG).filter(g => g.nd >= 2 || used.has(g.id)).map(g => g.n)), regP = new Set([...regN].map(n => n.slice(0, 2)));
+  const IR = O.filter(o => o.cat != "com" || (!used.has(o.w + "|" + o.k) && (LG[o.w + "|" + o.k] || {}).nd < 2 && !(o.sens == "D" && FRT.has(o.n)))).map(o => ({ ...o, cat: o.cat == "com" ? "occ" : o.cat })).sort((x, y) => y.d - x.d);
+  const regN = new Set(Object.values(LG).filter(g => g.nd >= 2 || used.has(g.id)).map(g => g.n).concat([...FRT])), regP = new Set([...regN].map(n => n.slice(0, 2)));
   return VRD = { t: Date.now(), since, s0, d0, lun, days, IR, n: O.length, regN, regP, SIX, nsta: Object.keys(SCH).length };
 }
 
@@ -615,9 +634,9 @@ async function vregView() {
   const mvC = L => L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
   const nR = WI.filter(x => x.typ == "R").length, nA = WI.filter(x => x.t1 != null).length, nD = WI.filter(x => x.t2 != null).length;
   let nx = "";
-  if (nowA >= W[0] && nowA < W[1] + 1440) { const ev = []; WI.forEach(x => { if (x.t1 != null) ev.push([x.a0, x.num.split(" / ")[0], "arrivée"]); if (x.t2 != null) ev.push([x.a1, x.num.split(" / ").pop(), "départ"]); }); const n = ev.filter(e => e[0] >= nowA).sort((a, b) => a[0] - b[0])[0]; if (n) { const dm = n[0] - nowA; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} à <b>${hhm(n[0] % 1440)}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
+  if (nowA >= W[0] && nowA < W[1] + 1440) { const ev = []; WI.forEach(x => { if (x.t1 != null) ev.push([x.a0, vLab(x, x.num.split(" / ")[0]), "arrivée"]); if (x.t2 != null) ev.push([x.a1, vLab(x, x.num.split(" / ").pop()), "départ"]); }); const n = ev.filter(e => e[0] >= nowA).sort((a, b) => a[0] - b[0])[0]; if (n) { const dm = n[0] - nowA; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} à <b>${hhm(n[0] % 1440)}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
   const tm = (a, e, cl) => `<span class="${cl}">${e ? "≈" : ""}${hhm(a % 1440)}${Math.floor(a / 1440) > Math.floor(W[0] / 1440) ? "<sup>+1</sup>" : ""}</span>`;
-  const row = x => `<div class="vrr ${x.typ}${x.a1 < nowA ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? tm(x.a0, x.e1, "a") : ""}${x.t2 != null ? tm(x.a1, x.e2, "d") : ""}</div><div class="vrv"><b>${E(x.num)}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${E(x.cie)} · ${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}${live(x)}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
+  const row = x => `<div class="vrr ${x.typ}${x.a1 < nowA ? " past" : ""}"><i></i><div class="vrt">${x.t1 != null ? tm(x.a0, x.e1, "a") : ""}${x.t2 != null ? tm(x.a1, x.e2, "d") : ""}</div><div class="vrv"><b>${E(vLab(x))}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${x.pfx ? "" : E(x.cie) + " · "}${E(x.route)}${x.appareil ? " · " + E(x.appareil) : ""}</div>${x.obs.length ? `<div class="vro">${E(x.obs.join(" · "))}</div>` : ""}${live(x)}</div><span class="vrb">${{ R: "Rot", A: "Arr", D: "Dép" }[x.typ]}</span></div>`;
   const list = vGroup(its, VTRR.get()).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${mvC(xs)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier sur cette période.</div>`;
   const chip = (k, l) => `<button type="button" class="btn${VRF == k ? " p" : ""}" data-a="vrf" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
   const wb = (k, l) => `<button type="button" class="btn${VRW == k ? " p" : ""}" data-a="vrw" data-k="${k}" style="padding:6px 10px;min-height:0">${l}</button>`;
@@ -637,7 +656,7 @@ function vTimeline(L, w0, w1, nowA) {
   let g = "";
   const step = span > 1440 ? 360 : 180;
   for (let a = Math.ceil(w0 / step) * step; a < w1; a += step) if (a > w0) g += `<i class="vgl${a % 360 ? "" : " g6"}" style="left:${P(a)}"></i>`;
-  L.forEach(x => { const tip = E(`${x.num} · ${[x.t1 != null ? x.a0 : null, x.t2 != null ? x.a1 : null].filter(v => v != null).map(v => hhm(v % 1440)).join(" → ")}`); g += x.typ == "R" ? `<b class="vmk vmR" style="left:${P(x.a0)};width:calc(${P(x.a1)} - ${P(x.a0)})" title="${tip}"></b>` : `<b class="vmk vm${x.typ}" style="left:${P(x.a0)}" title="${tip}"></b>`; });
+  L.forEach(x => { const tip = E(`${vLab(x)} · ${[x.t1 != null ? x.a0 : null, x.t2 != null ? x.a1 : null].filter(v => v != null).map(v => hhm(v % 1440)).join(" → ")}`); g += x.typ == "R" ? `<b class="vmk vmR" style="left:${P(x.a0)};width:calc(${P(x.a1)} - ${P(x.a0)})" title="${tip}"></b>` : `<b class="vmk vm${x.typ}" style="left:${P(x.a0)}" title="${tip}"></b>`; });
   if (nowA >= w0 && nowA <= w1) g += `<i class="vnw" style="left:${P(nowA)}"></i>`;
   const labs = []; for (let a = w0; a <= w1; a += span > 1440 ? 720 : 360) labs.push(`<span style="left:${P(a)}">${p2(Math.floor(a % 1440 / 60))}h</span>`);
   return `<div class="vtl"><div class="vtb">${g}</div><div class="vtx">${labs.join("")}</div></div>`;
@@ -674,7 +693,7 @@ V.vols = async () => {
   const { data: ALC } = await sb.from("allocation_vol").select("*").gte("jour", ymd(d.getTime() - 864e5)).lte("jour", ymd(f.getTime() + 864e5));
   const alo = v => (ALC || []).find(x => x.sens == v.sens && nvol(x.numero_brut || x.numero) == nvol(v.numero) && x.jour == ymd(v.heure_prevue));
   const num = n => +((String(n).match(/(\d+)\s*$/) || [])[1]), used = new Set(), RW = [];
-  L.forEach(a => { if (used.has(a.id) || a.sens != "A" || vMAI(a)) return; const c = L.find(x => x.sens == "D" && !used.has(x.id) && !vMAI(x) && t(x) > t(a) && t(x) - t(a) < 8 * H && ((a.rotation && a.rotation == x.rotation) || (a.immat && a.immat == x.immat) || (!a.rotation && !x.rotation && !a.immat && !x.immat && a.compagnie && a.compagnie == x.compagnie && Math.abs(num(a.numero) - num(x.numero)) <= 1))); if (c) { used.add(a.id); used.add(c.id); RW.push({ r: [a, c], k: t(a) }); } });
+  L.forEach(a => { if (used.has(a.id) || a.sens != "A" || vMAI(a)) return; const rn = vRet(vAlias(a.numero)), c = (rn && L.find(x => x.sens == "D" && !used.has(x.id) && vAlias(x.numero) == rn && t(x) > t(a) && t(x) - t(a) < 8 * H)) || L.find(x => x.sens == "D" && !used.has(x.id) && !vMAI(x) && t(x) > t(a) && t(x) - t(a) < 8 * H && ((a.rotation && a.rotation == x.rotation) || (a.immat && a.immat == x.immat) || (!a.rotation && !x.rotation && !a.immat && !x.immat && a.compagnie && a.compagnie == x.compagnie && Math.abs(num(a.numero) - num(x.numero)) <= 1))); if (c) { used.add(a.id); used.add(c.id); RW.push({ r: [a, c], k: t(a) }); } });
   L.forEach(v => { if (!used.has(v.id)) RW.push({ r: [v], k: t(v) }); }); RW.sort((x, y) => x.k - y.k);
   const RWG = vGroup(RW.map(w => { const [a, b] = w.r, d0 = t(a); return { w, k0: d0.getTime(), md: d0.getUTCHours() * 60 + d0.getUTCMinutes(), cie: vCie(a), typ: b ? "R" : a.sens, cargo: vCargo(a) || (b && vCargo(b)) }; }), VTRI.get()).flatMap(([l, xs]) => [...(l ? [{ h: l, n: xs.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0) }] : []), ...xs.map(x => x.w)]);
   const etaOf = v => volEta(v, alo(v)), schOf = v => volSch(v, alo(v)), stv = v => volSt(v, alo(v), MS);
@@ -682,9 +701,9 @@ V.vols = async () => {
   return head("Vols & chevauchements", `Shift du ${dmy(d)} 08h → ${dmy(f)} 08h`, vspCard(SPX.length)) + `<div style="display:flex;gap:6px;flex-wrap:wrap">${tb(0, "Shift actuel")} ${tb(1, "Demain")} ${tb(2, "Après-demain")} ${VR.includes(ME.role) ? `<button class="btn w" data-a="vol">+ Vol</button> <label class="btn" title="Importer le Flight Allocation Report (xlsx)">📥 Flight allocation<input type="file" id="alf" accept=".xlsx,.xls" hidden></label>` : ""}${MSGR.includes(ME.role) ? ` <button class="btn" data-a="msgadd">+ PSM / LDM / CPM</button>` : ""}</div>`
 
     + vregBtn() + `<div class="card sc"><h2>Chevauchements détectés</h2><table><tr><th>Service</th><th>Période</th><th>Vols</th><th>Agents</th><th>Niveau</th></tr>${(ov || []).map(o => `<tr><td>${o.service == "cabine" ? "Nettoyage cabine" : "Manutention"}</td><td>${hm(o.debut)}–${hm(o.fin)}</td><td>${E(o.vols)}</td><td><b>${o.besoin}</b> (${o.nb_vols} vols)</td><td><span class="bd ${o.niveau == "alerte" ? "bad" : "warn"}">${o.niveau == "alerte" ? "Alerte" : "Surveillance"}</span></td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun chevauchement significatif.</td></tr>`}</table></div>
-<div class="card sc"><div class="row" style="flex-wrap:wrap;gap:8px"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2>${vTriSel("p", VTRI.get())}</div><table class="vt"><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RWG.map(w => { if (w.h) return `<tr class="vg"><td colspan="7">${E(w.h)} · ${w.n} vol${w.n > 1 ? "s" : ""}</td></tr>`; const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(v.numero)}</b></span>`; const tm = (v, inb) => { const e = etaOf(v), s0 = schOf(v); let x = e && e != s0 ? ` <span class="m">ETA ${e}</span>` : "";
+<div class="card sc"><div class="row" style="flex-wrap:wrap;gap:8px"><h2>Programme (${RW.length} lignes · ${L.length} vols)</h2>${vTriSel("p", VTRI.get())}</div><table class="vt"><tr><th>STA / STD</th><th>Vol</th><th>Type</th><th>Appareil</th><th>From → To</th><th>Statut</th><th>Messages</th></tr>${RWG.map(w => { if (w.h) return `<tr class="vg"><td colspan="7">${E(w.h)} · ${w.n} vol${w.n > 1 ? "s" : ""}</td></tr>`; const [a, b] = w.r, one = !b, st = [a, b].filter(Boolean).map(stv); const fl = v => `<span class="lk" data-a="volfiche" data-i="${E(v.id)}"><b>${E(vNum(v))}</b></span>`; const tm = (v, inb) => { const e = etaOf(v), s0 = schOf(v); let x = e && e != s0 ? ` <span class="m">ETA ${e}</span>` : "";
       if (inb && v.phase != "parti" && (inb.heure_reelle || inb.heure_estimee)) { const m = String(s0).match(/(\d{1,2}):(\d{2})/), d0 = new Date(v.heure_prevue); if (m) { d0.setUTCHours(+m[1], +m[2], 0, 0); if (d0 < new Date(inb.heure_prevue)) d0.setTime(d0.getTime() + 864e5); const etd = new Date(inb.heure_reelle || inb.heure_estimee).getTime() + 45 * 6e4; if (etd > d0.getTime() + 5 * 6e4) x += ` <span class="bd warn">ETD ≈ ${hh(etd)}</span>`; } }
-      return `<b>${s0}</b>${x}`; }; const bg = x => `<span class="bd ${x[1]}">${x[0]}</span>`; return `<tr class="vr" data-a="volfiche" data-i="${E(a.id)}" style="cursor:pointer"><td style="white-space:nowrap">${tm(a)}${one ? "" : `<div>→ ${tm(b, a)}</div>`}</td><td>${!one && nvol(a.numero) == nvol(b.numero) ? `<span class="lk" data-a="volfiche" data-i="${E(a.id)}" data-j="${E(b.id)}"><b>${E(a.numero)}</b></span>` : fl(a) + (one ? "" : "<div>" + fl(b) + "</div>")}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td style="white-space:nowrap">${one ? (a.sens == "A" ? ap(a.provenance_destination) + " → NKC" : "NKC → " + ap(a.provenance_destination)) : ap(a.provenance_destination) + " → NKC → " + ap(b.provenance_destination)}</td><td>${bg(st[0])}${one ? "" : "<div>" + bg(st[1]) + "</div>"}</td><td style="white-space:nowrap">${mchips(a, MS, b)}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
+      return `<b>${s0}</b>${x}`; }; const bg = x => `<span class="bd ${x[1]}">${x[0]}</span>`; return `<tr class="vr" data-a="volfiche" data-i="${E(a.id)}" style="cursor:pointer"><td style="white-space:nowrap">${tm(a)}${one ? "" : `<div>→ ${tm(b, a)}</div>`}</td><td>${!one && nvol(a.numero) == nvol(b.numero) ? `<span class="lk" data-a="volfiche" data-i="${E(a.id)}" data-j="${E(b.id)}"><b>${E(vNum(a))}</b></span>` : fl(a) + (one ? "" : "<div>" + fl(b) + "</div>")}</td><td>${one ? (a.sens == "A" ? "Arrivée" : "Départ") : "Rotation"}</td><td>${E(a.type_appareil || (b && b.type_appareil)) || "—"}</td><td style="white-space:nowrap">${one ? (a.sens == "A" ? ap(a.provenance_destination) + " → NKC" : "NKC → " + ap(a.provenance_destination)) : ap(a.provenance_destination) + " → NKC → " + ap(b.provenance_destination)}</td><td>${bg(st[0])}${one ? "" : "<div>" + bg(st[1]) + "</div>"}</td><td style="white-space:nowrap">${mchips(a, MS, b)}</td></tr>`; }).join("") || `<tr><td colspan="7" class="m">Aucun vol.</td></tr>`}</table></div>
 <div class="m"><b>Rotation</b> = arrivée et départ du même avion regroupés. <b>STA / STD</b> = heures prévues (STA arrivée, STD départ ; d’après le Flight Allocation importé s’il existe) ; <b>ETA</b> = heure estimée, si elle diffère. <b>Statut</b> : « Prévu » = vol programmé, pas encore opéré ; « Live » = vol en l’air (ETA actualisée via Flightradar24) ; « Atterri » / « Parti » avec l’heure réelle, et « en avance » / « en retard » si l’écart dépasse 15 min ; « Heure dépassée » = l’heure prévue d’arrivée ou de départ est passée sans confirmation (la recherche Flightradar24 continue) ; « En retard » = l’avion n’a pas décollé à l’heure de décollage prévue, ou son heure estimée dépasse de plus de 15 min l’heure prévue ; « Annulé ». <b>Messages</b> : touchez PSM / LDM / CPM pour ouvrir la fiche du vol. Codes aéroports : IATA.</div>`;
 };
 
@@ -969,7 +988,7 @@ V.tach = async () => {
     }
     it.sort((a, b) => a.t - b.t);
     const nb = it.filter(x => !x.opt), ok = nb.filter(x => x.done || x.rep).length;
-    return `<div class="card"><div class="row"><div><b>${E(v.numero)}</b> <span class="bd ${A ? "info" : "warn"}">${A ? "Arrivée" : "Départ"}</span> <span class="m">${A ? "ETA" : "ETD"} ${hm(new Date(v.heure_estimee || v.heure_prevue))}${v.heure_reelle ? " · réel " + hm(new Date(v.heure_reelle)) : ""}${v.immat ? " · " + E(v.immat) : ""}${v.provenance_destination ? " · " + (A ? "de " : "vers ") + E(v.provenance_destination) : ""}</span></div><span class="bd ${ok == nb.length && nb.length ? "ok" : "info"}">${ok}/${nb.length}</span></div>
+    return `<div class="card"><div class="row"><div><b>${E(vNum(v))}</b> <span class="bd ${A ? "info" : "warn"}">${A ? "Arrivée" : "Départ"}</span> <span class="m">${A ? "ETA" : "ETD"} ${hm(new Date(v.heure_estimee || v.heure_prevue))}${v.heure_reelle ? " · réel " + hm(new Date(v.heure_reelle)) : ""}${v.immat ? " · " + E(v.immat) : ""}${v.provenance_destination ? " · " + (A ? "de " : "vers ") + E(v.provenance_destination) : ""}</span></div><span class="bd ${ok == nb.length && nb.length ? "ok" : "info"}">${ok}/${nb.length}</span></div>
 <div class="sc"><table class="ft"><tr><th>Heure</th><th>Équipe</th><th>Action / alerte</th><th>État</th></tr>${it.map(x => { const st = x.btn ? (x.done ? `<button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-u="1">${x.done.etat == "indisponible" ? "Indisponible (annuler)" : "✓ Fait " + hm(new Date(x.done.fait_le))}</button>` : `<button class="btn ${x.late ? "w" : "p"}" data-a="chk" data-v="${v.id}" data-k="${x.k}">${x.late ? "En retard — valider" : "Valider"}</button>${x.un ? ` <button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-e="indisponible">Indisponible</button>` : ""}`) : x.rep ? `<span class="bd ok">Reçu ${hm(new Date(x.rep.recu_le))}</span> ${x.rep.pdf_url ? `<a class="lk" href="${E(x.rep.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}` : x.opt ? `<span class="m">non reçu (à vérifier si PMR)</span>` : x.t.getTime() < now ? `<span class="bd bad">Non reçu — en retard</span>` : `<span class="bd info">À venir</span>`; return `<tr><td><b>${hm(x.t)}</b></td><td><span class="bd ${x.sv == "N" ? "info" : "warn"}">${x.sv == "N" ? "Nettoyage" : "Manutention"}</span></td><td style="white-space:pre-line">${E(x.l)}</td><td>${st}</td></tr>`; }).join("")}</table></div></div>`;
   };
   return head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} tâches faites · ${VL.length} vol(s)`, `<button class="btn w" data-a="tnew">+ Tâche</button>`)
@@ -1480,7 +1499,7 @@ const ACT = {
     const dt = (n) => ({ [n + "[month]"]: String(d.getUTCMonth() + 1).padStart(2, "0"), [n + "[day]"]: String(d.getUTCDate()).padStart(2, "0"), [n + "[year]"]: d.getUTCFullYear() });
     const uw = mk("https://form.jotform.com/252936581138565", { airlinespan: air, flightNumber: v.numero, arrivalAndor: A ? "Arrival" : "Départure", ...dt("date19") });
     const uo = mk("https://form.jotform.com/261972772336567", { airlinespan: air, numVol: v.numero, appareil: v.type_appareil, arriveeEtou: A ? "Arrivée" : "Départ", ...dt("date") });
-    return `<h2>Vol ${E(v.numero)} · ${A ? "Arrivée" : "Départ"}</h2>
+    return `<h2>Vol ${E(vNum(v))} · ${A ? "Arrivée" : "Départ"}</h2>
 <div class="m">${E(v.compagnie) || ""} ${E(v.provenance_destination) ? "· " + E(v.provenance_destination) : ""} ${E(v.type_appareil) ? "· " + E(v.type_appareil) : ""} ${E(v.immat) ? "· " + E(v.immat) : ""}<br>${dmy(v.heure_prevue)} · <b>${A ? "STA" : "STD"} ${SCH}</b>${ETA ? ` · <b>${A ? "ETA" : "ETD"} ${ETA}</b>` : ""} <span class="bd ${SV[1]}">${E(SV[0])}</span>${v.verif_le ? ` <span class="m">(vérifié ${hm(v.verif_le)})</span>` : ""}</div>
 ${fcard}${acard}${mcard}
 <div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : vol, date, sens${air ? ", compagnie" : ""}. Les autres champs restent à compléter.</div></div>
@@ -2285,7 +2304,7 @@ Object.assign(ACT, {
     if (!VRLAST) return toast("Rien à copier");
     const L = vGroup(VRLAST.its, "heure")[0][1], n = L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
     const T = [`Vols réguliers NKC — ${VRLAST.lab} du ${JSEML[VRLAST.d.getUTCDay()]} ${dmy(VRLAST.d)} (${n} vols)`, "Programme indicatif (heures prévues), sous réserve de changements : à confirmer avec le programme du jour.", ""];
-    L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${x.num}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
+    L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${vLab(x)}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}${x.cargo ? " (cargo)" : ""}  ${x.route}`));
     try { await navigator.clipboard.writeText(T.join("\n")); toast("Programme copié"); } catch (e) { toast("Copie impossible sur cet appareil"); }
   }
 });
