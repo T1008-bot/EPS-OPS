@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vols réguliers NKC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Tableau d'escale : bandeau 7 jours collant, frise 24 h, liste dense par tranche horaire */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#14202c; --muted:#5d6b78; --line:#d9dfe5;
+  --sel:#14202c; --sel-ink:#ffffff;
+  --arr:#1f6fb2; --dep:#b8740a; --rot:#5b4fb3; --now:#d23c3c;
+  --arr-bg:#e3eef8; --dep-bg:#f8eedd; --rot-bg:#ebe8f8;
+  --f-disp:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1720; --panel:#17212c; --ink:#e6ecf2; --muted:#93a1ae; --line:#2a3744;
+  --sel:#e6ecf2; --sel-ink:#0f1720;
+  --arr:#5aa6e6; --dep:#e2a43c; --rot:#9d93ee; --now:#ff6b6b;
+  --arr-bg:#16314a; --dep-bg:#3b2c12; --rot-bg:#272447; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --panel:#17212c; --ink:#e6ecf2; --muted:#93a1ae; --line:#2a3744;
+  --sel:#e6ecf2; --sel-ink:#0f1720;
+  --arr:#5aa6e6; --dep:#e2a43c; --rot:#9d93ee; --now:#ff6b6b;
+  --arr-bg:#16314a; --dep-bg:#3b2c12; --rot-bg:#272447; color-scheme:dark;}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.35 var(--f-body);-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:0 12px 40px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:14px 4px 8px;flex-wrap:wrap}
+h1{font:700 22px/1 var(--f-disp);letter-spacing:.02em;margin:0;text-transform:uppercase}
+.sub{color:var(--muted);font-size:12px}
+.views{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.views button{border:0;background:none;color:var(--muted);font:600 12px var(--f-body);padding:5px 10px;border-radius:6px;cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink)}
+
+.strip{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 8px;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.d{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 2px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--f-body);position:relative}
+.d .w{font:600 11px var(--f-body);text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.d .n{font:700 22px/1 var(--f-disp);font-variant-numeric:tabular-nums}
+.d .dt{font-size:10px;color:var(--muted)}
+.d[aria-selected="true"]{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
+.d[aria-selected="true"] .w,.d[aria-selected="true"] .dt{color:var(--sel-ink);opacity:.75}
+.d.today::after{content:"";position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--now)}
+.d:focus-visible,.views button:focus-visible,.f button:focus-visible,.copy:focus-visible,.wk:focus-visible{outline:2px solid var(--arr);outline-offset:2px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.sum{padding:10px 12px 6px}
+.sumtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.big{font:700 26px/1 var(--f-disp)}
+.big small{font:500 13px var(--f-body);color:var(--muted);margin-left:6px}
+.kpis{display:flex;gap:6px;flex-wrap:wrap}
+.k{font:600 11px var(--f-body);padding:3px 7px;border-radius:20px}
+.k.r{background:var(--rot-bg);color:var(--rot)} .k.a{background:var(--arr-bg);color:var(--arr)} .k.dd{background:var(--dep-bg);color:var(--dep)}
+.next{margin-top:8px;font-size:12.5px;padding:6px 8px;border-radius:6px;background:var(--bg);display:flex;gap:6px;align-items:center}
+.next b{font-family:var(--f-mono)}
+.next .dot{width:7px;height:7px;border-radius:50%;background:var(--now);flex:none}
+.tlw{margin-top:8px;padding:0 2px}
+.tlb{position:relative;height:26px;border-radius:6px;background:var(--bg)}
+.tlw.sm .tlb{height:20px}
+.gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}.gl.g6{background:var(--muted);opacity:.35}
+.mk{position:absolute;top:50%;transform:translateY(-50%)}
+.mr{height:12px;border-radius:6px;background:var(--rot);opacity:.85;min-width:6px}.mr.nx{border-radius:6px 0 0 6px}
+.mA,.mD{width:11px;height:11px;margin-left:-5.5px;border-radius:50%;border:2px solid var(--panel)}.mA{background:var(--arr)}.mD{background:var(--dep)}
+.tlw.sm .mr{height:10px}.tlw.sm .mA,.tlw.sm .mD{width:10px;height:10px;margin-left:-5px}
+.nw{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--now);border-radius:1px}
+.tll{position:relative;height:14px;font:500 10px var(--f-mono);color:var(--muted)}
+.tll span{position:absolute;top:2px;transform:translateX(-50%)}.tll span:first-child{transform:none}.tll span:last-child{transform:translateX(-100%)}
+
+.tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:10px 0 6px;flex-wrap:wrap}
+.f{display:flex;gap:4px;flex-wrap:wrap}
+.f button{border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 12px var(--f-body);padding:4px 9px;border-radius:20px;cursor:pointer}
+.f button[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
+.copy{border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 12px var(--f-body);padding:4px 10px;border-radius:6px;cursor:pointer}
+
+.per{display:flex;justify-content:space-between;font:600 12px var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 4px 4px}
+.list{overflow:hidden}
+.row{display:grid;grid-template-columns:4px 70px 1fr auto;gap:0 10px;align-items:center;padding:7px 10px 7px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .s{align-self:stretch;border-radius:0 2px 2px 0}
+.R .s{background:var(--rot)} .A .s{background:var(--arr)} .D .s{background:var(--dep)}
+.t{font:600 14px/1.25 var(--f-mono);font-variant-numeric:tabular-nums;display:flex;flex-direction:column}
+.t .ta{color:var(--arr)} .t .td{color:var(--dep)}
+.t sup{font-size:9px;margin-left:1px}
+.t .est{opacity:.75}
+.v{min-width:0}
+.v .no{font:700 15px var(--f-body);letter-spacing:.01em}
+.v .meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v .obs{font-size:11.5px;color:var(--muted);font-style:italic;margin-top:1px}
+.b{font:700 10px var(--f-body);letter-spacing:.05em;padding:3px 6px;border-radius:4px;text-transform:uppercase}
+.R .b{background:var(--rot-bg);color:var(--rot)} .A .b{background:var(--arr-bg);color:var(--arr)} .D .b{background:var(--dep-bg);color:var(--dep)}
+.row.past{opacity:.45}
+
+.week .wk{display:grid;grid-template-columns:58px 1fr 34px;gap:10px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--ink);font-family:var(--f-body)}
+.week .wk:first-child{border-top:0}
+.wk .l{font:700 15px/1.1 var(--f-disp);text-transform:uppercase}
+.wk .l span{display:block;font:400 11px var(--f-body);color:var(--muted);text-transform:none}
+.wk .tlw{margin-top:0}
+.wk .c{font:700 22px var(--f-disp);text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);padding:8px 4px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.foot{font-size:11.5px;color:var(--muted);padding:14px 4px 0;max-width:65ch}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--sel);color:var(--sel-ink);padding:7px 14px;border-radius:20px;font-size:12.5px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (max-width:420px){.row{grid-template-columns:4px 60px 1fr auto;gap:0 8px}.t{font-size:13px}.d .n{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Vols réguliers NKC</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="views" role="group" aria-label="Vue">
+      <button type="button" id="vJour" aria-pressed="true">Jour</button>
+      <button type="button" id="vSem" aria-pressed="false">Semaine</button>
+    </div>
+  </header>
+
+  <nav class="strip" role="tablist" aria-label="Jours" id="strip"></nav>
+
+  <main id="main"></main>
+
+  <div class="legend">
+    <span><i style="background:var(--rot)"></i>Rotation (arrivée → départ)</span>
+    <span><i style="background:var(--arr)"></i>Arrivée</span>
+    <span><i style="background:var(--dep)"></i>Départ</span>
+    <span><sup>+1</sup> lendemain · ≈ estimé</span>
+  </div>
+  <p class="foot">Heures habituelles relevées par Flightradar24 (atterrissage / décollage, heure locale) sur trois semaines, du 27 octobre au 17 novembre 2026. Vol régulier : vu au moins 2 semaines sur 3 le même jour. Navettes MSS, vols privés, d'État et isolés exclus. À recouper avec le Flight Allocation.</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// [arrivée, départ, type, compagnie, vol, trajet, observation]  — "+" = J+1, "~" = estimé
+const MA = "Mauritania Airlines", RAM = "Royal Air Maroc", TK = "Turkish Airlines", KP = "ASKY Airlines",
+      DHL = "DHL (cargo)", AF = "Air France", AH = "Air Algérie", NT = "Binter Canarias", TU = "Tunisair", WT = "Swiftair";
+const WEEK = [
+ {k:"mer", w:"Mer", date:"2026-11-18", lab:"Mercredi 18 novembre", f:[
+  ["01:41","02:55","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  [null,"06:37","D",KP,"KP15","NKC → CKY","Fin du night-stop du KP14 (arrivé mardi)"],
+  [null,"06:47","D",MA,"L6114","NKC → CMN",""],
+  [null,"07:08","D",MA,"L610","NKC → NDB",""],
+  ["08:52","11:20","R",TK,"TK571","BJL → NKC → IST","Arrivée entre 08:09 et 09:19"],
+  ["10:25","11:32","R",DHL,"D0104 / D0106","DSS → NKC → BKO","ATR 72 cargo"],
+  ["13:00","14:38","R",MA,"L6115 / L6116","CMN → NKC → TUN","Même avion 3 mercredis sur 3"],
+  ["13:05",null,"A",MA,"L611","NDB → NKC",""],
+  [null,"15:12","D",MA,"L6104","NKC → DSS",""],
+  ["22:05",null,"A",MA,"L6105","DSS → NKC","Vu 2 mercredis sur 3"],
+  ["22:21","00:38+","R",AF,"AF530","CKY → NKC → CDG","Sens inverse du dimanche"],
+  ["22:27","~23:45","R",AH,"AH4014 / AH4015","ALG → NKC → ALG","Départ estimé : non capté le mercredi"]]},
+ {k:"jeu", w:"Jeu", date:"2026-11-19", lab:"Jeudi 19 novembre", f:[
+  ["00:33",null,"A",MA,"L6117","TUN → NKC","Retour du L6116 de mercredi ; 01:34 le 05/11"],
+  ["01:46","02:54","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  ["01:53","03:28","R",NT,"NT1804 / NT1805","LPA → NKC → LPA","Mardi, jeudi, dimanche"],
+  [null,"09:32","D",MA,"L6312","NKC → BKO",""],
+  ["10:23","11:27","R",DHL,"D0104 / D0106","DSS → NKC → BKO","Indicatif SIV104 / SIV106"],
+  [null,"17:07","D",MA,"L6114","NKC → CMN","Vu 2 jeudis sur 3"],
+  ["17:59",null,"A",MA,"L6313","BKO → NKC",""],
+  ["18:00",null,"A",KP,"KP80","BJL → NKC","Night-stop, repart vendredi 06:33 (KP81)"],
+  ["19:04","20:09","R",RAM,"AT521 / AT520","CMN → NKC → CMN","Jeudi et samedi"],
+  ["19:50","21:26","R",TK,"TK583 / TK584","IST → NKC → IST","Départ capté une seule fois"],
+  ["22:04","23:33","R",TU,"TU563 / TU564","TUN → NKC → TUN","Jeudi et dimanche"],
+  ["22:21","23:53","R",AH,"AH4014 / AH4015","ALG → NKC → ALG","Départ à 00:18 (J+1) le 13/11"]]},
+ {k:"ven", w:"Ven", date:"2026-11-20", lab:"Vendredi 20 novembre", f:[
+  ["01:37","03:04","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  [null,"06:33","D",KP,"KP81","NKC → BJL","Fin du night-stop du KP80"],
+  [null,"06:57","D",MA,"L6114","NKC → CMN",""],
+  [null,"07:26","D",MA,"L620","NKC → EMN","14:44 le 30/10"],
+  ["10:25","11:33","R",DHL,"D0104 / D0106","DSS → NKC → BKO","ATR 72 cargo"],
+  ["13:17",null,"A",MA,"L6115","CMN → NKC",""],
+  ["13:38",null,"A",MA,"L621","EMN → NKC","Horaire variable (11:50 à 18:58)"],
+  [null,"15:16","D",MA,"L6104","NKC → DSS",""],
+  ["17:13","18:36","R",TK,"TK597","IST → NKC → BJL",""],
+  [null,"19:13","D",MA,"L6120","NKC → LPA","2 vendredis sur 3 ; 01:03 (J+1) le 06/11"],
+  ["21:22","23:59","R",AF,"AF594 / AF537","CDG → NKC → CDG","Départ parfois après minuit"]]},
+ {k:"sam", w:"Sam", date:"2026-11-21", lab:"Samedi 21 novembre", f:[
+  ["01:38","03:03","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  [null,"06:53","D",MA,"L610","NKC → NDB","08:30 le 31/10"],
+  [null,"08:50","D",MA,"L6212","NKC → DSS",""],
+  ["12:09","14:25","R",TK,"TK585 / TK586","IST → NKC → IST","Samedi uniquement"],
+  ["12:20",null,"A",MA,"L611","NDB → NKC","14:00 le 31/10"],
+  [null,"14:35","D",MA,"L6116","NKC → TUN","20:17 le 31/10"],
+  ["18:12",null,"A",MA,"L6213","DSS → NKC",""],
+  ["18:56",null,"A",KP,"KP80","BJL → NKC","Night-stop, repart dimanche 07:18 (KP81)"],
+  ["19:06","20:19","R",RAM,"AT521 / AT520","CMN → NKC → CMN","Jeudi et samedi"],
+  ["23:06","00:21+","R",AH,"AH4014 / AH4015","ALG → NKC → ALG",""]]},
+ {k:"dim", w:"Dim", date:"2026-11-22", lab:"Dimanche 22 novembre", f:[
+  ["01:56","03:17","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  ["02:21","03:32","R",NT,"NT1804 / NT1805","LPA → NKC → LPA","Mardi, jeudi, dimanche"],
+  ["06:35","09:10","R",MA,"L6117 / L6300","TUN → NKC → TUN","Même avion 2 dimanches sur 3"],
+  [null,"07:18","D",KP,"KP81","NKC → BJL","Fin du night-stop du KP80"],
+  [null,"07:52","D",MA,"L614","NKC → NDB",""],
+  ["10:33","11:27","R",DHL,"D0104 / D0106","DSS → NKC → BKO","08:07 → 09:13 le 15/11"],
+  ["15:26","17:24","R",MA,"L6221 / L6114","NDB → NKC → CMN","Même avion 3 dimanches sur 3"],
+  ["17:34","19:14","R",TK,"TK597","IST → NKC → BJL",""],
+  ["18:28",null,"A",KP,"KP14","CKY → NKC","Night-stop, repart lundi 06:53 (KP15)"],
+  ["18:37","20:14","R",AF,"AF530","CDG → NKC → CKY","Sens inverse du mercredi"],
+  ["22:33","23:57","R",TU,"TU563 / TU564","TUN → NKC → TUN","Arrivée entre 21:12 et 23:29"],
+  ["22:40","02:13+","R",WT,"WT193 / WT192","LPA → NKC → DSS","À confirmer : 00:04 le 02/11, sens inverse le 08/11"],
+  ["23:41",null,"A",MA,"L6115","CMN → NKC",""]]},
+ {k:"lun", w:"Lun", date:"2026-11-23", lab:"Lundi 23 novembre", f:[
+  ["01:57","03:08","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  ["06:36",null,"A",MA,"L6301","TUN → NKC","15:11 le 09/11"],
+  [null,"06:53","D",KP,"KP15","NKC → CKY","Fin du night-stop du KP14"],
+  ["08:17","10:51","R",TK,"TK571","BJL → NKC → IST","Vu 2 lundis sur 3"],
+  [null,"08:58","D",MA,"L6212","NKC → DSS","2 lundis sur 3 ; 14:24 le 09/11"],
+  [null,"16:46","D",MA,"L6116","NKC → TUN","Horaire variable (15:13 à 20:22)"],
+  ["18:20",null,"A",MA,"L6213","DSS → NKC","23:41 le 09/11"],
+  ["21:41","00:03+","R",AF,"AF594 / AF537","CDG → NKC → CDG",""]]},
+ {k:"mar", w:"Mar", date:"2026-11-24", lab:"Mardi 24 novembre", f:[
+  ["00:58","02:11","R",AH,"AH4014 / AH4015","ALG → NKC → ALG","Vol du lundi soir ; 23:05 lundi le 02/11"],
+  ["01:32","02:51","R",NT,"NT1804 / NT1805","LPA → NKC → LPA","Mardi, jeudi, dimanche"],
+  ["01:34","03:02","R",RAM,"AT511 / AT510","CMN → NKC → CMN","Quotidien"],
+  ["03:00",null,"A",MA,"L6117","TUN → NKC","Horaire variable (01:09 à 06:28)"],
+  [null,"07:25","D",MA,"L614","NKC → NDB",""],
+  [null,"09:39","D",MA,"L6312","NKC → BKO",""],
+  ["10:27","11:41","R",DHL,"D0104 / D0106","DSS → NKC → BKO","ATR 72 cargo"],
+  ["14:59","17:15","R",MA,"L6221 / L6114","NDB → NKC → CMN","Même avion 3 mardis sur 3"],
+  ["18:10",null,"A",KP,"KP14","CKY → NKC","Night-stop, repart mercredi 06:37 (KP15)"],
+  ["18:38",null,"A",MA,"L6313","BKO → NKC",""]]}
+];
+const PERIODS = [["Nuit","00h–06h",0,360],["Matin","06h–12h",360,720],["Après-midi","12h–18h",720,1080],["Soir","18h–24h",1080,1440]];
+const TYPE = {R:"Rotation",A:"Arrivée",D:"Départ"};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const clean = t => t ? t.replace(/[+~]/g, "") : null;
+const mins = t => { if (!t) return null; const [h, m] = clean(t).split(":").map(Number); return h * 60 + m + (t.endsWith("+") ? 1440 : 0); };
+const first = r => mins(r[0] ?? r[1]);
+const last = r => mins(r[1] ?? r[0]);
+const mv = d => d.f.reduce((s, r) => s + (r[2] === "R" ? 2 : 1), 0);
+const tfmt = t => t ? `${t.startsWith("~") ? "≈" : ""}${clean(t)}${t.endsWith("+") ? "<sup>+1</sup>" : ""}` : "";
+WEEK.forEach(d => d.f.sort((a, b) => first(a) - first(b)));
+
+const nowD = new Date();
+const todayISO = nowD.toISOString().slice(0, 10);
+const nowMin = nowD.getUTCHours() * 60 + nowD.getUTCMinutes(); // Nouakchott = UTC
+const total = WEEK.reduce((s, d) => s + mv(d), 0);
+$("#sub").textContent = `Semaine du 18 au 24 novembre 2026 · ${total} vols`;
+
+let cur = (WEEK.find(d => d.date === todayISO) || WEEK[0]).k, view = "jour", filt = "T";
+try { const f = localStorage.getItem("nkc-filtre"); if (f) filt = f; } catch (_) {}
+
+function timeline(d, h) {
+  const P = m => (Math.min(m, 1440) / 1440 * 100).toFixed(2) + "%", isToday = d.date === todayISO;
+  let g = "";
+  for (let x = 3; x < 24; x += 3) g += `<i class="gl${x % 6 ? "" : " g6"}" style="left:${P(x*60)}"></i>`;
+  d.f.forEach(r => {
+    const tip = esc(`${r[4]} · ${TYPE[r[2]]} ${[r[0], r[1]].filter(Boolean).map(clean).join(" → ")}`);
+    if (r[2] === "R") { const a = mins(r[0]), b = Math.min(mins(r[1]), 1440); g += `<b class="mk mr${mins(r[1]) > 1440 ? " nx" : ""}" style="left:${P(a)};width:${P(Math.max(b - a, 20))}" title="${tip}"></b>`; }
+    else g += `<b class="mk m${r[2]}" style="left:${P(mins(r[0] ?? r[1]))}" title="${tip}"></b>`;
+  });
+  if (isToday) g += `<i class="nw" style="left:${P(nowMin)}"></i>`;
+  const lab = [0,6,12,18,24].map(x => `<span style="left:${P(x*60)}">${String(x).padStart(2,"0")}h</span>`).join("");
+  return `<div class="tlw${h < 50 ? " sm" : ""}" role="img" aria-label="Frise horaire des vols du ${esc(d.lab)}"><div class="tlb">${g}</div><div class="tll">${lab}</div></div>`;
+}
+
+function strip() {
+  $("#strip").innerHTML = WEEK.map(d => `<button type="button" role="tab" class="d${d.date === todayISO ? " today" : ""}" aria-selected="${view === "jour" && d.k === cur}" data-k="${d.k}" aria-label="${esc(d.lab)}, ${mv(d)} vols"><span class="w">${d.w}</span><span class="n">${mv(d)}</span><span class="dt">${d.date.slice(8)}/11</span></button>`).join("");
+}
+
+function nextLine(d) {
+  if (d.date !== todayISO) return "";
+  const ev = [];
+  d.f.forEach(r => { if (r[0]) ev.push([mins(r[0]), r[4].split(" / ")[0], "arrivée", clean(r[0])]); if (r[1]) ev.push([mins(r[1]), r[4].split(" / ").pop(), "départ", clean(r[1])]); });
+  const n = ev.filter(e => e[0] >= nowMin).sort((a, b) => a[0] - b[0])[0];
+  if (!n) return `<div class="next"><span class="dot"></span>Plus aucun mouvement prévu aujourd'hui.</div>`;
+  const dm = n[0] - nowMin, txt = dm < 60 ? `${dm} min` : `${Math.floor(dm/60)} h ${String(dm%60).padStart(2,"0")}`;
+  return `<div class="next"><span class="dot"></span>Prochain : <b>${esc(n[1])}</b> ${n[2]} à <b>${n[3]}</b>, dans ${txt}</div>`;
+}
+
+function dayView() {
+  const d = WEEK.find(x => x.k === cur);
+  const nR = d.f.filter(r => r[2] === "R").length, nA = d.f.filter(r => r[0]).length, nD = d.f.filter(r => r[1]).length;
+  const rows = d.f.filter(r => filt === "T" || r[2] === filt);
+  const isToday = d.date === todayISO;
+  let list = "";
+  PERIODS.forEach(([p, span, a, b]) => {
+    const rs = rows.filter(r => first(r) >= a && first(r) < b);
+    if (!rs.length) return;
+    const n = rs.reduce((s, r) => s + (r[2] === "R" ? 2 : 1), 0);
+    list += `<div class="per"><span>${p} · ${span}</span><span>${n} vol${n > 1 ? "s" : ""}</span></div><div class="card list">` +
+      rs.map(r => `<div class="row ${r[2]}${isToday && last(r) < nowMin ? " past" : ""}"><span class="s"></span>
+        <div class="t">${r[0] ? `<span class="ta">${tfmt(r[0])}</span>` : ""}${r[1] ? `<span class="td${r[1].startsWith("~") ? " est" : ""}">${tfmt(r[1])}</span>` : ""}</div>
+        <div class="v"><div class="no">${esc(r[4])}</div><div class="meta">${esc(r[3])} · ${esc(r[5])}</div>${r[6] ? `<div class="obs">${esc(r[6])}</div>` : ""}</div>
+        <span class="b">${r[2] === "R" ? "Rot" : r[2] === "A" ? "Arr" : "Dép"}</span></div>`).join("") + `</div>`;
+  });
+  const fb = [["T","Tout"],["R","Rotations"],["A","Arrivées"],["D","Départs"]].map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${filt === k}">${l}</button>`).join("");
+  $("#main").innerHTML = `<section class="card sum" aria-label="Résumé du ${esc(d.lab)}">
+      <div class="sumtop"><div class="big">${mv(d)} vols<small>${esc(d.lab)}</small></div>
+      <div class="kpis"><span class="k r">${nR} rotations</span><span class="k a">${nA} arrivées</span><span class="k dd">${nD} départs</span></div></div>
+      ${nextLine(d)}${timeline(d, 64)}</section>
+    <div class="tools"><div class="f" role="group" aria-label="Filtrer">${fb}</div><button type="button" class="copy" id="copy">Copier le programme</button></div>
+    ${list || `<p class="sub">Aucun vol de ce type ce jour.</p>`}`;
+  $("#copy").onclick = () => copyDay(d);
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filt = b.dataset.f; try { localStorage.setItem("nkc-filtre", filt); } catch (_) {} dayView(); });
+}
+
+function weekView() {
+  $("#main").innerHTML = `<section class="card week">` + WEEK.map(d => `<button type="button" class="wk" data-go="${d.k}" aria-label="Ouvrir ${esc(d.lab)}">
+      <span class="l">${d.w} ${d.date.slice(8)}<span>${d.f.filter(r => r[2] === "R").length} rotations</span></span>
+      ${timeline(d, 48)}<span class="c">${mv(d)}</span></button>`).join("") + `</section>`;
+  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+}
+
+function copyDay(d) {
+  const L = [`✈ Vols réguliers NKC — ${d.lab} (${mv(d)} vols)`];
+  d.f.forEach(r => L.push(`${r[2] === "R" ? `${clean(r[0])} → ${clean(r[1])}${r[1].endsWith("+") ? " (J+1)" : ""}` : clean(r[0] ?? r[1])}  ${r[4]}  ${TYPE[r[2]]}  ${r[5]}${r[6] ? "  · " + r[6] : ""}`));
+  const done = ok => { const t = $("#toast"); t.textContent = ok ? "Programme copié" : "Copie impossible ici"; t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1600); };
+  try { navigator.clipboard.writeText(L.join("\n")).then(() => done(true), () => done(false)); } catch (_) { done(false); }
+}
+
+function render() {
+  $("#vJour").setAttribute("aria-pressed", view === "jour");
+  $("#vSem").setAttribute("aria-pressed", view === "semaine");
+  strip();
+  view === "jour" ? dayView() : weekView();
+  document.querySelectorAll("#strip .d").forEach(b => b.onclick = () => go(b.dataset.k));
+}
+function go(k) { view = "jour"; cur = k; if (location.hash !== "#" + k) location.hash = k; render(); }
+function fromHash() {
+  const h = location.hash.slice(1);
+  if (h === "semaine") view = "semaine"; else if (WEEK.some(d => d.k === h)) { view = "jour"; cur = h; }
+  render();
+}
+$("#vJour").onclick = () => go(cur);
+$("#vSem").onclick = () => { view = "semaine"; location.hash = "semaine"; render(); };
+window.addEventListener("hashchange", fromHash);
+document.addEventListener("keydown", e => {
+  if (view !== "jour" || !["ArrowLeft","ArrowRight"].includes(e.key)) return;
+  const i = WEEK.findIndex(d => d.k === cur) + (e.key === "ArrowRight" ? 1 : -1);
+  if (WEEK[i]) go(WEEK[i].k);
+});
+let x0 = null, y0 = null;
+document.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+document.addEventListener("touchend", e => {
+  if (x0 == null || view !== "jour") return;
+  const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+  if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+  const i = WEEK.findIndex(d => d.k === cur) + (dx < 0 ? 1 : -1);
+  if (WEEK[i]) go(WEEK[i].k);
+}, {passive:true});
+fromHash();
+</script>
+</body>
+</html>

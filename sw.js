@@ -7,7 +7,7 @@ self.addEventListener("fetch",e=>{
   /* bibliothèques versionnées (CDN) : cache d'abord */
   if(u.hostname=="cdn.jsdelivr.net"){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>m||fetch(r).then(x=>{if(x.ok||x.type=="opaque")c.put(r,x.clone());return x;}))));return;}
   /* page de l'app : toujours la version en ligne ; la copie en cache ne sert que hors connexion */
-  if(r.mode=="navigate"&&u.origin==self.location.origin){e.respondWith(fetch(r,{cache:"no-store"}).then(x=>{if(x.ok){const y=x.clone();caches.open(C).then(c=>c.put("/",y));}return x;}).catch(()=>caches.match("/")));return;}
+  if(r.mode=="navigate"&&u.origin==self.location.origin&&(u.pathname=="/"||u.pathname=="/index.html")){e.respondWith(fetch(r,{cache:"no-store"}).then(x=>{if(x.ok){const y=x.clone();caches.open(C).then(c=>c.put("/",y));}return x;}).catch(()=>caches.match("/")));return;}
   if(u.origin==self.location.origin&&/\.(png|webmanifest)$/.test(u.pathname)){e.respondWith(caches.open(C).then(c=>c.match(r).then(m=>{const n=fetch(r).then(x=>{if(x.ok)c.put(r,x.clone());return x;});return m||n;})));}
 });
 self.addEventListener("push",e=>{
