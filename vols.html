@@ -9,6 +9,9 @@
 /* Page publique « Programme de vol » : vols réguliers NKC, mise à jour quotidienne (vols-data.json) */
 :root{color-scheme:light;--bg:#E6EEFA;--s:#fff;--t:#13294F;--m:#5B6D8C;--b:#CBDAF0;--p:#2F6FD0;--pl:#E1ECFB;--n:#2358A8;--n2:#1B4890;--red:#C0392B;--sh:0 1px 2px #1b489214,0 6px 18px #1b48921a;--sp:cubic-bezier(.34,1.32,.64,1)}
 .vrs{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:sticky;top:0;z-index:4;background:var(--bg);padding:4px 0}
+.vmain{display:flex;flex-direction:column;gap:12px}.vmain[hidden]{display:none}@media(max-width:700px){.vmain{gap:12px}}.vqs{position:relative}.vqs input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px 11px 38px;border:1px solid var(--b);border-radius:12px;background:var(--s);color:var(--t)}.vqs:before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.6}
+.vqh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 0}.vqc{padding:10px 12px;display:grid;gap:6px}.vqc+.vqc{margin-top:8px}
+.vwk{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.vwk div{text-align:center;border-radius:7px;padding:4px 0;font-size:11px;line-height:1.35;border:1px solid var(--b)}.vwk span{display:block;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--m)}.vwk .on{background:var(--pl);border-color:transparent}.vwk .off{opacity:.38}.vwk .a{color:var(--p);font-weight:700}.vwk .d{color:#b8740a;font-weight:700}
 .vrd{border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;cursor:pointer;min-width:0}
 .vrd span{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--m)}.vrd b{font-size:20px;line-height:1.1}.vrd small{font-size:10px;color:var(--m)}
 .vrd.on{background:var(--n);border-color:var(--n);color:#fff}.vrd.on span,.vrd.on small{color:#fff;opacity:.8}
@@ -69,6 +72,33 @@ const vRet = n => { if (VRET[n]) return VRET[n]; const m = /^AH(\d+)$/.exec(n ||
 const vMAI = v => /^L6/.test(vAlias(v.numero)) || v.compagnie == "MAI";
 const vCat = v => { const n = vAlias(v.numero); if (v.compagnie == "MSS" || /^MSS/.test(n)) return "nav"; if (vIata(n)) return "com"; if (/^[A-Z]{3}\d/.test(n)) return "aut"; return "prv"; };
 const JSEM = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"], JSEML = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+/* recherche dans le programme de la semaine : numéro de vol, compagnie, destination (code ou ville) */
+const VILLE = { CMN: "Casablanca", DSS: "Dakar", TUN: "Tunis", BKO: "Bamako", BJL: "Banjul", IST: "Istanbul", NDB: "Nouadhibou", LPA: "Las Palmas Gran Canaria Canaries", CKY: "Conakry", ALG: "Alger Algiers", CDG: "Paris", EMN: "Nema", TER: "Terceira Lajes Acores", FEZ: "Fes Fez", OUZ: "Zouerate", ABJ: "Abidjan" };
+const vNorm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+let VQ = "", VQF = "T", VQDAYS = null;
+function vSearchHTML() {
+  const q = vNorm(VQ).trim(); if (!q || !VQDAYS) return "";
+  const toks = q.split(/\s+/), G = {};
+  /* 7 jours à partir d'aujourd'hui : chaque jour de la semaine une fois */
+  VQDAYS.slice(1, 8).forEach(D => D.it.forEach(x => {
+    const codes = x.route.match(/[A-Z]{3}/g) || [];
+    const hay = vNorm([x.num, vLab(x), x.cie, x.route, codes.map(c => VILLE[c] || "").join(" "), { R: "rotation", A: "arrivee", D: "depart" }[x.typ], x.cargo ? "cargo" : ""].join(" ")), hz = hay.replace(/[\s/]+/g, "");
+    if (!toks.every(t => hay.includes(t) || hz.includes(t))) return;
+    const g = G[x.typ + "|" + x.num] = G[x.typ + "|" + x.num] || { x, d: {} }; g.d[D.w] = x;
+  }));
+  const all = Object.values(G).sort((a, b) => vLab(a.x).localeCompare(vLab(b.x), "fr", { numeric: true }));
+  const n = k => all.filter(g => k == "T" || g.x.typ == k).length, L = all.filter(g => VQF == "T" || g.x.typ == VQF);
+  const chip = (k, l) => `<button type="button" class="btn${VQF == k ? " p" : ""}" data-a="vqf" data-k="${k}" data-qf="${k}" style="padding:6px 10px;min-height:0">${l} (${n(k)})</button>`;
+  const ord = [1, 2, 3, 4, 5, 6, 0], h = (m, e) => `${e ? "≈" : ""}${hhm(m % 1440)}${m >= 1440 ? "<sup>+1</sup>" : ""}`;
+  const card = ({ x, d }) => { const js = ord.filter(w => d[w]);
+    return `<div class="card vqc"><div class="row" style="align-items:baseline;gap:8px"><div><b>${E(vLab(x))}</b>${x.cargo ? ` <span class="bd warn">Cargo</span>` : ""}<div class="m">${x.pfx ? "" : E(x.cie) + " · "}${E(x.route)}</div></div><span class="vrb" style="${{ R: "background:#6d5bd01f;color:#6d5bd0", A: "background:var(--pl);color:var(--p)", D: "background:#c27c0e1f;color:#b8740a" }[x.typ]}">${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}</span></div>
+<div class="m"><b>${js.length} jour${js.length > 1 ? "s" : ""} / semaine</b> : ${js.map(w => JSEML[w]).join(", ")}</div>
+<div class="vwk">${ord.map(w => { const y = d[w]; return `<div class="${y ? "on" : "off"}"><span>${JSEM[w]}</span>${y ? (y.t1 != null ? `<i class="a" style="font-style:normal;display:block">${h(y.t1, y.e1)}</i>` : "") + (y.t2 != null ? `<i class="d" style="font-style:normal;display:block">${h(y.t2, y.e2)}</i>` : "") : "—"}</div>`; }).join("")}</div></div>`; };
+  return `<div class="vqh"><b>${all.length} vol${all.length > 1 ? "s" : ""} régulier${all.length > 1 ? "s" : ""} pour « ${E(VQ.trim())} »</b><span class="m">heures prévues : <span style="color:var(--p);font-weight:700">arrivée</span> · <span style="color:#b8740a;font-weight:700">départ</span></span></div>
+<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 8px">${chip("T", "Tout")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("R", "Rotations")}</div>
+${L.map(card).join("") || `<div class="card m">Aucun vol régulier ne correspond. Essayez un numéro (AT511), une compagnie (Air France) ou une ville (Casablanca, CMN).</div>`}`;
+}
+document.addEventListener("input", e => { if (e.target.id != "vq") return; VQ = e.target.value; const r = document.getElementById("vqr"), m = document.getElementById("vmain"); if (r) r.innerHTML = vSearchHTML(); if (m) m.hidden = !!VQ.trim(); });
 const PERL = ["Nuit · 00h–06h", "Matin · 06h–12h", "Après-midi · 12h–18h", "Soir · 18h–24h"];
 const VTRL = [["heure", "Heure"], ["compagnie", "Compagnie"], ["creneau", "Créneau horaire"], ["type", "Type (rotation, arrivée, départ)"], ["cargo", "Passagers / cargo"]];
 const hhm = m => p2(Math.floor(m / 60) % 24) + ":" + p2(m % 60);
@@ -195,7 +225,7 @@ function vTimeline(L, w0, w1, nowA) {
   return `<div class="vtl"><div class="vtb">${g}</div><div class="vtx">${labs.join("")}</div></div>`;
 }
 function render() {
-  const AT = a => new Date(R.d0.getTime() + a * 6e4);
+  VQDAYS = R.days; const AT = a => new Date(R.d0.getTime() + a * 6e4);
   const ALL = R.days.flatMap((D, j) => D.it.map(x => { const a0 = j * 1440 + (x.t1 ?? x.t2), a1 = j * 1440 + (x.t2 ?? x.t1); return { ...x, a0, a1, k0: a0, md: a0 % 1440 }; }));
   const nowA = Math.floor((Date.now() - R.d0.getTime()) / 6e4), cur = Math.floor((nowA - 480) / 1440), sd = cur + VRJ;
   const W = { shift: [sd * 1440 + 480, sd * 1440 + 1920, "Shift 08h → 08h"], jour: [sd * 1440, sd * 1440 + 1440, "Journée 00h → 24h"], h48: [sd * 1440 + 480, sd * 1440 + 3360, "48 h (2 shifts)"], passes: [cur * 1440 + 480, nowA, "Vols passés du shift en cours"] }[VRW];
@@ -214,23 +244,23 @@ function render() {
   const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => x.a0 < w0 + 1440 && x.a1 >= w0)), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" ? " on" : ""}" data-j="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
   document.getElementById("app").innerHTML = `<div><h1>Programme de vol · Nouakchott-Oumtounsy (NKC)</h1><div class="m">Vols réguliers · heures locales (UTC) · mis à jour le ${dmy(GEN)} à ${p2(GEN.getUTCHours())}h${p2(GEN.getUTCMinutes())}</div></div>
 <div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Heures prévues (STA / STD) du dernier Flight Allocation ; « ≈ » = heure prévue estimée. Des changements peuvent avoir lieu : confirmez chaque jour auprès de l’exploitation.</div>
-<div class="vrs">${strip}</div>
+<div class="vqs"><input id="vq" type="search" enterkeyhint="search" autocomplete="off" placeholder="Rechercher un vol : numéro, compagnie, destination…" value="${E(VQ)}"></div><div id="vqr">${vSearchHTML()}</div><div id="vmain" class="vmain"${VQ.trim() ? " hidden" : ""}><div class="vrs">${strip}</div>
 <div style="display:flex;gap:4px;flex-wrap:wrap">${wb("shift", "Shift 08h → 08h")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-more="1">Voir plus ▾</button>`}</div>
 <div class="card"><div class="row" style="align-items:baseline;flex-wrap:wrap"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${WI.filter(x => x.typ == "R").length} rotations</span><span class="A">${WI.filter(x => x.t1 != null).length} arrivées</span><span class="D">${WI.filter(x => x.t2 != null).length} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>
 <div class="row" style="flex-wrap:wrap"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div><div style="display:flex;gap:6px;align-items:center"><label class="m" for="tri">Trier par</label><select id="tri">${VTRL.map(([k, l]) => `<option value="${k}" ${TRI == k ? "selected" : ""}>${l}</option>`).join("")}</select><button type="button" class="btn" id="cp">📋 Copier</button></div></div>
-${list}
+${list}</div>
 <footer>Programme établi à partir du Flight Allocation et des vols observés (Flightradar24) sur les trois dernières semaines. Vols privés, d’État et occasionnels non affichés. EPS — El Baraka Prestations de Services.</footer>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || !R) return;
   if (b.dataset.j != null) { VRJ = +b.dataset.j; if (VRW == "passes") VRW = "shift"; }
-  else if (b.dataset.w) VRW = b.dataset.w; else if (b.dataset.more) VRWM = true; else if (b.dataset.f) VRF = b.dataset.f;
+  else if (b.dataset.w) VRW = b.dataset.w; else if (b.dataset.more) VRWM = true; else if (b.dataset.f) VRF = b.dataset.f; else if (b.dataset.qf) VQF = b.dataset.qf;
   else if (b.id == "cp") { const L = vGroup(LAST.its, "heure")[0][1], n = L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0), T = [`Vols réguliers NKC — ${LAST.lab} du ${JSEML[LAST.d.getUTCDay()]} ${dmy(LAST.d)} (${n} vols)`, "Programme indicatif (heures prévues), sous réserve de changements.", ""]; L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${vLab(x)}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}  ${x.route}`)); navigator.clipboard.writeText(T.join("\n")).then(() => b.textContent = "✓ Copié", () => b.textContent = "Copie impossible"); return; }
   else return;
   render();
 });
 document.addEventListener("change", e => { if (e.target.id == "tri") { TRI = e.target.value; try { localStorage.setItem("pv_tri", TRI); } catch (x) { } render(); } });
-fetch("vols-data.json", { cache: "no-store" }).then(r => r.json()).then(D => { GEN = new Date(D.genere_le); R = vregData(D); render(); setInterval(render, 60000); })
+fetch("vols-data.json", { cache: "no-store" }).then(r => r.json()).then(D => { GEN = new Date(D.genere_le); R = vregData(D); render(); setInterval(() => { if (!document.activeElement || document.activeElement.id != "vq") render(); }, 60000); })
   .catch(err => { document.getElementById("app").innerHTML = `<div class="card">Programme indisponible pour le moment (${E(err.message)}).</div>`; });
 </script>
 </body>
