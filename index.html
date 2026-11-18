@@ -228,7 +228,16 @@ const BC = { alertes: 0, pres: 0 };
 function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
-let RA = [];
+let RA = [], PSV = [];
+/* prise / fin de service (chefs d'équipe et superviseurs) avec position au moment du clic */
+const PSR = ["chef_nettoyage", "chef_bagages", "superviseur_nettoyage", "superviseur_bagages", "superviseur_principal"];
+const PSVW = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "responsable_rh", "assistante_rh"];
+function psvCard() {
+  const mine = PSV.filter(p => p.user_id == UID), last = mine[mine.length - 1], on = last && last.type == "prise", lieu = p => p.sur_site == null ? "position indisponible" : p.sur_site ? `sur le site (${Math.round(p.distance_m)} m)` : `hors site (${(p.distance_m / 1000).toFixed(1)} km)`;
+  const me = PSR.includes(ME.role) ? `<div class="row" style="flex-wrap:wrap;gap:8px"><div><b>${on ? "En service" : last ? "Service terminé" : "Service non pris"}</b><div class="m">${last ? `${last.type == "prise" ? "Pris" : "Quitté"} à ${hm(new Date(last.le))} · ${lieu(last)}` : "Marquez votre arrivée à l’aéroport : les minuteurs de 30 min des tâches de début de shift démarrent à la première prise de service."}</div></div>${on ? `<button type="button" class="btn" data-a="psv" data-t="fin">🏁 Je quitte le service</button>` : `<button type="button" class="btn p" data-a="psv" data-t="prise">📍 Je prends service</button>`}</div>` : "";
+  const all = PSVW.includes(ME.role) && PSV.length ? `<div class="m" style="margin-top:8px">Prises de service du shift</div>${[...new Set(PSV.map(p => p.user_id))].map(u => { const L = PSV.filter(p => p.user_id == u), a = L.find(p => p.type == "prise"), f = [...L].reverse().find(p => p.type == "fin"); return `<div class="li"><div><b>${E(L[0].nom)}</b> <span class="m">${E(RL[L[0].role] || L[0].role)}${L[0].equipe ? " · " + E(L[0].equipe) : ""}</span></div><div class="m" style="text-align:right">${a ? "↗ " + hm(new Date(a.le)) + " · " + lieu(a) : ""}${f ? "<br>↘ " + hm(new Date(f.le)) + " · " + lieu(f) : ""}</div></div>`; }).join("")}` : "";
+  return me || all ? `<div class="card"><h2>📍 Prise de service</h2>${me}${all}</div>` : "";
+}
 /* effectif prévu par équipe et situation du recrutement (config_alertes) */
 let EFFP = { nettoyage: 31, nettoyage_n4: 33, manutention: 28 }, RECR = {};
 async function loadCFG() { const { data } = await sb.from("config_alertes").select("cle,valeur").in("cle", ["effectif_prevu", "recrutement"]); (data || []).forEach(r => { if (r.cle == "effectif_prevu") EFFP = { ...EFFP, ...(r.valeur || {}) }; else RECR = r.valeur || {}; }); }
@@ -247,16 +256,22 @@ const gnum = x => { const m = String(x || "").trim().match(/^(?:[ÉéEe]quipe|Gr
 async function loadRA() {
   const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
   const [{ data }, { data: dsp }] = await Promise.all([sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " ")),
-    sb.from("rapports_staff").select("recu_le,brut").eq("categorie", "dispatching").gte("recu_le", new Date(t0 - 2 * H).toISOString())]);
+    sb.from("rapports_staff").select("recu_le,brut").eq("categorie", "dispatching").gte("recu_le", new Date(t0 - 2 * H).toISOString()),
+    sb.from("prises_service").select("user_id,nom,role,service,equipe,type,le,distance_m,sur_site").eq("jour_shift", ymd(s)).order("le").then(r => (PSV = r.data || [], r), () => ({ data: [] }))]);
+  /* minuteur : 1re prise de service du service (chef d'équipe ou superviseur) ; à défaut, horaire standard */
+  const arr = sv => { const x = PSV.find(p => p.type == "prise" && p.service == (sv == "bagages" ? "manutention" : sv)); return x ? new Date(x.le).getTime() : null; };
+  const rap = (a, n0) => `rappel n°${Math.floor((now - a) / (30 * 60000))}${n0}`;
   const rows = (data || []).filter(r => gnum(r.groupe) == String(g)), has = (sv, a, b) => rows.some(r => { const t = new Date(T(r.cree_le)).getTime(); return r.service == sv && t >= t0 + a * H && t < t0 + b * H; });
   RA = [];
   [["nettoyage", "Nettoyage N" + g], ["bagages", "Manutention M" + g]].forEach(([sv, nom]) => {
-    if (now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push({ sv, nom, t: `⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe` });
+    const a = arr(sv);
+    if (a ? now >= a + 30 * 60000 && !has(sv, -3, 8) : now >= t0 + 2 * H && !has(sv, -3, 8)) RA.push({ sv, nom, t: a ? `⏱ Rapport de situation ${nom} non reçu — à remettre 30 min après la prise de service (${hm(new Date(a))}) : ${rap(a, "")}${now >= a + 60 * 60000 ? " — relancez le chef d’équipe" : ""}` : `⏱ Rapport de situation ${nom} (à remettre avant 10h00) non reçu — rappel n°${Math.floor((now - t0 - 2 * H) / H) + 1} (toutes les 60 min) : relancer le chef d’équipe` });
     if (now >= t0 + 9 * H && !has(sv, 8, 16)) RA.push({ sv, nom, t: now >= t0 + 9.5 * H ? `⚠ Rapport de situation ${nom} (17h–17h30) non reçu — en RETARD, 2e rappel : relancer le chef d’équipe` : `Rappel : rapport de situation ${nom} à remettre entre 17h00 et 17h30 (même sans renfort)` });
   });
   /* Staff Dispatching nettoyage : attendu avant 09h00, alerte à partir de 09h30 puis toutes les 60 min */
   const dOk = (dsp || []).some(r => { const a = (r.brut && r.brut.answers) || {}, gr = Object.values(a).find(x => /groupe en service/i.test(x.text || "")); return !gr || gnum(gr.answer) == String(g); });
-  if (now >= t0 + 1.5 * H && !dOk) RA.push({ sv: "nettoyage", nom: "Nettoyage N" + g, m: `Staff Dispatching Nettoyage N${g} non soumis`, t: `⏱ Staff Dispatching Nettoyage N${g} (attendu avant 09h00) non soumis — rappel n°${Math.floor((now - t0 - 1.5 * H) / H) + 1} : relancer le chef d’équipe` });
+  const an = arr("nettoyage");
+  if (an ? now >= an + 30 * 60000 && !dOk : now >= t0 + 1.5 * H && !dOk) RA.push({ sv: "nettoyage", nom: "Nettoyage N" + g, m: `Staff Dispatching Nettoyage N${g} non soumis`, t: an ? `⏱ Staff Dispatching Nettoyage N${g} non soumis — attendu 30 min après la prise de service (${hm(new Date(an))}) : ${rap(an, "")}${now >= an + 60 * 60000 ? " — relancez le chef d’équipe" : ""}` : `⏱ Staff Dispatching Nettoyage N${g} (attendu avant 09h00) non soumis — rappel n°${Math.floor((now - t0 - 1.5 * H) / H) + 1} : relancer le chef d’équipe` });
   const nj = Object.entries(ST).filter(([m, r]) => r.statut == "nj" && AG.some(a => a.matricule == m && onDuty(a))).length;
   BC.pres = RA.length + nj; setB();
 }
@@ -373,6 +388,7 @@ V.shift = async () => {
 <div class="svl"><div class="svt">Manutention · M${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rb?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rb?.chefs)) || "—"}</b></div></div></div>
 ${rb ? "" : `<div class="m"><span class="bd warn">Rapport de situation Manutention non reçu pour ce shift</span></div>`}
 <div class="svl"><div class="svt">Nettoyage · N${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rn?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rn?.chefs)) || "—"}</b></div></div></div></div>
+${SHV ? "" : psvCard()}
 ${sxCards("shift", ["vols"])}
 ${SHV ? "" : interditsCard()}
 ${sxCards("shift", null, ["vols"])}
@@ -2238,6 +2254,19 @@ async function shell() {
   draw(); ntInit();
 }
 Object.assign(ACT, {
+  async psv(b) {
+    const ty = b.dataset.t;
+    try { if (!localStorage.getItem("geo_ok") && !confirm("Votre position est relevée uniquement au moment où vous prenez et quittez le service, pour confirmer votre présence à l’aéroport. Continuer ?")) return; localStorage.setItem("geo_ok", "1"); } catch (e) { }
+    b.disabled = true; toast("Localisation en cours…");
+    const send = async (c) => {
+      const { data, error } = await sb.rpc("prendre_service", { p_type: ty, p_lat: c ? c.latitude : null, p_lon: c ? c.longitude : null, p_prec: c ? c.accuracy : null });
+      b.disabled = false; if (error) return toast("Refusé : " + error.message);
+      toast(`${ty == "prise" ? "Service pris" : "Fin de service"} à ${hm(new Date())}${data.sur_site == null ? " (sans position)" : data.sur_site ? " — sur le site" : " — hors site (" + (data.distance_m / 1000).toFixed(1) + " km)"}${data.minuteurs ? ` · minuteurs lancés (${data.minuteurs} tâches)` : ""}`);
+      await loadRA(); draw(1);
+    };
+    if (!navigator.geolocation) return confirm("Localisation indisponible sur cet appareil. Enregistrer sans position ?") ? send(null) : (b.disabled = false);
+    navigator.geolocation.getCurrentPosition(p => send(p.coords), () => { if (confirm("Position non obtenue (autorisation refusée ou signal GPS faible). Enregistrer sans position ?")) send(null); else b.disabled = false; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  },
   async relance(b) {
     const sv = b.dataset.s, nom = b.dataset.n; b.disabled = true;
     const { data, error } = await sb.rpc("relancer_chefs", { p_service: sv, p_motif: b.dataset.m || `Rapport de situation du staff ${nom} non reçu` });
