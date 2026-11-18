@@ -14,6 +14,7 @@
 .vwk{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.vwk div{text-align:center;border-radius:7px;padding:4px 0;font-size:11px;line-height:1.35;border:1px solid var(--b)}.vwk span{display:block;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--m)}.vwk .on{background:var(--pl);border-color:transparent}.vwk .off{opacity:.38}.vwk .a{color:var(--p);font-weight:700}.vwk .d{color:#b8740a;font-weight:700}
 .vwt{padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.vwt table{border-collapse:separate;border-spacing:0;font-size:11px;width:100%;min-width:600px;table-layout:fixed}.vwt th,.vwt td{border-bottom:1px solid var(--b);padding:4px 3px;vertical-align:top;text-align:left}.vwt tr:last-child td{border-bottom:0}.vwt th{font-size:10px;text-transform:uppercase;color:var(--m);text-align:center;font-weight:800}.vwt th small{display:block;font-weight:500;text-transform:none}.vwt th:first-child,.vwt td:first-child{position:sticky;left:0;z-index:1;background:var(--s);width:86px;min-width:86px;max-width:96px;border-right:1px solid var(--b);text-align:left}.vwt td:first-child b{display:block;font-size:11.5px;line-height:1.2}.vwt td:first-child small{color:var(--m)}.vwt .td{background:#e1ecfb80}.vwt th.td{color:var(--n)}
 .vwi{line-height:1.25;padding:2px 3px;border-radius:5px;border-left:3px solid #6d5bd0;background:#6d5bd00d}.vwi span{white-space:nowrap}.vwi+.vwi{margin-top:3px}.vwi.A{border-color:var(--p);background:#2f6fd00d}.vwi.D{border-color:#b8740a;background:#c27c0e0d}.vwi b{display:block;font-size:11px;white-space:nowrap}.vwi .a{color:var(--p);font-weight:700}.vwi .d{color:#b8740a;font-weight:700}.vwi sup{font-size:8px}
+.vwj{padding:8px;font-size:11px;overflow-x:auto;-webkit-overflow-scrolling:touch}.vwj>div{display:grid;grid-template-columns:repeat(7,minmax(82px,1fr));gap:4px;min-width:600px}.vwj section{display:flex;flex-direction:column;gap:3px;border-radius:8px;padding:3px}.vwj section.td{background:#e1ecfb80}.vwj h4{margin:0 0 2px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--m);font-weight:800;line-height:1.3}.vwj h4 small{display:block;font-weight:500;text-transform:none}.vwj section.td h4{color:var(--n)}.vwj .vwi+.vwi{margin-top:0}
 .vrd{border:1px solid var(--b);background:var(--s);color:var(--t);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;cursor:pointer;min-width:0}
 .vrd span{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--m)}.vrd b{font-size:20px;line-height:1.1}.vrd small{font-size:10px;color:var(--m)}
 .vrd.on{background:var(--n);border-color:var(--n);color:#fff}.vrd.on span,.vrd.on small{color:#fff;opacity:.8}
@@ -102,7 +103,7 @@ ${L.map(card).join("") || `<div class="card m">Aucun vol régulier ne correspond
 }
 document.addEventListener("input", e => { if (e.target.id != "vq") return; VQ = e.target.value; const r = document.getElementById("vqr"), m = document.getElementById("vmain"); if (r) r.innerHTML = vSearchHTML(); if (m) m.hidden = !!VQ.trim(); });
 /* semaine par compagnie : une ligne par compagnie, une colonne par jour (lundi → dimanche), numéros et heures prévues dans chaque case */
-function vWeekHTML(days, f) {
+function vWeekHTML(days, f, mode, rot2) {
   const ord = [1, 2, 3, 4, 5, 6, 0], C = {}, DW = {}, sem = days.slice(1, 8), tw = sem[0].w;
   sem.forEach(D => { DW[D.w] = D; D.it.filter(f).forEach(x => { const c = x.pfx || x.cie; ((C[c] = C[c] || {})[D.w] = C[c][D.w] || []).push(x); }); });
   const cos = Object.keys(C).sort((a, b) => a.localeCompare(b, "fr"));
@@ -111,9 +112,15 @@ function vWeekHTML(days, f) {
   const sn = n => { const [a, b] = n.split(" / "); if (!b) return a; let c = 0; while (c < a.length && a[c] == b[c]) c++; return c < 2 ? a + "/" + b : a + "/" + b.slice(Math.max(2, Math.min(c, b.length - 2))); };
   const h = (m, e) => `${e ? "≈" : ""}${hhm(m % 1440)}${m >= 1440 ? "<sup>+1</sup>" : ""}`;
   const it = x => `<div class="vwi ${x.typ}"><b>${E(sn(x.num))}</b>${x.t1 != null ? `<span class="a">${h(x.t1, x.e1)}</span>` : ""}${x.t1 != null && x.t2 != null ? "–" : ""}${x.t2 != null ? `<span class="d">${h(x.t2, x.e2)}</span>` : ""}</div>`;
-  const mv = L => L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
-  return `<div class="card vwt"><table><thead><tr><th>Compagnie</th>${ord.map(w => `<th class="${w == tw ? "td" : ""}">${JSEM[w]}<small>${DW[w] ? DW[w].j.slice(8, 10) + "/" + DW[w].j.slice(5, 7) : ""}</small></th>`).join("")}</tr></thead><tbody>${cos.map(c => `<tr><td><b>${E(c)}</b><small>${mv(Object.values(C[c]).flat())} vols / sem.</small></td>${ord.map(w => `<td class="${w == tw ? "td" : ""}">${(C[c][w] || []).sort((a, b) => (a.t1 ?? a.t2) - (b.t1 ?? b.t2)).map(it).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-<div class="m" style="font-size:12px">Heures prévues : <span style="color:var(--p);font-weight:700">arrivée</span> – <span style="color:#b8740a;font-weight:700">départ</span> · « ≈ » estimée · <sup>+1</sup> lendemain · barre violette = rotation. Faites glisser le tableau horizontalement sur téléphone.</div>`;
+  const mv = L => L.reduce((s, x) => s + (x.typ == "R" && rot2 ? 2 : 1), 0), byT = (a, b) => (a.t1 ?? a.t2) - (b.t1 ?? b.t2);
+  const leg = `<div class="m" style="font-size:12px">Heures prévues : <span style="color:var(--p);font-weight:700">arrivée</span> – <span style="color:#b8740a;font-weight:700">départ</span> · « ≈ » estimée · <sup>+1</sup> lendemain · barre violette = rotation${rot2 ? "" : " (comptée comme un seul vol)"}. Faites glisser le tableau horizontalement sur téléphone.</div>`;
+  if (mode == "semj") {
+    /* sans colonne compagnie : chaque jour en ordre chronologique */
+    const itj = x => it(x).replace("<b>", "<b>" + (x.pfx ? E(x.pfx) + " " : ""));
+    return `<div class="card vwj"><div>${ord.map(w => { const L = sem.find(D => D.w == w).it.filter(f).sort(byT); return `<section class="${w == tw ? "td" : ""}"><h4>${JSEM[w]}<small>${DW[w].j.slice(8, 10)}/${DW[w].j.slice(5, 7)} · ${mv(L)} vol${mv(L) > 1 ? "s" : ""}</small></h4>${L.map(itj).join("")}</section>`; }).join("")}</div></div>${leg}`;
+  }
+  return `<div class="card vwt"><table><thead><tr><th>Compagnie</th>${ord.map(w => `<th class="${w == tw ? "td" : ""}">${JSEM[w]}<small>${DW[w] ? DW[w].j.slice(8, 10) + "/" + DW[w].j.slice(5, 7) : ""}</small></th>`).join("")}</tr></thead><tbody>${cos.map(c => `<tr><td><b>${E(c)}</b><small>${mv(Object.values(C[c]).flat())} vols / sem.</small></td>${ord.map(w => `<td class="${w == tw ? "td" : ""}">${(C[c][w] || []).sort(byT).map(it).join("")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+${leg}`;
 }
 const PERL = ["Nuit · 00h–06h", "Matin · 06h–12h", "Après-midi · 12h–18h", "Soir · 18h–24h"];
 const VTRL = [["heure", "Heure"], ["compagnie", "Compagnie"], ["creneau", "Créneau horaire"], ["type", "Type (rotation, arrivée, départ)"], ["cargo", "Passagers / cargo"]];
@@ -216,7 +223,7 @@ function vregData(DATA) {
       if (g.sens == "A") { const ns = Object.values(NS[g.id] || {}).sort((x, y) => y.c - x.c)[0]; if (ns && ns.c >= 2) obs.push(`même avion repart en ${ns.n}${ns.off ? " le lendemain (night-stop)" : ""}`); }
       D.it.push({ typ: g.sens, t1: g.sens == "A" ? sg.m : null, t2: g.sens == "D" ? sg.m : null, e1: g.sens == "A" && sg.src == "est", e2: g.sens == "D" && sg.src == "est", md: sg.m, k0: sg.m, num: g.n, pfx: g.cargo ? vCpx(g.occ[0]) : "", cie: g.cie, route: g.sens == "A" ? ap(g.pd) + " → NKC" : "NKC → " + ap(g.pd), cargo: g.cargo, appareil: g.typ, obs: obs.filter(Boolean) });
     });
-    D.mv = D.it.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
+    D.mv = D.it.length;
     D.it.forEach(x => { const [na, nd] = x.typ == "R" ? (x.num.includes(" / ") ? x.num.split(" / ") : [x.num, x.num]) : [x.num, x.num];
       if (x.t1 != null) SIX[D.w + "|" + na + "|A"] = (x.e1 ? "≈" : "") + hhm(x.t1);
       if (x.t2 != null) SIX[((D.w + (x.t2 >= 1440 ? 1 : 0)) % 7) + "|" + nd + "|D"] = (x.e2 ? "≈" : "") + hhm(x.t2); });
@@ -249,7 +256,7 @@ function render() {
   const dayLab = a => { const d = AT(a); return `${JSEM[d.getUTCDay()]} ${dmy(d)}`; };
   const WI = ALL.filter(x => inW(x, W[0], W[1])).map(x => { const k = Math.floor(x.a0 / 360); return { ...x, ck: k, cl: PERL[k % 4] + " · " + dayLab(x.a0) }; });
   const its = WI.filter(x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF)); LAST = { lab: W[2], d: AT(W[0]), its };
-  const mvC = L => L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0);
+  const mvC = L => L.length; /* page Programme de vol : une rotation compte pour un vol */
   let nx = "";
   { const ev = []; WI.forEach(x => { if (x.t1 != null) ev.push([x.a0, vLab(x, x.num.split(" / ")[0]), "arrivée"]); if (x.t2 != null) ev.push([x.a1, vLab(x, x.num.split(" / ").pop()), "départ"]); }); const n = ev.filter(e => e[0] >= nowA).sort((a, b) => a[0] - b[0])[0]; if (n && nowA >= W[0]) { const dm = n[0] - nowA; nx = `<div class="vnx"><i></i>Prochain : <b>${E(n[1])}</b> ${n[2]} prévu à <b>${hhm(n[0] % 1440)}</b>, dans ${dm < 60 ? dm + " min" : Math.floor(dm / 60) + " h " + p2(dm % 60)}</div>`; } }
   const tm = (a, e, cl) => `<span class="${cl}">${e ? "≈" : ""}${hhm(a % 1440)}${Math.floor(a / 1440) > Math.floor(W[0] / 1440) ? "<sup>+1</sup>" : ""}</span>`;
@@ -257,21 +264,21 @@ function render() {
   const list = vGroup(its, TRI).map(([l, xs]) => `${l ? `<div class="vrg"><span>${E(l)}</span><span>${mvC(xs)} vols</span></div>` : ""}<div class="card vrl">${xs.map(row).join("")}</div>`).join("") || `<div class="card m">Aucun vol régulier sur cette période.</div>`;
   const chip = (k, l) => `<button type="button" class="btn${VRF == k ? " p" : ""}" data-f="${k}">${l}</button>`;
   const wb = (k, l) => `<button type="button" class="btn${VRW == k ? " p" : ""}" data-w="${k}">${l}</button>`;
-  const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => x.a0 < w0 + 1440 && x.a1 >= w0)), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" && VRW != "sem" ? " on" : ""}" data-j="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
+  const strip = [...Array(7)].map((_, i) => { const j = cur + i, w0 = j * 1440 + 480, n = mvC(ALL.filter(x => x.a0 < w0 + 1440 && x.a1 >= w0)), d = AT(j * 1440); return `<button type="button" class="vrd${i == VRJ && VRW != "passes" && !/^sem/.test(VRW) ? " on" : ""}" data-j="${i}"><span>${i == 0 ? "Shift" : JSEM[d.getUTCDay()]}</span><b>${n}</b><small>${dmy(d)}</small></button>`; }).join("");
   document.getElementById("app").innerHTML = `<div><h1>Programme de vol · Nouakchott-Oumtounsy (NKC)</h1><div class="m">Vols réguliers · heures locales (UTC) · mis à jour le ${dmy(GEN)} à ${p2(GEN.getUTCHours())}h${p2(GEN.getUTCMinutes())}</div></div>
 <div class="card vrn"><b>⚠️ Programme indicatif : vols réguliers uniquement.</b> Heures prévues (STA / STD) du dernier Flight Allocation ; « ≈ » = heure prévue estimée. Des changements peuvent avoir lieu : confirmez chaque jour auprès de l’exploitation.</div>
 <div class="vqs"><input id="vq" type="search" enterkeyhint="search" autocomplete="off" placeholder="Rechercher un vol : numéro, compagnie, destination…" value="${E(VQ)}"></div><div id="vqr">${vSearchHTML()}</div><div id="vmain" class="vmain"${VQ.trim() ? " hidden" : ""}><div class="vrs">${strip}</div>
-<div style="display:flex;gap:4px;flex-wrap:wrap">${wb("shift", "Shift 08h → 08h")}${wb("sem", "Semaine par compagnie")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-more="1">Voir plus ▾</button>`}</div>
-${VRW == "sem" ? "" : `<div class="card"><div class="row" style="align-items:baseline;flex-wrap:wrap"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${WI.filter(x => x.typ == "R").length} rotations</span><span class="A">${WI.filter(x => x.t1 != null).length} arrivées</span><span class="D">${WI.filter(x => x.t2 != null).length} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>`}
-<div class="row" style="flex-wrap:wrap"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div>${VRW == "sem" ? "" : `<div style="display:flex;gap:6px;align-items:center"><label class="m" for="tri">Trier par</label><select id="tri">${VTRL.map(([k, l]) => `<option value="${k}" ${TRI == k ? "selected" : ""}>${l}</option>`).join("")}</select><button type="button" class="btn" id="cp">📋 Copier</button></div>`}</div>
-${VRW == "sem" ? vWeekHTML(R.days, x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF)) : list}</div>
+<div style="display:flex;gap:4px;flex-wrap:wrap">${wb("shift", "Shift 08h → 08h")}${wb("sem", "Semaine par compagnie")}${wb("semj", "Semaine par jour")}${VRWM || VRW != "shift" ? wb("jour", "Journée 00h–24h") + wb("h48", "48 h") + wb("passes", "Vols passés") : `<button type="button" class="btn" data-more="1">Voir plus ▾</button>`}</div>
+${/^sem/.test(VRW) ? "" : `<div class="card"><div class="row" style="align-items:baseline;flex-wrap:wrap"><div><b style="font-size:22px">${mvC(WI)} vols</b> <span class="m">${E(W[2])}${VRW == "passes" ? "" : " · " + dayLab(W[0])}</span></div><div class="vrk"><span class="R">${WI.filter(x => x.typ == "R").length} rotations</span><span class="A">${WI.filter(x => x.typ == "A").length} arrivées</span><span class="D">${WI.filter(x => x.typ == "D").length} départs</span></div></div>${nx}${vTimeline(WI, W[0], Math.max(W[1], W[0] + 60), nowA)}</div>`}
+<div class="row" style="flex-wrap:wrap"><div style="display:flex;gap:4px;flex-wrap:wrap">${chip("T", "Tout")}${chip("R", "Rotations")}${chip("A", "Arrivées")}${chip("D", "Départs")}${chip("C", "Cargo")}</div>${/^sem/.test(VRW) ? "" : `<div style="display:flex;gap:6px;align-items:center"><label class="m" for="tri">Trier par</label><select id="tri">${VTRL.map(([k, l]) => `<option value="${k}" ${TRI == k ? "selected" : ""}>${l}</option>`).join("")}</select><button type="button" class="btn" id="cp">📋 Copier</button></div>`}</div>
+${/^sem/.test(VRW) ? vWeekHTML(R.days, x => VRF == "T" || (VRF == "C" ? x.cargo : x.typ == VRF), VRW, false) : list}</div>
 <footer>Programme établi à partir du Flight Allocation et des vols observés (Flightradar24) sur les trois dernières semaines. Vols privés, d’État et occasionnels non affichés. EPS — El Baraka Prestations de Services.</footer>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || !R) return;
-  if (b.dataset.j != null) { VRJ = +b.dataset.j; if (VRW == "passes" || VRW == "sem") VRW = "shift"; }
+  if (b.dataset.j != null) { VRJ = +b.dataset.j; if (VRW == "passes" || /^sem/.test(VRW)) VRW = "shift"; }
   else if (b.dataset.w) VRW = b.dataset.w; else if (b.dataset.more) VRWM = true; else if (b.dataset.f) VRF = b.dataset.f; else if (b.dataset.qf) VQF = b.dataset.qf;
-  else if (b.id == "cp") { const L = vGroup(LAST.its, "heure")[0][1], n = L.reduce((s, x) => s + (x.typ == "R" ? 2 : 1), 0), T = [`Vols réguliers NKC — ${LAST.lab} du ${JSEML[LAST.d.getUTCDay()]} ${dmy(LAST.d)} (${n} vols)`, "Programme indicatif (heures prévues), sous réserve de changements.", ""]; L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${vLab(x)}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}  ${x.route}`)); navigator.clipboard.writeText(T.join("\n")).then(() => b.textContent = "✓ Copié", () => b.textContent = "Copie impossible"); return; }
+  else if (b.id == "cp") { const L = vGroup(LAST.its, "heure")[0][1], n = L.length, T = [`Vols réguliers NKC — ${LAST.lab} du ${JSEML[LAST.d.getUTCDay()]} ${dmy(LAST.d)} (${n} vols)`, "Programme indicatif (heures prévues), sous réserve de changements.", ""]; L.forEach(x => T.push(`${x.typ == "R" ? (x.e1 ? "≈" : "") + hhm(x.a0 % 1440) + " → " + (x.e2 ? "≈" : "") + hhm(x.a1 % 1440) : ((x.e1 || x.e2) ? "≈" : "") + hhm(x.a0 % 1440)}  ${vLab(x)}  ${{ R: "Rotation", A: "Arrivée", D: "Départ" }[x.typ]}  ${x.route}`)); navigator.clipboard.writeText(T.join("\n")).then(() => b.textContent = "✓ Copié", () => b.textContent = "Copie impossible"); return; }
   else return;
   render();
 });
