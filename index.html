@@ -2312,9 +2312,10 @@ const vueChaine = () => { const p = new Proxy(function () { }, { get: (t, k) => 
 /* toute écriture est bloquée tant qu'on consulte un autre compte */
 (() => {
   const f = sb.from.bind(sb), r = sb.rpc.bind(sb), st = sb.storage.from.bind(sb.storage), fi = sb.functions.invoke.bind(sb.functions);
-  sb.from = t => { const q = f(t); if (!VUE) return q; ["insert", "update", "upsert", "delete"].forEach(m => { q[m] = () => { toast(vueMsg()); return vueChaine(); }; }); return q; };
-  sb.rpc = (n, a, o) => { if (VUE && !VUE_RPC_LECTURE.includes(n)) { toast(vueMsg()); return vueChaine(); } return r(n, a, o); };
-  sb.storage.from = b => { const x = st(b); if (!VUE) return x; ["upload", "copy", "remove", "move", "update"].forEach(m => { x[m] = async () => { toast(vueMsg()); return vueErr(); }; }); return x; };
+  /* pendant la consultation, les lectures passent par la session du compte consulté (ses vrais droits d'accès) */
+  sb.from = t => { const q = VUE && VUE.cli ? VUE.cli.from(t) : f(t); if (!VUE) return q; ["insert", "update", "upsert", "delete"].forEach(m => { q[m] = () => { toast(vueMsg()); return vueChaine(); }; }); return q; };
+  sb.rpc = (n, a, o) => { if (VUE && !VUE_RPC_LECTURE.includes(n)) { toast(vueMsg()); return vueChaine(); } return VUE && VUE.cli ? VUE.cli.rpc(n, a, o) : r(n, a, o); };
+  sb.storage.from = b => { const x = VUE && VUE.cli ? VUE.cli.storage.from(b) : st(b); if (!VUE) return x; ["upload", "copy", "remove", "move", "update"].forEach(m => { x[m] = async () => { toast(vueMsg()); return vueErr(); }; }); return x; };
   sb.functions.invoke = (n, o) => VUE && n != "ia-texte" ? (toast(vueMsg()), Promise.resolve(vueErr())) : fi(n, o);
 })();
 const vueAutorise = () => (ME0 ? UID0 : UID) == VUE_UID;
@@ -2332,15 +2333,23 @@ async function vueChoisir() {
   if (error) return toast("Liste indisponible : " + error.message);
   const L = data || [];
   mdOpen(`<div class="row"><h2>👁 Voir comme…</h2><button type="button" class="btn" id="no">✕</button></div>
-<div class="m">L’app s’affiche comme pour la personne choisie : menus, Mon shift, tâches, alertes. Lecture seule : aucune action n’est enregistrée. Les données restent celles auxquelles votre propre compte a accès.</div>
+<div class="m">L’app s’affiche exactement comme pour la personne choisie : ses menus, ses tâches, ses alertes et <b>uniquement les données auxquelles son compte a accès</b>. Lecture seule : aucune action n’est enregistrée. Session de consultation valable 1 heure.</div>
 ${VUE_ROLES.concat([...new Set(L.map(p => p.role))].filter(r => !VUE_ROLES.includes(r))).map(r => { const G = L.filter(p => p.role == r); return G.length ? `<div><div class="m" style="font-weight:700;margin:6px 0 4px">${E(RL[r] || r)}</div>${G.map(p => `<button type="button" class="dsg" data-a="vueset" data-i="${p.id}"><b>${E(p.nom)}</b><span class="m">${p.matricule ? "ID " + E(p.matricule) : ""}</span></button>`).join("")}</div>` : ""; }).join("")}`);
   $("#no").onclick = () => $("#md").classList.remove("on");
   vueChoisir.L = L;
 }
 Object.assign(ACT, {
   vuechoix() { vueChoisir(); },
-  vueset(b) { const p = (vueChoisir.L || []).find(x => x.id == b.dataset.i); if (!p || !vueAutorise()) return; if (!ME0) { ME0 = ME; UID0 = UID; } VUE = p; ME = { ...ME0, id: p.id, nom: p.nom, role: p.role, matricule: p.matricule, must_change: false }; UID = p.id; $("#md").classList.remove("on"); toast("Vue de " + p.nom + " (lecture seule)"); vueRaz(); },
-  vuequit() { if (!ME0) return; ME = ME0; UID = UID0; VUE = null; ME0 = null; UID0 = null; toast("Retour à votre compte"); vueRaz(); }
+  async vueset(b) { const p = (vueChoisir.L || []).find(x => x.id == b.dataset.i); if (!p || !vueAutorise()) return;
+    if (VUE) ACT.vuequit(true);
+    toast("Ouverture de la session de " + p.nom + "…");
+    const { data, error } = await sb.functions.invoke("voir-comme", { body: { cible: p.id } });
+    if (error || !data || !data.access_token) return toast("Consultation impossible : " + (data?.erreur || error?.message || "erreur"));
+    const cli = supabase.createClient(sb.supabaseUrl, sb.supabaseKey, { global: { headers: { Authorization: "Bearer " + data.access_token } }, auth: { persistSession: false, autoRefreshToken: false, storageKey: "eps-vue" }, realtime: { params: {} } });
+    ME0 = ME; UID0 = UID; VUE = { ...p, cli, fin: data.expires_at };
+    ME = { ...ME0, id: p.id, nom: p.nom, role: p.role, matricule: p.matricule, must_change: false }; UID = p.id;
+    $("#md").classList.remove("on"); toast("Vue de " + p.nom + " : ses accès réels, lecture seule"); BOOT = Promise.all([loadAG(), loadST(), loadAL()]); BOOT.catch(() => { }); vueRaz(); },
+  vuequit(silencieux) { if (!ME0) return; ME = ME0; UID = UID0; VUE = null; ME0 = null; UID0 = null; if (silencieux === true) return; toast("Retour à votre compte"); BOOT = Promise.all([loadAG(), loadST(), loadAL()]); BOOT.catch(() => { }); vueRaz(); }
 });
 
 /* Onglets intégrés comme cartes dépliables dans une page hôte */
