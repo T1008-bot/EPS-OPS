@@ -2097,8 +2097,8 @@ function agSug(q) {
 }
 document.addEventListener("input", e => { if (e.target.id != "deq") return; const L = agSug(e.target.value); $("#deql").innerHTML = L.map(a => `<button type="button" class="dsg" data-a="desel" data-m="${E(a.matricule)}"><b>${E(a.nom)}</b><span class="m">ID ${E(a.matricule)}${a.badge ? " · badge " + E(a.badge) : ""} · ${E(a.equipe || "")}</span></button>`).join("") || (e.target.value.trim() ? `<div class="m" style="padding:6px">Aucun agent ne correspond.</div>` : ""); });
 
-async function denewOpen() {
-  if (!(await maSig())) { toast("Enregistrez d’abord votre signature : elle sera apposée sur la demande."); return msigOpen(denewOpen); }
+async function denewOpen(pre) {
+  if (!(await maSig())) { toast("Enregistrez d’abord votre signature : elle sera apposée sur la demande."); return msigOpen(() => denewOpen(pre)); }
   DESEL = null; const co = ((await sb.rpc("collaborateurs")).data || []).filter(c => DE_DELEG.includes(c.role) && c.id != UID);
   mdOpen(`<div class="row"><h2>Nouvelle demande d’explication</h2><button type="button" class="btn" id="no">✕</button></div>
 <div><label>1. Agent concerné</label><input id="deq" placeholder="Nom, matricule ou badge…" autocomplete="off"><div id="deql" class="dsl"></div><div id="dech"></div></div>
@@ -2113,6 +2113,7 @@ async function denewOpen() {
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="deok">Établir la demande</button></div>`);
   const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
   $("#dedl").onchange = e => { $("#decw").style.display = e.target.value ? "" : "none"; };
+  if (pre && pre.m) { DESEL = AG.find(a => a.matricule == pre.m) || null; if (DESEL) deChip(DESEL); if (pre.date) $("#dedf").value = pre.date; if (pre.objet) $("#deob").value = pre.objet; if (pre.faits) $("#defa").value = pre.faits; }
   $("#deok").onclick = async () => {
     if (!DESEL) return toast("Choisissez l’agent concerné"); const ob = $("#deob").value.trim(), fa = $("#defa").value.trim();
     if (!ob || fa.length < 25) return toast("Renseignez l’objet et décrivez les faits");
@@ -2121,6 +2122,7 @@ async function denewOpen() {
     if (error) { b.disabled = false; b.textContent = "Établir la demande"; return toast("Refusé : " + error.message); }
     const pth = `de/${data.id}/etab.png`, cp = await DST().copy("signatures/" + UID + ".png", pth);
     if (!cp.error) await sb.rpc("de_sig_etab", { p_id: data.id, p_chemin: pth });
+    if (pre && pre.done) await pre.done(data.id);
     const del = $("#dedl").value; cl(); toast("Demande établie : " + data.ref + (del ? " — remise déléguée" : ""));
     await draw(); if (!del && confirm("Remettre maintenant la demande à l’agent (lecture, réponse et signature) ?")) deRemise(data.id);
   };
@@ -2483,7 +2485,7 @@ function apTeams() {
 }
 async function apLoad() {
   if (!APON || !APW.includes(ME.role)) return;
-  const [a, r] = await Promise.all([sb.from("appels").select("*").eq("jour", apJour()), sb.from("statuts_jour").select("jour,matricule,justification").eq("retard_a_confirmer", true).gte("jour", ymd(Date.now() - 3 * 864e5))]);
+  const [a, r] = await Promise.all([sb.from("appels").select("*").eq("jour", apJour()), sb.from("statuts_jour").select("*").or("retard_a_confirmer.eq.true,and(retard_issue.not.is.null,retard_suite.is.null),and(retard_suite.in.(de,av),retard_de_id.is.null)").gte("jour", ymd(Date.now() - 7 * 864e5)).order("jour")]);
   APL = a.data || []; APR = r.data || [];
 }
 async function apCard() {
@@ -2492,10 +2494,27 @@ async function apCard() {
   const s = shiftStart(), T = apTeams(), late = Date.now() >= s.getTime() + 75 * 60000;
   const line = e => { const a = APL.find(x => x.equipe == e);
     return `<div class="li"><div><b>${apLab(e)}</b><div class="m">${a ? `Fait à ${hm(a.fait_le)} par ${E(a.fait_nom || "")}${a.lat != null ? " · 📍 position relevée" : ""}` : e == "Équipe 4" ? "Journée 08h–16h · pas encore fait" : "Pas encore fait"}</div></div>${a ? `<div style="text-align:right"><b style="font-size:18px">${a.presents}/${a.effectif}</b> <button class="btn" data-a="apvoir" data-e="${E(e)}">Voir</button></div>` : `<div>${late ? '<span class="bd bad">En retard</span> ' : ""}<button class="btn p" data-a="apnew" data-e="${E(e)}">Faire l’appel</button></div>`}</div>`; };
-  const eqs = new Set(T), R = APR.map(x => ({ ...x, a: AG.find(g => g.matricule == x.matricule) })).filter(x => x.a && eqs.has(x.a.equipe));
+  const eqs = new Set(T), R = APR.map(x => ({ ...x, a: AG.find(g => g.matricule == x.matricule) })).filter(x => x.a && (eqs.has(x.a.equipe) || (!x.retard_a_confirmer && apVis(x.a.equipe))));
   return `<div class="card"><div class="row"><h2>📋 Appel du shift <span class="bd warn">En essai</span></h2><span class="m">${dmy(s)} · 08h → 08h</span></div><div class="m">Tout le monde est présent par défaut : notez seulement les absents et les retards. La situation officielle reste celle de Jotform.</div>${T.map(line).join("")}</div>`
-    + (R.length ? `<div class="card" style="border-left:4px solid var(--red)"><b>⏱ Retards à confirmer</b><div class="m">Absents à la situation du matin, mais plus listés parmi les absents de la situation du soir (Jotform).</div>${R.map(x => `<div class="li"><div><b>${E(x.a.nom)}</b><div class="m">ID ${E(x.matricule)} · ${apLab(x.a.equipe)} · ${dmy(x.jour)}</div></div><div class="row" style="gap:6px"><button class="btn w" data-a="apret" data-m="${E(x.matricule)}" data-j="${x.jour}" data-v="1">Retard (heure)</button><button class="btn" data-a="apret" data-m="${E(x.matricule)}" data-j="${x.jour}" data-v="0">Absent</button></div></div>`).join("")}</div>` : "");
+    + apRetCard(R);
 }
+const RTI = { retard: "Retard", absent: "Absence confirmée", justifie: "Retard justifié / autorisé" }, RTS = { rh: "Information RH", de: "Demande d’explication", av: "Avertissement verbal", autre: "Autre mesure" };
+/* retards : 1) confirmer (heure d’arrivée, absent, justifié/autorisé) — 2) suite à donner — 3) demande d’explication à établir. RH notifiée à chaque étape. */
+function apRetCard(R) {
+  if (!R.length) return "";
+  const id = x => `data-m="${E(x.matricule)}" data-j="${x.jour}"`, who = x => `<b>${E(x.a.nom)}</b><div class="m">ID ${E(x.matricule)} · ${apLab(x.a.equipe)} · shift du ${dmy(x.jour + "T08:00:00Z")}</div>`;
+  const A = R.filter(x => x.retard_a_confirmer), B = R.filter(x => !x.retard_a_confirmer && x.retard_issue && !x.retard_suite), C = R.filter(x => ["de", "av"].includes(x.retard_suite) && !x.retard_de_id);
+  const etat = x => `<div class="m"><span class="bd ${x.retard_issue == "absent" ? "bad" : "warn"}">${RTI[x.retard_issue]}${x.retard_heure ? " · arrivée " + E(String(x.retard_heure).replace(":", "h")) : ""}</span>${x.retard_issue == "justifie" ? ` ${E(x.retard_autorise_par || "")} : ${E(x.retard_motif || "")}` : ""} · ${E(x.retard_traite_nom || "")}</div>`;
+  return `<div class="card" style="border-left:4px solid var(--red)"><b>⏱ Retards</b><div class="m">Les RH sont notifiées à chaque étape.</div>
+${A.length ? `<div class="svt" style="margin-top:8px">À confirmer</div><div class="m">Absents à la situation du matin, plus listés parmi les absents de la situation du soir (Jotform).</div>${A.map(x => `<div class="li" style="flex-wrap:wrap"><div>${who(x)}</div><div class="row" style="gap:6px"><button class="btn w" data-a="apret" data-k="retard" ${id(x)}>Retard (heure d’arrivée)</button><button class="btn" data-a="apret" data-k="absent" ${id(x)}>Absent</button><button class="btn" data-a="apret" data-k="justifie" ${id(x)}>Justifié / autorisé</button></div></div>`).join("")}` : ""}
+${B.length ? `<div class="svt" style="margin-top:8px">Suite à donner</div>${B.map(x => `<div class="li" style="flex-wrap:wrap"><div>${who(x)}${etat(x)}</div><div class="row" style="gap:6px"><button class="btn" data-a="apsuite" data-k="rh" ${id(x)}>Informer RH</button><button class="btn" data-a="apsuite" data-k="de" ${id(x)}>Demande d’explication</button><button class="btn" data-a="apsuite" data-k="av" ${id(x)}>Avertissement verbal</button><button class="btn" data-a="apsuite" data-k="autre" ${id(x)}>Autre…</button></div></div>`).join("")}` : ""}
+${C.length ? `<div class="svt" style="margin-top:8px">Demande d’explication à établir</div>${C.map(x => `<div class="li" style="flex-wrap:wrap"><div>${who(x)}${etat(x)}<div class="m">${RTS[x.retard_suite]} décidé par ${E(x.retard_suite_nom || "")}</div></div>${DE_ETAB.includes(ME.role) ? `<button class="btn p" data-a="apde" ${id(x)}>Établir la demande d’explication</button>` : '<span class="m">Transmis au superviseur</span>'}</div>`).join("")}` : ""}</div>`;
+}
+const apDE = x => { const a = AG.find(g => g.matricule == x.matricule) || {}, d = dmy(x.jour + "T08:00:00Z"), av = x.retard_suite == "av";
+  denewOpen({ m: x.matricule, date: x.jour, objet: (av ? "Avertissement verbal – " : "") + (x.retard_issue == "absent" ? "Absence" : "Retard") + " – Shift du " + d + "/" + x.jour.slice(0, 4),
+    faits: `Il a été constaté que, lors du shift du ${d}, ${x.retard_issue == "absent" ? "vous ne vous êtes pas présenté(e) à votre poste" : `vous vous êtes présenté(e) à votre poste en retard${x.retard_heure ? ", à " + String(x.retard_heure).replace(":", "h") : ""}, l’appel de l’équipe ${apLab(a.equipe || "")} ayant eu lieu à 08h00`}.${x.retard_issue == "justifie" ? ` Motif invoqué : ${x.retard_motif || ""} (${x.retard_autorise_par || ""}).` : ""}`,
+    done: id => sb.rpc("retard_de_lier", { p_jour: x.jour, p_matricule: x.matricule, p_de: id }).then(() => apLoad()) }); };
+const apVis = e => { if (svcRole() && apSv(e) != svcRole()) return false; const mine = AG.find(a => a.matricule == ME.matricule); return !(/^chef_/.test(ME.role) && mine && mine.equipe != e); };
 /* --- fenêtre d’appel --- */
 const apRow = a => { const x = APX.s[a.matricule] || { s: "p" }, ks = x.s == "mp" ? [...APK, "mp"] : APK;
   return `<div class="apr" id="apr_${E(a.matricule)}" data-n="${E(N(a.nom + " " + a.matricule + " " + (a.badge || "")))}"><div class="row" style="flex-wrap:nowrap"><span><b>${E(a.nom)}</b> <span class="m">${E(a.matricule)}${a.fonction ? " · " + E(a.fonction) : ""}</span></span></div><div class="apc">${ks.map(k => `<button type="button" class="apk ${k}" aria-pressed="${x.s == k}" data-a="apch" data-m="${E(a.matricule)}" data-v="${k}">${APS[k]}</button>`).join("")}</div>${x.s == "r" ? `<div class="row" style="flex-wrap:nowrap;gap:6px"><label class="m" style="margin:0">Arrivée</label><input type="time" value="${E(x.h || "")}" data-apm="${E(a.matricule)}" data-apf="h" style="width:auto"></div>` : ["j", "c", "nj", "mp"].includes(x.s) ? `<input placeholder="${x.s == "nj" ? "Observation (facultatif)" : "Motif (maladie, permission…)"}" value="${E(x.mo || "")}" data-apm="${E(a.matricule)}" data-apf="mo">` : ""}</div>`; };
@@ -2633,8 +2652,16 @@ Object.assign(ACT, {
   aprno() { $("#aprc")?.remove(); },
   async appdf(b) { const a = APL.find(x => x.equipe == b.dataset.e); if (!a) return; b.disabled = true; try { await apPDF(a); } catch (e) { toast("PDF impossible : " + e.message); } b.disabled = false; },
   async apshare(b) { const a = APL.find(x => x.equipe == b.dataset.e); if (!a) return; const t = apTxt(a); if (navigator.share) { try { await navigator.share({ title: "Appel " + apLab(a.equipe), text: t }); return; } catch (e) { if (e.name == "AbortError") return; } } open("https://wa.me/?text=" + encodeURIComponent(t), "_blank"); },
-  apret(b) { const m = b.dataset.m, j = b.dataset.j, a = AG.find(x => x.matricule == m) || { nom: m }, go = async (ret, h) => { const { error } = await sb.rpc("retard_valider", { p_jour: j, p_matricule: m, p_retard: ret, p_heure: h || null }); if (error) return toast("Refusé : " + error.message); toast(ret ? "Retard confirmé" : "Absence confirmée"); await apLoad(); draw(2); };
-    if (b.dataset.v == "1") ask("Retard de " + a.nom, [{ k: "h", l: "Heure d’arrivée", t: "time", r: 1 }], v => go(true, v.h)); else if (confirm(a.nom + " était bien absent(e) ce jour-là ?")) go(false); },
+  apret(b) { const m = b.dataset.m, j = b.dataset.j, k = b.dataset.k, a = AG.find(x => x.matricule == m) || { nom: m };
+    const go = async v => { const { error } = await sb.rpc("retard_traiter", { p_jour: j, p_matricule: m, p_issue: k, p_heure: v.h || null, p_motif: v.mo || null, p_par: v.par || null }); if (error) return toast("Refusé : " + error.message); toast(RTI[k] + " enregistré · RH notifiées"); await apLoad(); draw(2); };
+    if (k == "retard") ask("Retard de " + a.nom, [{ k: "h", l: "Heure d’arrivée sur l’aéroport", t: "time", r: 1 }], go);
+    else if (k == "justifie") ask("Retard justifié / autorisé · " + a.nom, [{ k: "par", l: "Justifié ou autorisé par (nom, fonction)", r: 1 }, { k: "mo", l: "Motif / justification", t: "ta", r: 1 }, { k: "h", l: "Heure d’arrivée (si l’agent est arrivé)", t: "time" }], go);
+    else ask("Absence de " + a.nom, [{ k: "mo", l: "Observation (facultatif)", t: "ta" }], go); },
+  apsuite(b) { const m = b.dataset.m, j = b.dataset.j, k = b.dataset.k, a = AG.find(x => x.matricule == m) || { nom: m };
+    const go = async v => { const { error } = await sb.rpc("retard_suite_donner", { p_jour: j, p_matricule: m, p_suite: k, p_note: v.n || null }); if (error) return toast("Refusé : " + error.message); toast("Décision enregistrée · RH notifiées");
+      await apLoad(); if ((k == "de" || k == "av") && DE_ETAB.includes(ME.role)) { const x = APR.find(r => r.matricule == m && r.jour == j); if (x) return apDE(x); } draw(2); };
+    ask(RTS[k] + " · " + a.nom, [{ k: "n", l: k == "autre" ? "Mesure décidée" : "Note (facultatif)", t: "ta", r: k == "autre" }], go); },
+  apde(b) { const x = APR.find(r => r.matricule == b.dataset.m && r.jour == b.dataset.j); if (x) apDE(x); },
   async apxls(b) { const d1 = $("#apx1").value, d2 = $("#apx2").value; if (!d1 || !d2 || d1 > d2) return toast("Période invalide"); b.disabled = true; try { const n = await apXLS(d1, d2); toast(n ? n + " appel(s) exporté(s)" : "Aucun appel sur la période"); } catch (e) { toast("Export impossible : " + e.message); } b.disabled = false; }
 });
 document.addEventListener("click", e => { if (!e.target.closest("#md")) SXA = e.target.closest("[data-sx]")?.dataset.sx || null; const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { SXA = null; NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });

@@ -107,3 +107,10 @@ grant execute on function public.appel_actif(), public.appel_enregistrer(date,te
   public.retard_valider(date,text,boolean,text) to authenticated;
 
 select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select public.detecter_retards(); select public.rappels_appel();$$);
+
+-- 19/11/2026 — Traitement des retards (migration retards_traitement_suite, appliquée) :
+-- colonnes statuts_jour.retard_issue/retard_motif/retard_autorise_par/retard_traite_nom/retard_traite_le/
+-- retard_suite/retard_suite_note/retard_suite_nom/retard_suite_le/retard_de_id ;
+-- fonctions retard_traiter (retard + heure | absent | justifié/autorisé + motif + par qui, notification RH),
+-- retard_suite_donner (informer RH | demande d'explication | avertissement verbal | autre, notification RH,
+-- et superviseurs si un chef demande une DE), retard_de_lier (lien vers la demande d'explication établie).
