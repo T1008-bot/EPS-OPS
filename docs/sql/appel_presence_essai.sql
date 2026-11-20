@@ -299,3 +299,170 @@ begin
 end $$;
 
 grant execute on function public.demande_creer(jsonb), public.demande_notifier_creation(bigint), public.demande_signer(bigint,text,text), public.demande_rh(bigint,text,text), public.demande_valider(bigint,text,text), public.demande_annuler(bigint,text), public.demande_pj(bigint,jsonb) to authenticated;
+
+-- 2026-11-20 : intégration des demandes validées (situation, paie, congés, prêts) + priorité et écarts
+alter table public.demandes_agent add column if not exists sig_dg text, add column if not exists verse_le date, add column if not exists verse_nom text,
+  add column if not exists verse_note text, add column if not exists pret_id bigint, add column if not exists conge_id bigint,
+  add column if not exists integre_le timestamptz, add column if not exists ecarts jsonb not null default '[]';
+
+/* jour de shift concerné par une permission de départ (shift de 08h à 08h) */
+create or replace function public.dem_jour_depart(d public.demandes_agent) returns date language sql immutable as $$
+  select case when d.heure_depart is not null and d.heure_depart < time '08:00' then d.date_debut - 1 else d.date_debut end $$;
+
+/* jour normalement travaillé par l'agent (rotation des équipes / jours ouvrés) */
+create or replace function public.dem_jour_travaille(p_mat text, p_jour date) returns boolean language sql stable security definer set search_path = public as $$
+  select case when a.service like 'Encadrement%' then true
+    when a.equipe ~ '^(Équipe|Manutention) [123]$' then garde_du(p_jour) = right(a.equipe,1)::int
+    when a.equipe in ('Équipe 4','Chauffeurs') then extract(isodow from p_jour) <= 5
+    else true end from agents a where a.matricule = p_mat $$;
+
+create or replace function public.dem_ecart(p_id bigint, p_jour date, p_txt text) returns void
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent;
+begin
+  select * into r from demandes_agent where id = p_id;
+  if r.ecarts @> jsonb_build_array(jsonb_build_object('jour', p_jour, 'texte', p_txt)) then return; end if;
+  update demandes_agent set ecarts = ecarts || jsonb_build_array(jsonb_build_object('jour', p_jour, 'texte', p_txt, 'le', now())) where id = p_id;
+  perform notifier(array['responsable_rh','assistante_rh'], null, 'presence', 'Écart avec une ' || lower(dem_libelle(r.type)) || ' — ' || r.agent_nom,
+    to_char(p_jour,'DD/MM/YYYY') || ' : ' || p_txt || ' La ' || lower(dem_libelle(r.type)) || ' validée (' || r.ref || ') a été appliquée.', 'eff', r.ref, null);
+end $$;
+
+/* priorité des permissions et congés validés sur la situation saisie (appel, situation du staff, saisie manuelle) */
+create or replace function public.dem_priorite() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare d public.demandes_agent; x text; src text; lib text := case coalesce(new.statut, old.statut) when 'nj' then 'absent non justifié' when 'j' then 'absence justifiée' when 'c' then 'congé' when 'mp' then 'mise à pied' else 'présent' end;
+begin
+  if coalesce(current_setting('eps.dem_sync', true), '') = '1' then return coalesce(new, old); end if;
+  if tg_op = 'DELETE' then
+    select * into d from demandes_agent where matricule = old.matricule and statut = 'validee' and type in ('permission_jours','anticipation_conge') and old.jour between date_debut and date_fin limit 1;
+    if d.id is null then return old; end if;
+    perform dem_ecart(d.id, old.jour, 'l''agent a été marqué présent dans la situation' || coalesce(' par ' || (select nom from profiles where id = auth.uid()), '') || '.');
+    return null;
+  end if;
+  select * into d from demandes_agent where matricule = new.matricule and statut = 'validee'
+    and ((type in ('permission_jours','anticipation_conge') and new.jour between date_debut and date_fin) or (type = 'permission_depart' and dem_jour_depart(demandes_agent) = new.jour)) limit 1;
+  if d.id is null then return new; end if;
+  x := case d.type when 'permission_jours' then 'j' when 'anticipation_conge' then 'c' end;
+  if tg_op = 'UPDATE' and new.statut is not distinct from old.statut then return new; end if;
+  src := case when new.justification like 'Jotform%' then ' dans la situation du staff (Jotform)' else coalesce(' par ' || (select nom from profiles where id = auth.uid()), '') end;
+  if x is null then /* permission de départ : l'agent était présent */
+    if new.statut = 'nj' then
+      perform dem_ecart(d.id, new.jour, 'l''agent a été marqué « absent non justifié »' || src || '.');
+      if tg_op = 'INSERT' then return null; else return old; end if;
+    end if;
+    return new;
+  end if;
+  if new.statut = x then return new; end if;
+  if new.statut = 'mp' then perform dem_ecart(d.id, new.jour, 'une mise à pied couvre ce jour ; elle est conservée, à vérifier.'); return new; end if;
+  perform dem_ecart(d.id, new.jour, 'l''agent a été marqué « ' || lib || ' »' || src || '.');
+  new.statut := x; new.justification := dem_libelle(d.type) || ' validée — ' || d.ref;
+  return new;
+end $$;
+create trigger dem_priorite before insert or update or delete on public.statuts_jour for each row execute function dem_priorite();
+
+/* intégration à la situation (et donc à la paie) d'une permission ou d'un congé anticipé validé */
+create or replace function public.dem_integrer(p_id bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; x text; j date; o text; cid bigint;
+begin
+  select * into r from demandes_agent where id = p_id;
+  if r.statut <> 'validee' or r.type not in ('permission_jours','anticipation_conge') or r.date_debut is null then return; end if;
+  x := case r.type when 'permission_jours' then 'j' else 'c' end;
+  perform set_config('eps.dem_sync', '1', true);
+  for j in select g::date from generate_series(r.date_debut, coalesce(r.date_fin, r.date_debut), interval '1 day') g loop
+    if not dem_jour_travaille(r.matricule, j) then continue; end if;
+    select statut into o from statuts_jour where jour = j and matricule = r.matricule;
+    if o = 'mp' then perform dem_ecart(r.id, j, 'une mise à pied couvre ce jour ; elle est conservée, à vérifier.'); continue; end if;
+    if o is not null and o <> x then perform dem_ecart(r.id, j, 'la situation indiquait « ' || case o when 'nj' then 'absent non justifié' when 'j' then 'absence justifiée' when 'c' then 'congé' else o end || ' » avant la validation.'); end if;
+    insert into statuts_jour (jour, matricule, statut, justification, saisi_par, maj) values (j, r.matricule, x, dem_libelle(r.type) || ' validée — ' || r.ref, auth.uid(), now())
+      on conflict (jour, matricule) do update set statut = excluded.statut, justification = excluded.justification, saisi_par = excluded.saisi_par, maj = now();
+  end loop;
+  perform set_config('eps.dem_sync', '', true);
+  if r.type = 'anticipation_conge' then
+    insert into conges (matricule, date_debut, date_fin, type, statut, motif, cree_par, cree_nom, valide_par, valide_nom, valide_le)
+    values (r.matricule, r.date_debut, coalesce(r.date_fin, r.date_debut), 'annuel', 'valide', 'Anticipation de congé — ' || r.ref || coalesce(' : ' || r.motif, ''), r.lance_par, r.lance_nom, auth.uid(), r.val_nom, now()) returning id into cid;
+  end if;
+  update demandes_agent set integre_le = now(), conge_id = coalesce(cid, conge_id) where id = p_id;
+end $$;
+
+create or replace function public.dem_apres_validation(p_id bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent;
+begin
+  select * into r from demandes_agent where id = p_id;
+  if r.type = 'pret' then
+    perform notifier(array['responsable_comptabilite'], null, 'rh', 'Prêt à verser — ' || r.agent_nom, coalesce(r.montant::text,'?') || ' MRU en ' || coalesce(r.nb_echeances,1) || ' échéance(s). Confirmez le versement pour l''ajouter à la paie. Réf. ' || r.ref, 'eff', r.ref, null);
+  else perform dem_integrer(p_id); end if;
+end $$;
+
+/* RH : facultatif pour permissions et congés, obligatoire pour les prêts */
+create or replace function public.demande_rh(p_id bigint, p_decision text, p_note text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  if not acces_ok(array['responsable_rh','assistante_rh']) then raise exception 'Réservé aux ressources humaines'; end if;
+  if p_decision not in ('approuve','refuse') then raise exception 'Décision invalide'; end if;
+  update demandes_agent set rh_decision = p_decision, rh_note = nullif(p_note,''), rh_nom = moi, rh_le = now()
+   where id = p_id and nature = 'demande' and statut in ('en_attente','validee') and rh_decision is null returning * into r;
+  if r.id is null then raise exception 'Demande introuvable, close ou déjà traitée par les RH'; end if;
+  if r.type = 'pret' and r.statut = 'en_attente' then
+    if p_decision = 'refuse' then update demandes_agent set statut = 'refusee' where id = p_id returning * into r;
+    elsif r.val_decision = 'valide' then update demandes_agent set statut = 'validee', transmis_rh_le = now() where id = p_id returning * into r; perform dem_apres_validation(p_id); end if;
+  end if;
+  perform notifier(array[case when r.type = 'pret' then 'direction' else 'responsable_ops' end], array[r.lance_par], 'rh', dem_libelle(r.type) || ' — ' || r.agent_nom || ' : ' || case p_decision when 'approuve' then 'approuvée par les RH' else 'refusée par les RH' end,
+    coalesce(p_note || ' ','') || 'Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  return r;
+end $$;
+
+/* validation finale : responsable des opérations (permissions, congés) ; DG pour les prêts (avec l'approbation RH) */
+create or replace function public.demande_decider(p_id bigint, p_decision text, p_note text default null, p_sig text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  select * into r from demandes_agent where id = p_id for update;
+  if r.id is null or r.nature <> 'demande' then raise exception 'Demande introuvable'; end if;
+  if r.type = 'pret' then if not acces_ok(array['direction']) then raise exception 'Les prêts sont validés et signés par la Direction générale'; end if;
+  elsif not acces_ok(array['responsable_ops']) then raise exception 'Réservé au responsable des opérations'; end if;
+  if r.statut <> 'en_attente' or r.val_decision is not null then raise exception 'La demande n''est plus en attente'; end if;
+  if p_decision not in ('valide','refuse') then raise exception 'Décision invalide'; end if;
+  if p_decision = 'valide' and (r.sig_agent is null or r.sig_sup is null) then raise exception 'Signatures manquantes : %', concat_ws(', ', case when r.sig_agent is null then 'agent' end, case when r.sig_sup is null then 'superviseur' end); end if;
+  if p_decision = 'valide' and r.type = 'pret' and p_sig is null then raise exception 'La signature de la Direction générale est requise'; end if;
+  update demandes_agent set val_decision = p_decision, val_note = nullif(p_note,''), val_nom = moi, val_le = now(), sig_dg = case when r.type = 'pret' then p_sig else sig_dg end,
+    statut = case when p_decision = 'refuse' then 'refusee' when r.type = 'pret' and coalesce(r.rh_decision,'') <> 'approuve' then 'en_attente' else 'validee' end,
+    transmis_rh_le = case when p_decision = 'valide' and (r.type <> 'pret' or r.rh_decision = 'approuve') then now() end
+   where id = p_id returning * into r;
+  if r.statut = 'validee' then perform dem_apres_validation(p_id); end if;
+  perform notifier(array['responsable_rh','assistante_rh'], array[r.lance_par], 'rh',
+    dem_libelle(r.type) || ' — ' || r.agent_nom || case when p_decision = 'refuse' then ' : refusée' when r.statut = 'validee' then ' : validée, transmise aux RH' else ' : signée par la DG, approbation RH attendue' end,
+    coalesce(p_note || ' ', '') || case when r.statut = 'validee' and r.type <> 'pret' then 'Intégrée à la situation et à la paie. ' else '' end || 'Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  return r;
+end $$;
+
+/* comptabilité : confirmation du versement du prêt -> ligne dans Prêts et avances -> retenues sur la paie */
+create or replace function public.demande_versement(p_id bigint, p_date date, p_debut_periode date, p_note text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid()); pid bigint; dp date;
+begin
+  if not acces_ok(array['responsable_comptabilite']) then raise exception 'Réservé au responsable de la comptabilité'; end if;
+  select * into r from demandes_agent where id = p_id for update;
+  if r.id is null or r.type <> 'pret' or r.statut <> 'validee' then raise exception 'Prêt non validé'; end if;
+  if r.verse_le is not null then raise exception 'Versement déjà confirmé'; end if;
+  dp := case when extract(day from p_debut_periode) >= 26 then make_date(extract(year from p_debut_periode)::int, extract(month from p_debut_periode)::int, 26)
+             else (make_date(extract(year from p_debut_periode)::int, extract(month from p_debut_periode)::int, 26) - interval '1 month')::date end;
+  insert into prets_avances (matricule, type, montant, date_octroi, nb_echeances, debut_periode, motif, accorde_par, statut, note, cree_par, cree_nom, echeances_payees)
+  values (r.matricule, 'pret', r.montant, p_date, coalesce(r.nb_echeances, 1), dp, r.motif, r.val_nom, 'en_cours', 'Demande ' || r.ref || coalesce(' — ' || nullif(p_note,''), ''), auth.uid(), moi, 0) returning id into pid;
+  update demandes_agent set verse_le = p_date, verse_nom = moi, verse_note = nullif(p_note,''), pret_id = pid where id = p_id returning * into r;
+  perform notifier(array['responsable_rh','assistante_rh','direction'], array[r.lance_par], 'rh', 'Prêt versé — ' || r.agent_nom,
+    r.montant || ' MRU versés le ' || to_char(p_date,'DD/MM/YYYY') || ', retenus en ' || coalesce(r.nb_echeances,1) || ' échéance(s) à partir de la paie de la période commençant le ' || to_char(dp,'DD/MM/YYYY') || '. Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  return r;
+end $$;
+create or replace function public.demande_valider(p_id bigint, p_decision text, p_note text default null) returns public.demandes_agent
+language sql security definer set search_path = public as $$ select demande_decider(p_id, p_decision, p_note, null) $$;
+grant execute on function public.demande_versement(bigint,date,date,text), public.demande_decider(bigint,text,text,text) to authenticated;
+
+create or replace function public.dem_manque(d public.demandes_agent) returns text language sql stable as $$
+  select nullif(concat_ws(', ', case when d.sig_agent is null then 'signature de l''agent' end,
+    case when d.sig_sup is null then 'signature du superviseur' end,
+    case when d.type = 'pret' and d.rh_decision is null then 'approbation RH' end,
+    case when d.val_decision is null then case when d.type = 'pret' then 'signature de la DG' else 'validation du responsable des opérations' end end), '') $$;
+
