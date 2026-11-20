@@ -822,7 +822,7 @@ ${D.length ? `<div class="svt" style="margin-top:8px">Départs à confirmer</div
 V.eff = async () => {
   const ifc = await infosCard().catch(() => "");
   const o = (k, l, key) => `<select data-f="${k}"><option value="">${l}</option>${[...new Set(AG.map(a => a[key]))].map(x => `<option ${F[k] == x ? "selected" : ""}>${E(x)}</option>`).join("")}</select>`;
-  return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`) + ifc + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option><option value="h" ${F.st == "h" ? "selected" : ""}>Hors shift</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
+  return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`, CLL.includes(ME.role) ? `<button class="btn p" data-a="clsouvrir">📝 Mettre à jour (classeurs)</button>` : "") + ifc + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option><option value="h" ${F.st == "h" ? "selected" : ""}>Hors shift</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
 };
 
 /* ---------- Situations à suivre (absentéisme) ---------- */
@@ -2679,6 +2679,123 @@ Object.assign(ACT, {
     ask(RTS[k] + " · " + a.nom, [{ k: "n", l: k == "autre" ? "Mesure décidée" : "Note (facultatif)", t: "ta", r: k == "autre" }], go); },
   apde(b) { const x = APR.find(r => r.matricule == b.dataset.m && r.jour == b.dataset.j); if (x) apDE(x); },
   async apxls(b) { const d1 = $("#apx1").value, d2 = $("#apx2").value; if (!d1 || !d2 || d1 > d2) return toast("Période invalide"); b.disabled = true; try { const n = await apXLS(d1, d2); toast(n ? n + " appel(s) exporté(s)" : "Aucun appel sur la période"); } catch (e) { toast("Export impossible : " + e.message); } b.disabled = false; }
+});
+/* ===== Classeurs du personnel (Google Drive archiveseps, dossier PERSONNEL) : ouvrir, modifier, enregistrer, mettre à jour l’annuaire ===== */
+const CLL = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+const CLE = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_nettoyage", "superviseur_bagages"];
+let XL = null, XLF = [], XJP = null;
+const xjLoad = () => window.ExcelJS ? Promise.resolve() : XJP || (XJP = new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"; s.onload = ok; s.onerror = () => { XJP = null; ko(new Error("Module Excel indisponible (connexion)")); }; document.head.appendChild(s); }));
+const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+async function drv(body) { const { data, error } = await sb.functions.invoke("drive", { body }); if (error) { let m = error.message; try { m = (await error.context.json()).erreur || m; } catch (_) { } throw new Error(m); } if (data && data.erreur) throw new Error(data.erreur); return data; }
+const clsKind = n => /manut/i.test(n) ? "M" : /nett/i.test(n) ? "N" : "";
+const b64ToBuf = b => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; };
+const bufToB64 = buf => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+/* nom du fichier enregistré : la date (jjmmaa) remplacée par celle du jour, version ajoutée si le nom existe déjà */
+function clsNom(nom) {
+  const d = new Date(), dd = p2(d.getUTCDate()) + p2(d.getUTCMonth() + 1) + String(d.getUTCFullYear()).slice(2);
+  let b = nom.replace(/\.xlsx$/i, "").replace(/\s*\((?:V\d+|\d+)\)\s*$/i, "").trim();
+  b = /\d{6}(?!.*\d{6})/.test(b) ? b.replace(/\d{6}(?!.*\d{6})/, dd) : b + " " + dd;
+  let n = b + ".xlsx", v = 1; while (XLF.some(f => f.nom == n)) n = `${b} (V${++v}).xlsx`; return n;
+}
+async function clsListe() {
+  if (!CLL.includes(ME.role)) return toast("Classeurs non accessibles à votre profil");
+  mdOpen(`<div class="row"><h2>Classeurs du personnel</h2><button type="button" class="btn" id="no">✕</button></div><div class="ld"><i></i>Lecture du dossier Drive…</div>`); $("#no").onclick = mdClose;
+  try { XLF = ((await drv({ action: "liste" })).fichiers || []).filter(f => /\.xlsx$/i.test(f.nom)); }
+  catch (e) { return mdOpen(`<div class="row"><h2>Classeurs du personnel</h2><button type="button" class="btn" id="no">✕</button></div><div class="al">Drive inaccessible : ${E(e.message)}</div>`), $("#no").onclick = mdClose; }
+  const G = [["N", "Nettoyage"], ["M", "Manutention bagages"], ["", "Autres fichiers"]].map(([k, l]) => [l, XLF.filter(f => clsKind(f.nom) == k)]).filter(g => g[1].length);
+  mdOpen(`<div class="row"><h2>Classeurs du personnel</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Dossier Drive PERSONNEL (archiveseps). Ouvrez la dernière version pour la modifier : l’enregistrement crée une nouvelle version datée du jour, l’ancienne reste dans le dossier.</div>
+${G.map(([l, L]) => `<div class="svt" style="margin-top:6px">${l}</div>${L.map((f, i) => `<button type="button" class="dsg" data-a="clsopen" data-i="${E(f.id)}"><b>${E(f.nom)}</b><span class="m">${i == 0 && l != "Autres fichiers" ? '<span class="bd ok">Dernière version</span> ' : ""}modifié le ${dmy(f.modifie)} à ${hm(f.modifie)}</span></button>`).join("")}`).join("")}`);
+  $("#no").onclick = mdClose;
+}
+async function clsOuvrir(id) {
+  mdOpen(`<div class="ld"><i></i>Ouverture du classeur…</div>`);
+  try {
+    await xjLoad(); const f = await drv({ action: "lire", id }), wb = new ExcelJS.Workbook(); await wb.xlsx.load(b64ToBuf(f.contenu));
+    XL = { wb, id: f.id, nom: f.nom, kind: clsKind(f.nom), s: 0, dirty: false, q: "", ro: !CLE.includes(ME.role) }; mdClose(); clsDraw();
+  } catch (e) { mdClose(); toast("Ouverture impossible : " + e.message); }
+}
+const clsTxt = c => { const v = c.value; if (v == null) return ""; if (typeof v == "object") { if (v.richText) return v.richText.map(x => x.text).join(""); if (v.formula || v.sharedFormula) return v.result != null ? String(v.result) : ""; if (v instanceof Date) return ymd(v); if (v.text) return String(v.text); } return String(v); };
+function clsDraw() {
+  let o = $("#xled"); if (!o) { o = document.createElement("div"); o.id = "xled"; document.body.appendChild(o); }
+  const ws = XL.wb.worksheets[XL.s], nc = Math.min(Math.max(ws.columnCount, 5), 8), q = N(XL.q.trim());
+  const rows = []; for (let r = 1; r <= ws.rowCount; r++) { const v = []; for (let c = 1; c <= nc; c++) v.push(clsTxt(ws.getCell(r, c))); if (q && !N(v.join(" ")).includes(q)) continue; rows.push([r, v]); }
+  o.innerHTML = `<style>body:has(#xled) #md{z-index:30}body:has(#xled) #ts{z-index:31}#xled{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}#xled .xh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:var(--s);border-bottom:1px solid var(--b)}#xled .xt{display:flex;gap:4px;overflow-x:auto;padding:6px 12px;background:var(--s);border-bottom:1px solid var(--b)}#xled .xt button{white-space:nowrap}#xled .xb{flex:1;overflow:auto}#xled table{border-collapse:collapse;font-size:13px;min-width:720px;background:var(--s)}#xled td{border:1px solid var(--b);padding:0;vertical-align:middle}#xled td.n{background:var(--pl);color:var(--m);font-size:11px;text-align:center;min-width:34px;padding:2px}#xled input{border:0;border-radius:0;padding:6px 8px;width:100%;min-width:60px;background:transparent;font-size:13px}#xled input:focus{outline:2px solid var(--p);background:#fff}#xled td.w input{min-width:260px}#xled .ra{white-space:nowrap;padding:2px 4px}#xled .ra button{border:0;background:none;cursor:pointer;font-size:15px;padding:4px}</style>
+<div class="xh"><b style="flex:1;min-width:180px">${E(XL.nom)}${XL.dirty ? ' <span class="bd warn">modifié</span>' : ""}${XL.ro ? ' <span class="bd info">lecture seule</span>' : ""}</b><input id="xlq" placeholder="Chercher un nom, un matricule…" value="${E(XL.q)}" style="max-width:240px"><button class="btn" data-a="clsimp">Mettre à jour l’annuaire…</button>${XL.ro ? "" : `<button class="btn p" data-a="clssave">💾 Enregistrer sur Drive</button>`}<button class="btn" data-a="clsclose">Fermer</button></div>
+<div class="xt">${XL.wb.worksheets.map((w, i) => `<button class="btn ${i == XL.s ? "p" : ""}" data-a="clstab" data-i="${i}">${E(w.name)}</button>`).join("")}</div>
+<div class="xb"><table>${rows.map(([r, v]) => `<tr><td class="n">${r}</td>${v.map((x, c) => `<td class="${c == 3 ? "w" : ""}"><input data-xr="${r}" data-xc="${c + 1}" value="${E(x)}" ${XL.ro ? "readonly" : ""}></td>`).join("")}${XL.ro ? "" : `<td class="ra"><button title="Insérer une ligne en dessous" data-a="clsrow" data-k="add" data-r="${r}">➕</button><button title="Supprimer la ligne" data-a="clsrow" data-k="del" data-r="${r}">🗑</button></td>`}</tr>`).join("")}</table></div>`;
+  $("#xlq").oninput = ev => { XL.q = ev.target.value; const p = ev.target.selectionStart; clsDraw(); const i = $("#xlq"); i.focus(); i.setSelectionRange(p, p); };
+  o.onchange = ev => { const t = ev.target; if (!t.dataset.xr || XL.ro) return; const c = ws.getCell(+t.dataset.xr, +t.dataset.xc), v = t.value.trim(), num = typeof c.value == "number"; c.value = v === "" ? null : num && /^-?\d+(\.\d+)?$/.test(v) ? +v : v; if (!XL.dirty) { XL.dirty = true; o.querySelector(".xh b").insertAdjacentHTML("beforeend", ' <span class="bd warn">modifié</span>'); } };
+}
+/* insertion / suppression de ligne en conservant la mise en forme et les cellules fusionnées */
+function clsSplice(ws, r, del) {
+  const M = Object.values(ws._merges || {}).map(m => ({ ...m.model }));
+  M.forEach(m => { try { ws.unMergeCells(m.top, m.left, m.bottom, m.right); } catch (_) { } });
+  if (del) ws.spliceRows(r, 1); else { ws.spliceRows(r + 1, 0, []); const h = ws.getRow(r); ws.getRow(r + 1).height = h.height; for (let c = 1; c <= Math.max(ws.columnCount, 5); c++) ws.getCell(r + 1, c).style = JSON.parse(JSON.stringify(ws.getCell(r, c).style || {})); }
+  M.forEach(m => { let { top, bottom } = m; if (del) { if (top == r && bottom == r) return; if (top > r) top--; if (bottom >= r) bottom--; } else { if (top > r) top++; if (bottom > r) bottom++; } try { ws.mergeCells(top, m.left, bottom, m.right); } catch (_) { } });
+}
+function clsMaj(wb) {
+  const d = new Date(), txt = `${d.getUTCDate()} ${MOIS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  wb.worksheets.forEach(ws => {
+    let n = 0; for (let r = 1; r <= ws.rowCount; r++) if (/^\d{4}$/.test(clsTxt(ws.getCell(r, 2)).trim()) && clsTxt(ws.getCell(r, 4)).trim()) n++;
+    ws.eachRow(row => row.eachCell(c => { const v = clsTxt(c); if (!v || (c.value && typeof c.value == "object" && !c.value.richText)) return;
+      if (/^\s*Mise à jour\s*:/i.test(v)) c.value = "Mise à jour : " + txt;
+      else if (/mise à jour le\s+\d{1,2}\s+\S+\s+\d{4}/i.test(v)) c.value = v.replace(/(mise à jour le)\s+\d{1,2}\s+\S+\s+\d{4}/i, "$1 " + txt);
+      else if (/^\s*Effectif répertorié\s*:\s*\d+/i.test(v) && n) c.value = v.replace(/\d+/, String(n)); }));
+  });
+}
+/* lecture des agents du classeur (mêmes règles que l’import initial) */
+const CL_SEC = { "BATIMENT ADMINISTRATIF ET ANNEXES": "Bâtiment administratif et annexes", "GSE": "GSE", "VITRERIES, FACADES ET NETTOYAGE EN HAUTEUR": "Vitreries, façades et nettoyage en hauteur", "PAVILLON PRESIDENTIEL": "Pavillon présidentiel", "PARKING, VOIRIES, COLLECTE, GESTION DE DECHETS": "Parking, voiries, collecte et déchets", "UNITE DESINFECTION": "Unité désinfection", "UNITE CAFM": "Unité CAFM" };
+const CL_ZN = { "MOSQ": "Mosquée et Devanture", "FRET": "FRET", "B. ADMIN": null, "C. GN": "COMPAGNIE GENDARMERIE", "CO. POL": "COMMISS POLICE", "INFIR": "INFIRMERIE" };
+const clU = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+function clsParse(wb, kind) {
+  const out = [];
+  wb.worksheets.forEach(ws => {
+    const t = ws.name; if (/EX.?EMPLOY/i.test(t) || /^(Sheet|Feuil)\d*$/i.test(t)) return;
+    const n = (t.match(/\d/) || [])[0], ch = /chauff/i.test(t); if (!n && !ch) return;
+    const e = kind == "M" ? "Manutention " + n : ch ? "Chauffeurs" : "Équipe " + n; let s = kind == "M" ? "Manutention" : ch ? "Chauffeurs" : e == "Équipe 4" ? null : "Terminal", enc = false;
+    for (let r = 1; r <= ws.rowCount; r++) {
+      const v = [1, 2, 3, 4, 5].map(c => clsTxt(ws.getCell(r, c)).trim()), u = clU(v[0]);
+      if (CL_SEC[u]) { s = CL_SEC[u]; continue; } if (u == "ENCADREMENT OPERATIONNEL") { enc = true; continue; } if (u == "AGENTS DE MANUTENTION") { enc = false; continue; }
+      if (!/^\d{4}$/.test(v[1])) continue;
+      let nom = v[3], f = null; const l = nom.toLowerCase(); if (!nom) continue;
+      if (/sup\.?\s?p\b/i.test(l)) f = "Superviseur Principal"; else if (/sup manut/i.test(l)) f = "Superviseur Manutention"; else if (/chef/i.test(l) || /\/\/\s*$/.test(nom)) f = "Chef d’équipe";
+      nom = nom.replace(/\s*(\/\/.*|-\s*Chef(?:fe)? d.équipe.*|\(\s*Chef(?:fe)? d.équipe\s*\))\s*$/i, "").replace(/\s+/g, " ").trim();
+      let b = v[2] || null, z = null; if (b && !/^\d+$/.test(b)) { z = b in CL_ZN ? CL_ZN[b] : b; b = null; }
+      let ss = s; if (kind == "M" && enc) ss = "Encadrement Manutention"; if (e == "Équipe 4" && (v[1] == "1101" || v[1] == "1102")) { ss = "Encadrement Nettoyage"; f = "Superviseur Nettoyage"; }
+      out.push({ m: v[1], b, n: nom, t: v[4] || null, e, s: ss, f, z });
+    }
+  });
+  return out;
+}
+const clK = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+function clsImport() {
+  const kind = XL.kind; if (!kind) return toast("Service du classeur non reconnu (le nom doit contenir Nettoyage ou Manutention)");
+  const R = clsParse(XL.wb, kind), dup = R.map(x => x.m).filter((m, i, a) => a.indexOf(m) != i);
+  const inS = a => kind == "M" ? /^Manut/.test(a.equipe || "") : /^(Équipe|Chauffeurs)/.test(a.equipe || ""), A = Object.fromEntries(AG.map(a => [a.matricule, a])), RM = new Set(R.map(x => x.m));
+  const nv = R.filter(x => !A[x.m]), ch = R.filter(x => A[x.m] && clK(A[x.m].nom) != clK(x.n)), eq = R.filter(x => A[x.m] && A[x.m].equipe != x.e), tl = R.filter(x => A[x.m] && x.t && A[x.m].tel != x.t && clK(A[x.m].nom) == clK(x.n)), dp = AG.filter(a => inS(a) && !RM.has(a.matricule));
+  const li = (t, L, f) => L.length ? `<details><summary class="lk" style="padding:4px 0">${t} (${L.length})</summary>${L.map(f).map(x => `<div class="m" style="padding:2px 0">${x}</div>`).join("")}</details>` : `<div class="m">${t} : aucun</div>`;
+  mdOpen(`<div class="row"><h2>Mettre à jour l’annuaire</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Classeur ${E(XL.nom)} · ${R.length} agents reconnus${XL.dirty ? ' · <b>modifications non enregistrées sur Drive</b>' : ""}</div>
+${dup.length ? `<div class="al">Matricules en double dans le classeur : ${E(dup.join(", "))}. Corrigez avant d’importer.</div>` : ""}
+${li("Nouveaux", nv, x => `${E(x.m)} ${E(x.n)} · ${E(x.e)}`)}${li("Matricule attribué à une autre personne", ch, x => `${E(x.m)} : ${E(A[x.m].nom)} → <b>${E(x.n)}</b>`)}${li("Changement d’équipe", eq, x => `${E(x.m)} ${E(x.n)} : ${E(A[x.m].equipe)} → ${E(x.e)}`)}${li("Téléphone modifié", tl, x => `${E(x.m)} ${E(x.n)} : ${E(A[x.m].tel || "—")} → ${E(x.t)}`)}${li("Absents du classeur → départ à confirmer", dp, a => `${E(a.matricule)} ${E(a.nom)} · ${E(a.equipe)}`)}
+<div class="m">Les absences déjà enregistrées restent attachées aux matricules. Les départs sont à confirmer par les RH ; les RH sont notifiées.</div>
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no2">Annuler</button>${XL.ro ? "" : `<button type="button" class="btn p" id="clsgo" ${dup.length || R.length < 20 ? "disabled" : ""}>Appliquer à l’annuaire</button>`}</div>`);
+  $("#no").onclick = mdClose; $("#no2").onclick = mdClose;
+  const b = $("#clsgo"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "Mise à jour…"; const { data, error } = await sb.rpc("agents_import_classeur", { p_rows: R, p_service: kind == "M" ? "manutention" : "nettoyage", p_source: XL.nom }); if (error) { b.disabled = false; b.textContent = "Appliquer à l’annuaire"; return toast("Refusé : " + error.message); } mdClose(); await loadAG(); toast(`Annuaire mis à jour : ${data.nouveaux} nouveau(x), ${data.maj} mis à jour, ${data.departs} départ(s) à confirmer`); };
+}
+Object.assign(ACT, {
+  clsouvrir() { clsListe(); },
+  clsopen(b) { clsOuvrir(b.dataset.i); },
+  clstab(b) { XL.s = +b.dataset.i; clsDraw(); },
+  clsclose() { if (XL && XL.dirty && !confirm("Fermer sans enregistrer les modifications ?")) return; $("#xled")?.remove(); XL = null; if (NAV == "eff") draw(1); },
+  clsrow(b) { const ws = XL.wb.worksheets[XL.s], r = +b.dataset.r; if (b.dataset.k == "del") { const v = [1, 2, 3, 4].map(c => clsTxt(ws.getCell(r, c))).filter(Boolean).join(" · "); if (!confirm(`Supprimer la ligne ${r}${v ? " (" + v + ")" : ""} ?`)) return; } clsSplice(ws, r, b.dataset.k == "del"); XL.dirty = true; clsDraw(); if (b.dataset.k == "add") setTimeout(() => document.querySelector(`#xled [data-xr="${r + 1}"][data-xc="2"]`)?.focus(), 0); },
+  async clssave(b) {
+    document.activeElement?.blur(); const nom = clsNom(XL.nom);
+    if (!confirm(`Enregistrer sur Drive sous le nom :\n${nom}\n\nLa version actuelle reste dans le dossier.`)) return;
+    b.disabled = true; b.textContent = "Enregistrement…";
+    try { clsMaj(XL.wb); const buf = await XL.wb.xlsx.writeBuffer(), r = await drv({ action: "ecrire", nom, contenu: bufToB64(buf) }); XL.id = r.id; XL.nom = r.nom; XL.dirty = false; XLF.unshift({ id: r.id, nom: r.nom, modifie: r.modifie }); clsDraw(); toast("Enregistré sur Drive : " + r.nom); if (confirm("Classeur enregistré. Mettre maintenant l’annuaire de l’app à jour à partir de ce classeur ?")) clsImport(); }
+    catch (e) { b.disabled = false; b.textContent = "💾 Enregistrer sur Drive"; toast("Enregistrement impossible : " + e.message); }
+  },
+  clsimp() { document.activeElement?.blur(); clsImport(); }
 });
 document.addEventListener("click", e => { if (!e.target.closest("#md")) SXA = e.target.closest("[data-sx]")?.dataset.sx || null; const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { SXA = null; NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
 document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } if (e.target.id == "sq") { SQ = e.target.value; sigList(); } if (e.target.id == "irq") { IRQ = e.target.value; irList(); } });
