@@ -132,3 +132,8 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- appel de 17h (colonnes appels.soir_*, appel_soir_enregistrer) ; heure d'arrivée obligatoire pour chaque renfort ;
 -- tarif renfort dans grille_salaire (500 MRU par shift, quelle que soit l'heure d'arrivée) ; renforts_shifts(debut, fin) : un shift
 -- compté une fois par agent (appel 08h, appel 17h, shift supplémentaire) ; situation_paie(annee, mois) = recap_paie_mois + shifts et montant des renforts.
+
+-- 20/11/2026 — Onglet Comptabilité et congés (migration comptabilite_onglet_conges, appliquée) :
+-- paie, grille, prêts/avances, primes réservés au responsable de la comptabilité, au responsable des opérations et à la direction ;
+-- commande_compta() (validation comptable des demandes d'achat) ; table conges + conges_rappel() (cron du 20 au 28 à 07h41 :
+-- planifier les congés du mois suivant avant le 1er) ; acces_ok() autorise les appels internes (tâches planifiées).
