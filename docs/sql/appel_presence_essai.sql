@@ -114,3 +114,7 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- fonctions retard_traiter (retard + heure | absent | justifié/autorisé + motif + par qui, notification RH),
 -- retard_suite_donner (informer RH | demande d'explication | avertissement verbal | autre, notification RH,
 -- et superviseurs si un chef demande une DE), retard_de_lier (lien vers la demande d'explication établie).
+
+-- 20/11/2026 — Justification / autorisation d'un retard ou d'une absence (appliqué) :
+-- retard_traiter notifie RH + comptabilité pour une justification ; recap_paie ne la compte ni comme absence ni comme retard ;
+-- trigger retard_justifie_clore : une justification clôt d'elle-même la « suite à donner » (aucune mesure).
