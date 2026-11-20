@@ -823,7 +823,7 @@ ${D.length ? `<div class="svt" style="margin-top:8px">Départs à confirmer</div
 <div class="svt" style="margin-top:8px">Agents à compléter</div>${L.map(x => `<div class="li"><div><span class="lk" data-a="fiche" data-m="${E(x.a.matricule)}">${E(x.a.nom)}</span><div class="m">${E(x.a.matricule)} · ${E(x.a.equipe || "")}</div></div><div style="text-align:right">${x.m.map(k => `<span class="bd ${/NNI|partagé/.test(k) ? "bad" : "warn"}" style="margin:1px">${k}</span>`).join("")}</div></div>`).join("")}</details>`;
 }
 V.eff = async () => {
-  const ifc = await infosCard().catch(() => "");
+  const ifc = (await demCard().catch(() => "")) + (await infosCard().catch(() => ""));
   const o = (k, l, key) => `<select data-f="${k}"><option value="">${l}</option>${[...new Set(AG.map(a => a[key]))].map(x => `<option ${F[k] == x ? "selected" : ""}>${E(x)}</option>`).join("")}</select>`;
   return head("Effectifs & annuaire", `${AG.length} agents · identifiant officiel : matricule`, CLL.includes(ME.role) ? `<button class="btn p" data-a="clsouvrir">📝 Mettre à jour (classeurs)</button>` : "") + ifc + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><input id="fq" placeholder="Matricule, badge, téléphone, nom…" value="${E(F.q)}">${o("eq", "Toutes les équipes", "equipe")}${o("sv", "Tous les services", "service")}<select data-f="st"><option value="">Présence : tous</option><option value="p" ${F.st == "p" ? "selected" : ""}>Présents</option><option value="a" ${F.st == "a" ? "selected" : ""}>Absents</option><option value="h" ${F.st == "h" ? "selected" : ""}>Hors shift</option></select><select data-f="bd"><option value="">Badge : tous</option><option value="a" ${F.bd == "a" ? "selected" : ""}>Avec badge</option><option value="s" ${F.bd == "s" ? "selected" : ""}>Sans badge</option></select></div><div id="el">${eT()}</div>`;
 };
@@ -1400,7 +1400,8 @@ async function fiche(mat, k) {
   const RT = {}; (r2.data || []).forEach(x => { const l = (x.lignes || []).find(y => y.m == mat && y.s == "r") || {}; RT[x.jour] = { jour: x.jour, h: l.h, mo: l.mo, j: false, src: "appel · " + (x.fait_nom || "") }; });
   (r1.data || []).forEach(x => { if (x.retard_issue == "absent") return; const o = RT[x.jour] || { jour: x.jour }; RT[x.jour] = { ...o, h: x.retard_heure || o.h, j: x.retard_issue == "justifie", mo: x.retard_issue == "justifie" ? `${x.retard_autorise_par || ""} : ${x.retard_motif || ""}` : o.mo, suite: x.retard_suite ? (RTS[x.retard_suite] || x.retard_suite) + (x.retard_suite_note ? " — " + x.retard_suite_note : "") : null, src: x.retard_traite_nom || o.src }; });
   const rt = Object.values(RT).sort((x, y) => y.jour.localeCompare(x.jour));
-  FC = { a, dd, ab, c, sv: su.data || null, rt }; ficheDraw(k);
+  const dm = DMR.includes(ME.role) ? ((await sb.from("demandes_agent").select("*").eq("matricule", mat).order("created_at", { ascending: false })).data || []) : null;
+  FC = { a, dd, ab, c, sv: su.data || null, rt, dm }; ficheDraw(k);
 }
 function ficheDraw(k) {
   const { a, dd, c, sv } = FC, g = grpOf(a), st = stt(a), tl = a.tel ? a.tel.replace(/\s/g, "") : "";
@@ -1416,15 +1417,16 @@ ${ch("auj", "Aujourd’hui", `<span class="bd ${st == "p" ? "ok" : st == "h" ? "
 ${ch("nj", "Abs. non justifiées (90 j)", `<span style="color:${c.nj ? "#e11d48" : "inherit"}">${c.nj}</span>`)}${ch("j", "Abs. justifiées (90 j)", c.j)}
 ${ch("c", "Congés (90 j)", c.c)}${ch("mp", "Mises à pied (90 j)", c.mp)}
 ${ch("ret", "Retards (historique total)", `<span style="color:${(FC.rt || []).length ? "#d97706" : "inherit"}">${(FC.rt || []).length}</span>${(FC.rt || []).some(x => x.j) ? `<small>dont ${(FC.rt || []).filter(x => x.j).length} justifié(s) ou autorisé(s)</small>` : ""}`, 'style="grid-column:1/-1"')}
-${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
+${FC.dm ? ch("dem", "Demandes et documents", `${FC.dm.length ? FC.dm.length : "Aucun"}${FC.dm.some(x => x.statut == "en_attente") ? `<small style="color:#d97706">${FC.dm.filter(x => x.statut == "en_attente").length} en attente</small>` : ""}`, 'style="grid-column:1/-1"') : ""}${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
 <div id="fx">${k ? fxHTML(k) : '<div class="m" style="text-align:center">Touchez un élément pour afficher le détail.</div>'}</div>
-<div class="row" style="justify-content:flex-end">${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no2">Fermer</button></div>`;
+<div class="row" style="justify-content:flex-end;flex-wrap:wrap;gap:6px">${DML.includes(ME.role) || DMRH.includes(ME.role) ? `<button type="button" class="btn p" data-a="demnew" data-m="${E(a.matricule)}">+ Demande / justificatif / autre</button>` : ""}${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no2">Fermer</button></div>`;
   const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
   $("#mf").onsubmit = e => e.preventDefault();
   $("#md").classList.add("on");
 }
 function fxHTML(k) {
   const { a, dd, ab, sv } = FC, nn = NNI[a.matricule], li = L => L.map(x => `<div class="li"><div>${fd(x.jour)} · <span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut]}</span>${x.justification ? `<div class="m">${E(JU(x.justification))}</div>` : ""}</div></div>`).join("");
+  if (k == "dem") return demListe(FC.dm || []);
   if (k == "ret") { const R = FC.rt || []; return `<h2>Retards — historique total (${R.length})</h2><div class="m">Tous les retards, justifiés ou non, pour l’évaluation et le contrôle.</div>${R.map(x => `<div class="li"><div>${fd(x.jour)}${x.h ? ` · arrivée ${E(String(x.h).replace(":", "h"))}` : ""} <span class="bd ${x.j ? "info" : "warn"}">${x.j ? "justifié / autorisé" : "retard"}</span>${x.mo ? `<div class="m">${E(x.mo)}</div>` : ""}${x.suite ? `<div class="m">Suite : ${E(x.suite)}</div>` : ""}</div><span class="m">${E(x.src || "")}</span></div>`).join("") || '<div class="m">Aucun retard enregistré.</div>'}`; }
   if (k == "id") return `<div class="li"><div>Matricule</div><b>${E(a.matricule)}</b></div><div class="li"><div>N° badge</div><b>${E(a.badge) || "—"}</b></div>${nn ? `<div class="li"><div>NNI</div><b ${nn.a_confirmer ? 'style="color:#e11d48"' : ""}>${E(nn.nni)}${nn.a_confirmer ? " (à confirmer)" : ""}</b></div>` : ""}<div class="li"><div>Équipe</div><b>${E(a.equipe)}</b></div>${a.zone ? `<div class="li"><div>Zone</div><b>${E(a.zone)}</b></div>` : ""}<div class="li"><div>Téléphone</div><b>${E(a.tel) || "—"}</b></div>`;
   if (k == "emb") return `<div class="li"><div>Date d’embauche</div><b>${a.date_embauche ? fd(a.date_embauche) + " · " + anc(a.date_embauche) : "non renseignée"}</b></div>${AGW.includes(ME.role) ? `<div class="row" style="gap:8px"><input id="fxe" type="date" value="${E(a.date_embauche || "")}" style="flex:1"><button type="button" class="btn p" data-a="embsave">Enregistrer</button></div>` : ""}`;
@@ -2763,6 +2765,156 @@ Object.assign(ACT, {
   apde(b) { const x = APR.find(r => r.matricule == b.dataset.m && r.jour == b.dataset.j); if (x) apDE(x); },
   async apxls(b) { const d1 = $("#apx1").value, d2 = $("#apx2").value; if (!d1 || !d2 || d1 > d2) return toast("Période invalide"); b.disabled = true; try { const n = await apXLS(d1, d2); toast(n ? n + " appel(s) exporté(s)" : "Aucun appel sur la période"); } catch (e) { toast("Export impossible : " + e.message); } b.disabled = false; }
 });
+/* ===== Demandes et documents de l’agent (fiche agent · annuaire) ===== */
+const DML = ["superviseur_nettoyage", "superviseur_bagages", "superviseur_principal", "direction", "responsable_ops", "coordinateur_ops"]; /* lancent les demandes */
+const DMRH = ["responsable_rh", "assistante_rh"], DMV = ["responsable_ops"]; /* approbation RH · validation finale */
+const DMR = [...DML, ...DMRH, "responsable_comptabilite"]; /* consultation */
+const DMT = { permission_depart: "Permission de départ", permission_jours: "Permission de quelques jours", pret: "Demande de prêt", anticipation_conge: "Demande d’anticipation de congé", justificatif: "Justificatif d’absence", autre: "Autre document" };
+const DMS = { en_attente: ["En attente", "warn"], validee: ["Validée · transmise aux RH", "ok"], refusee: ["Refusée", "bad"], annulee: ["Annulée", "info"], depose: ["Déposé", "info"] };
+const DST2 = () => sb.storage.from("dossiers-agents");
+let DMO = null;
+const dmManque = d => d.nature != "demande" || d.statut != "en_attente" ? [] : [!d.sig_agent && "signature de l’agent", !d.sig_sup && "signature du superviseur", !d.rh_decision && "approbation RH", !d.val_decision && "validation finale"].filter(Boolean);
+const dmPer = d => d.type == "permission_depart" ? `${d.date_debut ? fd(d.date_debut) : ""}${d.heure_depart ? " · départ " + String(d.heure_depart).slice(0, 5).replace(":", "h") : ""}${d.heure_retour ? " · retour " + String(d.heure_retour).slice(0, 5).replace(":", "h") : ""}` : d.type == "pret" ? `${mru(d.montant || 0)}${d.nb_echeances ? " · " + d.nb_echeances + " échéance(s)" : ""}` : d.date_debut ? (d.date_fin && d.date_fin != d.date_debut ? `du ${fd(d.date_debut)} au ${fd(d.date_fin)}` : fd(d.date_debut)) + (d.nb_jours ? ` · ${d.nb_jours} j` : "") : "";
+const dmLi = (d, nom) => { const m = dmManque(d), s = DMS[d.statut] || [d.statut, "info"]; return `<div class="li" data-a="demo" data-i="${d.id}" style="cursor:pointer;flex-wrap:wrap"><div><b>${E(DMT[d.type])}</b>${nom ? ` — ${E(d.agent_nom || "")}` : ""} <span class="bd ${s[1]}">${s[0]}</span>${d.objet ? `<div>${E(d.objet)}</div>` : ""}<div class="m">${E(dmPer(d))}${dmPer(d) ? " · " : ""}${E(d.ref)} · par ${E(d.lance_nom || "—")} le ${fd(String(d.created_at).slice(0, 10))}${(d.pj || []).length ? ` · 📎${d.pj.length}` : ""}</div>${m.length ? `<div>${m.map(x => `<span class="bd bad" style="margin:1px">manque : ${x}</span>`).join("")}</div>` : ""}${d.statut == "validee" && !d.rh_decision ? `<div><span class="bd warn">approbation RH à donner</span></div>` : ""}</div><span class="m">›</span></div>`; };
+function demListe(L) {
+  return `<h2>Demandes et documents (${L.length})</h2>${DML.includes(ME.role) || DMRH.includes(ME.role) ? `<div class="row" style="justify-content:flex-start"><button type="button" class="btn p" data-a="demnew" data-m="${E(FC.a.matricule)}">+ Ajouter une demande, un justificatif ou autre</button></div>` : ""}${L.map(d => dmLi(d)).join("") || '<div class="m">Aucune demande ni document.</div>'}`;
+}
+async function demCard() {
+  if (!DMR.includes(ME.role)) return "";
+  let q = sb.from("demandes_agent").select("*").order("created_at", { ascending: false }).limit(200);
+  if (DMV.includes(ME.role)) q = q.eq("statut", "en_attente");
+  else if (DMRH.includes(ME.role)) q = q.eq("nature", "demande").in("statut", ["en_attente", "validee"]).is("rh_decision", null);
+  else if (DML.includes(ME.role)) q = q.eq("statut", "en_attente").eq("lance_par", UID);
+  else return "";
+  const { data } = await q; const L = data || []; if (!L.length) return "";
+  const t = DMV.includes(ME.role) ? "à valider" : DMRH.includes(ME.role) ? "à approuver (RH)" : "lancées, en attente";
+  return `<details class="card" style="border-left:4px solid #2358A8" open><summary style="cursor:pointer"><b>📝 Demandes ${t} : ${L.length}</b><div class="m">Permissions, prêts, anticipations de congé — touchez une demande pour signer, approuver ou valider.</div></summary>${L.map(d => dmLi(d, 1)).join("")}</details>`;
+}
+async function dmSigURL(p) { if (!p) return null; const { data } = await DST2().download(p); return data ? await blobURL(data) : null; }
+function demNew(mat, typ) {
+  const a = AG.find(x => x.matricule == mat); if (!a) return;
+  const peutDem = DML.includes(ME.role), T = typ || (peutDem ? "permission_depart" : "justificatif");
+  const types = Object.entries(DMT).filter(([k]) => peutDem || ["justificatif", "autre"].includes(k));
+  const isDem = !["justificatif", "autre"].includes(T);
+  const f = (id, l, ty = "text", x = "") => `<div><label>${l}</label><input id="${id}" type="${ty}" ${x}></div>`;
+  const champs = { permission_depart: f("dmd", "Date", "date", `value="${today()}"`) + `<div class="row" style="gap:8px"><div style="flex:1"><label>Heure de départ</label><input id="dmhd" type="time" value="${hhmm()}"></div><div style="flex:1"><label>Heure de retour prévue (facultatif)</label><input id="dmhr" type="time"></div></div>`,
+    permission_jours: `<div class="row" style="gap:8px"><div style="flex:1"><label>Du</label><input id="dmd" type="date"></div><div style="flex:1"><label>Au</label><input id="dmf" type="date"></div></div>` + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
+    anticipation_conge: `<div class="row" style="gap:8px"><div style="flex:1"><label>Congé souhaité du</label><input id="dmd" type="date"></div><div style="flex:1"><label>Au</label><input id="dmf" type="date"></div></div>` + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
+    pret: f("dmm", "Montant demandé (MRU)", "number", 'min="0" step="100"') + f("dme", "Nombre d’échéances de remboursement", "number", 'min="1" step="1" value="1"'),
+    justificatif: f("dmo", "Nature de l’absence (maladie, décès, convocation…)") + `<div class="row" style="gap:8px"><div style="flex:1"><label>Absence du</label><input id="dmd" type="date" value="${today()}"></div><div style="flex:1"><label>Au (facultatif)</label><input id="dmf" type="date"></div></div>`,
+    autre: f("dmo", "Objet du document") + f("dmd", "Date concernée (facultatif)", "date") };
+  mdOpen(`<div class="row"><h2>${isDem ? "📝 Nouvelle demande" : "📎 Nouveau document"}</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m"><b>${E(a.nom)}</b> · ${E(a.matricule)} · ${E(a.equipe || "")} · ${E(a.service || "")}</div>
+<div><label>Type</label><select id="dmt">${types.map(([k, l]) => `<option value="${k}" ${k == T ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+${champs[T]}
+<div><label>${isDem ? "Motif" : "Note (facultatif)"}</label><textarea id="dmmo" rows="3"></textarea></div>
+<div><label>${isDem ? "Pièces jointes (facultatif)" : "Fichier(s) à joindre"}</label><input id="dmpj" type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"></div>
+${isDem ? `<div class="svt">Signatures</div>
+<label>Signature de l’agent (demandeur)</label><canvas id="dmpa" style="width:100%;height:150px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas><div class="row" style="justify-content:space-between"><span class="m">L’agent signe dans le cadre. Vous pourrez aussi la faire signer plus tard.</span><button type="button" class="btn" id="dmpacl">Effacer</button></div>
+<label>Votre signature (superviseur qui lance la demande)</label><div id="dmsw"><span class="m">Chargement…</span></div>
+<div class="m">Après l’envoi, la demande apparaît aussitôt chez le responsable des opérations et chez les RH pour approbation, avec les signatures manquantes. La validation finale revient au responsable des opérations, puis la demande est transmise aux RH.</div>` : `<div class="m">Le document est classé dans la fiche de l’agent et les RH sont prévenues.</div>`}
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="dmx">Annuler</button><button type="button" class="btn p" id="dmok">${isDem ? "Lancer la demande" : "Enregistrer"}</button></div>`);
+  const back = () => fiche(mat, "dem"); $("#no").onclick = back; $("#dmx").onclick = back;
+  $("#dmt").onchange = e => demNew(mat, e.target.value);
+  let pa = null, ps = null, maS = null;
+  if (isDem) {
+    pa = sigPad($("#dmpa")); $("#dmpacl").onclick = () => pa.clear();
+    const pad = () => { $("#dmsw").innerHTML = `<canvas id="dmps" style="width:100%;height:150px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="dmpscl">Effacer</button></div>`; ps = sigPad($("#dmps")); $("#dmpscl").onclick = () => ps.clear(); maS = null; };
+    maSig().then(u => { if (!u) return pad(); maS = u; $("#dmsw").innerHTML = `<div style="${SGBG};padding:8px;text-align:center"><img src="${u}" style="max-height:80px;max-width:100%"></div><div class="row" style="justify-content:space-between"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="dmms" checked> Apposer ma signature enregistrée</label><button type="button" class="btn" id="dmmp">Signer au doigt</button></div>`; $("#dmmp").onclick = pad; }).catch(pad);
+  }
+  $("#dmok").onclick = async () => {
+    const v = id => ($("#" + id) || {}).value || "", t = $("#dmt").value, b = $("#dmok");
+    const p = { matricule: mat, type: t, objet: v("dmo"), date_debut: v("dmd"), date_fin: v("dmf"), heure_depart: v("dmhd"), heure_retour: v("dmhr"), nb_jours: v("dmj"), montant: v("dmm"), nb_echeances: v("dme"), motif: isDem ? v("dmmo").trim() : "", note: isDem ? "" : v("dmmo").trim() };
+    const files = [...($("#dmpj").files || [])];
+    if (t == "permission_depart" && !p.date_debut) return toast("Indiquez la date");
+    if (["permission_jours", "anticipation_conge"].includes(t) && (!p.date_debut || !p.date_fin)) return toast("Indiquez les dates de début et de fin");
+    if (p.date_fin && p.date_debut && p.date_fin < p.date_debut) return toast("La date de fin précède la date de début");
+    if (t == "pret" && !(+p.montant > 0)) return toast("Indiquez le montant");
+    if (isDem && !p.motif) return toast("Indiquez le motif");
+    if (t == "justificatif" && (!p.objet || !p.date_debut)) return toast("Indiquez la nature et la date de l’absence");
+    if (t == "autre" && !p.objet) return toast("Indiquez l’objet du document");
+    if (!isDem && !files.length) return toast("Joignez au moins un fichier");
+    if (files.some(x => x.size > 15e6)) return toast("Fichier trop lourd (15 Mo au maximum)");
+    if (["permission_jours", "anticipation_conge"].includes(t) && !p.nb_jours) p.nb_jours = String(Math.round((new Date(p.date_fin) - new Date(p.date_debut)) / 864e5) + 1);
+    const sa = pa && pa.used() && pa.png(), ss = maS && $("#dmms")?.checked ? maS : ps && ps.used() && ps.png();
+    b.disabled = true; b.textContent = "Envoi…";
+    try {
+      const { data: d, error } = await sb.rpc("demande_creer", { p }); if (error) throw error;
+      const up = async (nom, png) => { const ch = `dem/${d.id}/${nom}.png`, r = await DST2().upload(ch, await dURL2blob(png), { upsert: true, contentType: "image/png" }); if (r.error) throw r.error; return ch; };
+      if (sa) { const r = await sb.rpc("demande_signer", { p_id: d.id, p_qui: "agent", p_chemin: await up("agent", sa) }); if (r.error) throw r.error; }
+      if (ss) { const r = await sb.rpc("demande_signer", { p_id: d.id, p_qui: "sup", p_chemin: await up("superviseur", ss) }); if (r.error) throw r.error; }
+      for (const x of files) await dmUp(d.id, x);
+      await sb.rpc("demande_notifier_creation", { p_id: d.id });
+      toast(isDem ? "Demande lancée : " + d.ref : "Document enregistré : " + d.ref); demOpen(d.id, mat);
+    } catch (e) { toast("Refusé : " + (e.message || e)); b.disabled = false; b.textContent = isDem ? "Lancer la demande" : "Enregistrer"; }
+  };
+}
+async function dmUp(id, file) {
+  const nom = file.name.replace(/[^\w.\-]+/g, "_").slice(-80), ch = `dem/${id}/${Date.now()}_${nom}`;
+  const r = await DST2().upload(ch, file, { contentType: file.type || undefined }); if (r.error) throw r.error;
+  const x = await sb.rpc("demande_pj", { p_id: id, p_item: { chemin: ch, nom: file.name, mime: file.type || "", taille: file.size } }); if (x.error) throw x.error;
+}
+async function demOpen(id, mat) {
+  const { data: d, error } = await sb.from("demandes_agent").select("*").eq("id", id).maybeSingle(); if (error || !d) return toast("Demande introuvable");
+  DMO = { d, mat: mat || d.matricule };
+  const [sa, ss] = await Promise.all([dmSigURL(d.sig_agent), dmSigURL(d.sig_sup)]);
+  let U = {}; if ((d.pj || []).length) { const { data } = await DST2().createSignedUrls(d.pj.map(p => p.chemin), 3600); (data || []).forEach(x => U[x.path] = x.signedUrl); }
+  const s = DMS[d.statut] || [d.statut, "info"], m = dmManque(d), att = d.statut == "en_attente", isDem = d.nature == "demande";
+  const box = (t, img, l2, act) => `<div class="card" style="padding:8px;margin:0"><div class="m">${t}</div>${img ? `<img src="${img}" style="max-height:70px;max-width:100%">` : `<div><span class="bd bad">manquante</span></div>`}<div class="m">${l2 || ""}</div>${act || ""}</div>`;
+  const vis = (t, dec, nom, le, note, act) => `<div class="card" style="padding:8px;margin:0"><div class="m">${t}</div>${dec ? `<span class="bd ${/refus/.test(dec) ? "bad" : "ok"}">${dec}</span><div class="m">${E(nom || "")} · ${dmy(le)} ${hm(le)}</div>${note ? `<div class="m">${E(note)}</div>` : ""}` : `<span class="bd warn">en attente</span>`}${act || ""}</div>`;
+  const moi = d.lance_par == UID, L = DML.includes(ME.role);
+  const rhAct = DMRH.includes(ME.role) && !d.rh_decision && ["en_attente", "validee"].includes(d.statut) ? `<div class="row" style="gap:4px;margin-top:6px"><button type="button" class="btn p" data-a="demrh" data-v="approuve">Approuver</button><button type="button" class="btn" data-a="demrh" data-v="refuse">Refuser</button></div>` : "";
+  const vaAct = DMV.includes(ME.role) && att ? `<div class="row" style="gap:4px;margin-top:6px"><button type="button" class="btn p" data-a="demval" data-v="valide" ${d.sig_agent && d.sig_sup ? "" : 'disabled title="Signatures manquantes"'}>Valider</button><button type="button" class="btn" data-a="demval" data-v="refuse">Refuser</button></div>${d.sig_agent && d.sig_sup ? "" : '<div class="m">Validation possible après les signatures de l’agent et du superviseur.</div>'}` : "";
+  mdOpen(`<div class="row"><h2>${E(DMT[d.type])}</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m"><b>${E(d.agent_nom || "")}</b> · ${E(d.matricule)} · ${E(d.ref)} <span class="bd ${s[1]}">${s[0]}</span></div>
+${d.objet ? `<div class="li"><div>Objet</div><b>${E(d.objet)}</b></div>` : ""}${dmPer(d) ? `<div class="li"><div>${d.type == "pret" ? "Montant" : "Date / période"}</div><b>${E(dmPer(d))}</b></div>` : ""}
+${d.motif ? `<div class="li"><div>Motif</div><div style="text-align:right">${E(d.motif)}</div></div>` : ""}${d.note ? `<div class="li"><div>Note</div><div style="text-align:right">${E(d.note)}</div></div>` : ""}
+<div class="li"><div>${isDem ? "Lancée" : "Déposé"} par</div><b>${E(d.lance_nom || "—")} · ${dmy(d.created_at)} ${hm(d.created_at)}</b></div>
+${m.length ? `<div class="al">Manque : ${m.join(", ")}.</div>` : ""}${d.statut == "validee" ? `<div class="m">Validée le ${dmy(d.val_le)} et transmise aux RH${d.rh_decision ? "" : " — approbation RH encore attendue"}.</div>` : ""}${d.statut == "annulee" ? `<div class="m">Annulée par ${E(d.annule_nom || "")} le ${dmy(d.annule_le)}${d.annule_note ? " : " + E(d.annule_note) : ""}</div>` : ""}
+${isDem ? `<div class="svt">Signatures et approbations</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">
+${box("Agent (demandeur)", sa, d.sig_agent_le ? dmy(d.sig_agent_le) + " " + hm(d.sig_agent_le) : "", !d.sig_agent && att && L ? `<button type="button" class="btn p" data-a="demsig" data-q="agent" style="margin-top:6px">✍️ Faire signer l’agent</button>` : "")}
+${box("Superviseur (" + E(d.lance_nom || "") + ")", ss, d.sig_sup_le ? dmy(d.sig_sup_le) + " " + hm(d.sig_sup_le) : "", !d.sig_sup && att && moi ? `<button type="button" class="btn p" data-a="demsig" data-q="sup" style="margin-top:6px">✍️ Signer</button>` : "")}
+${vis("Ressources humaines", d.rh_decision ? (d.rh_decision == "approuve" ? "approuvée" : "refusée") : "", d.rh_nom, d.rh_le, d.rh_note, rhAct)}
+${vis("Responsable des opérations (validation finale)", d.val_decision ? (d.val_decision == "valide" ? "validée" : "refusée") : "", d.val_nom, d.val_le, d.val_note, vaAct)}</div>` : ""}
+<div class="svt">Pièces jointes (${(d.pj || []).length})</div>${(d.pj || []).map(p => `<div class="li"><a class="lk" href="${U[p.chemin] || "#"}" target="_blank" rel="noopener">📎 ${E(p.nom)}</a><span class="m">${E(p.par || "")} · ${p.le ? dmy(p.le) : ""}</span></div>`).join("") || '<div class="m">Aucune.</div>'}
+${d.statut != "annulee" && (L || DMRH.includes(ME.role)) ? `<label class="btn" style="align-self:flex-start">📎 Joindre un fichier<input type="file" id="dmadd" multiple hidden accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"></label>` : ""}
+<div class="row" style="justify-content:flex-end;gap:6px;flex-wrap:wrap">${["en_attente", "depose"].includes(d.statut) && (moi || ["responsable_ops", "direction"].includes(ME.role)) ? `<button type="button" class="btn" style="color:var(--red)" data-a="demann">Annuler ${isDem ? "la demande" : "le document"}</button>` : ""}${isDem ? `<button type="button" class="btn" data-a="dempdf">📄 Document PDF</button>` : ""}<button type="button" class="btn" data-a="fiche" data-m="${E(d.matricule)}">← Fiche de l’agent</button></div>`);
+  $("#no").onclick = mdClose;
+  const add = $("#dmadd"); if (add) add.onchange = async e => { const F = [...e.target.files]; e.target.value = ""; try { for (const x of F) { if (x.size > 15e6) throw new Error("Fichier trop lourd (15 Mo au maximum)"); await dmUp(d.id, x); } toast("Fichier joint"); demOpen(d.id); } catch (x) { toast("Refusé : " + (x.message || x)); } };
+}
+function demSigner(q) {
+  const d = DMO.d; mdOpen(`<div class="row"><h2>✍️ ${q == "agent" ? "Signature de l’agent" : "Votre signature"}</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="m">${E(DMT[d.type])} · ${E(d.agent_nom || "")} · ${E(d.ref)}</div>
+<canvas id="dmpx" style="width:100%;height:170px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas>
+<div class="row" style="justify-content:space-between;gap:6px">${q == "sup" ? `<button type="button" class="btn" id="dmmx">Apposer ma signature enregistrée</button>` : "<span></span>"}<span class="row" style="gap:6px"><button type="button" class="btn" id="dmcx">Effacer</button><button type="button" class="btn p" id="dmox">Enregistrer</button></span></div>`);
+  const back = () => demOpen(d.id); $("#no").onclick = back;
+  const p = sigPad($("#dmpx")); $("#dmcx").onclick = () => p.clear();
+  const save = async png => { try { const ch = `dem/${d.id}/${q == "agent" ? "agent" : "superviseur"}.png`, r = await DST2().upload(ch, await dURL2blob(png), { upsert: true, contentType: "image/png" }); if (r.error) throw r.error; const x = await sb.rpc("demande_signer", { p_id: d.id, p_qui: q, p_chemin: ch }); if (x.error) throw x.error; toast("Signature enregistrée"); back(); } catch (e) { toast("Refusé : " + (e.message || e)); } };
+  $("#dmox").onclick = () => { const png = p.used() && p.png(); if (!png) return toast("Signez d’abord dans le cadre"); save(png); };
+  if ($("#dmmx")) $("#dmmx").onclick = async () => { const u = await maSig(); if (!u) return toast("Aucune signature enregistrée : signez dans le cadre"); save(u); };
+}
+async function demPDF() {
+  const d = DMO.d; await h2pLoad(); const [sa, ss] = await Promise.all([dmSigURL(d.sig_agent), dmSigURL(d.sig_sup)]), a = AG.find(x => x.matricule == d.matricule) || {};
+  const td = "padding:6px;border:1px solid #CBDAF0;vertical-align:top", cel = (t, img, l) => `<td style="${td};height:110px;width:25%"><b>${t}</b><br>${img ? `<img src="${img}" style="max-height:60px;max-width:100%">` : ""}<br><span style="font-size:10px;color:#5B6D8C">${l || ""}</span></td>`;
+  const el = document.createElement("div"); el.style.cssText = "position:fixed;left:-10000px;top:0;width:760px;background:#fff;color:#13294F;font:12px/1.5 Arial,sans-serif;padding:8px";
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #2358A8;padding-bottom:8px"><img src="${LG_EPS}" style="height:46px"><div style="text-align:right"><b style="font-size:16px">${E(DMT[d.type])}</b><br>Réf. ${E(d.ref)} · ${dmy(d.created_at)}</div></div>
+<table style="width:100%;border-collapse:collapse;margin-top:10px"><tr><td style="${td};width:30%">Agent</td><td style="${td}"><b>${E(d.agent_nom || "")}</b> — matricule ${E(d.matricule)}</td></tr><tr><td style="${td}">Équipe · service</td><td style="${td}">${E(a.equipe || "")} · ${E(a.service || "")}</td></tr>
+${d.objet ? `<tr><td style="${td}">Objet</td><td style="${td}">${E(d.objet)}</td></tr>` : ""}${dmPer(d) ? `<tr><td style="${td}">${d.type == "pret" ? "Montant" : "Date / période"}</td><td style="${td}">${E(dmPer(d))}</td></tr>` : ""}<tr><td style="${td}">Motif</td><td style="${td}">${E(d.motif || "—")}</td></tr><tr><td style="${td}">Demande lancée par</td><td style="${td}">${E(d.lance_nom || "")} le ${dmy(d.created_at)} à ${hm(d.created_at)}</td></tr></table>
+<table style="width:100%;border-collapse:collapse;margin-top:14px"><tr>${cel("L’agent (demandeur)", sa, d.sig_agent_le ? dmy(d.sig_agent_le) + " " + hm(d.sig_agent_le) : "signature manquante")}${cel("Le superviseur", ss, (d.sig_sup_nom || d.lance_nom || "") + (d.sig_sup_le ? " · " + dmy(d.sig_sup_le) : " · signature manquante"))}${cel("Ressources humaines", "", d.rh_decision ? (d.rh_decision == "approuve" ? "Approuvée" : "Refusée") + " par " + E(d.rh_nom || "") + " le " + dmy(d.rh_le) : "en attente")}${cel("Responsable des opérations", "", d.val_decision ? (d.val_decision == "valide" ? "Validée" : "Refusée") + " par " + E(d.val_nom || "") + " le " + dmy(d.val_le) : "en attente")}</tr></table>
+<p style="font-size:10px;color:#5B6D8C">Document généré par EPS OPS. ${d.statut == "validee" ? "Demande validée et transmise aux ressources humaines le " + dmy(d.transmis_rh_le) + "." : "Statut : " + (DMS[d.statut] || [d.statut])[0] + "."}</p>`;
+  document.body.appendChild(el);
+  try { await window.html2pdf().set({ margin: [10, 10, 10, 10], filename: `${d.ref}_${String(d.agent_nom || "").replace(/\s+/g, "_")}.pdf`, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, backgroundColor: "#fff" }, jsPDF: { unit: "mm", format: "a4" } }).from(el).save(); } finally { el.remove(); }
+}
+Object.assign(ACT, {
+  demnew(b) { demNew(b.dataset.m); },
+  demo(b) { demOpen(+b.dataset.i); },
+  demsig(b) { demSigner(b.dataset.q); },
+  dempdf() { demPDF().catch(e => toast(e.message)); },
+  demrh(b) { const v = b.dataset.v; ask(v == "approuve" ? "Approbation RH" : "Refus RH", [{ k: "n", l: v == "approuve" ? "Commentaire (facultatif)" : "Motif du refus", r: v != "approuve" }], async q => { const { error } = await sb.rpc("demande_rh", { p_id: DMO.d.id, p_decision: v, p_note: q.n || null }); toast(error ? "Refusé : " + error.message : "Enregistré"); demOpen(DMO.d.id); }); },
+  demval(b) { const v = b.dataset.v; ask(v == "valide" ? "Valider la demande (transmise ensuite aux RH)" : "Refuser la demande", [{ k: "n", l: v == "valide" ? "Commentaire (facultatif)" : "Motif du refus", r: v != "valide" }], async q => { const { error } = await sb.rpc("demande_valider", { p_id: DMO.d.id, p_decision: v, p_note: q.n || null }); toast(error ? "Refusé : " + error.message : v == "valide" ? "Validée et transmise aux RH" : "Refusée"); demOpen(DMO.d.id); }); },
+  demann() { ask("Annuler", [{ k: "n", l: "Motif (facultatif)" }], async q => { const { error } = await sb.rpc("demande_annuler", { p_id: DMO.d.id, p_note: q.n || null }); toast(error ? "Refusé : " + error.message : "Annulée"); demOpen(DMO.d.id); }); }
+});
+
 /* ===== Classeurs du personnel (Google Drive archiveseps, dossier PERSONNEL) : ouvrir, modifier, enregistrer, mettre à jour l’annuaire ===== */
 const CLL = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
 const CLE = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_nettoyage", "superviseur_bagages"];

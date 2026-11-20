@@ -148,3 +148,154 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- un même jour n'est retenu qu'une fois. Grille : ('retenue','jour_absence_map',500).
 -- Fonction paie_periode(p_annee, p_mois) = paie_site + jours_retenus, tarif_retenue, retenue_absences.
 -- Webhook ITGHANE enregistré : app_secrets.itghane_webhook_url.
+
+-- 2026-11-20 : demandes et documents de l'agent (fiche agent / annuaire)
+create table if not exists public.demandes_agent (
+  id bigserial primary key,
+  ref text unique,
+  matricule text not null,
+  agent_nom text,
+  nature text not null default 'demande' check (nature in ('demande','justificatif','autre')),
+  type text not null check (type in ('permission_depart','permission_jours','pret','anticipation_conge','justificatif','autre')),
+  objet text,
+  date_debut date, date_fin date, heure_depart time, heure_retour time,
+  nb_jours numeric, montant numeric, nb_echeances int,
+  motif text, note text,
+  statut text not null default 'en_attente' check (statut in ('en_attente','validee','refusee','annulee','depose')),
+  lance_par uuid default auth.uid(), lance_nom text, lance_role text,
+  created_at timestamptz not null default now(),
+  sig_agent text, sig_agent_le timestamptz, sig_agent_par text,
+  sig_sup text, sig_sup_nom text, sig_sup_le timestamptz,
+  rh_decision text check (rh_decision in ('approuve','refuse')), rh_note text, rh_nom text, rh_le timestamptz,
+  val_decision text check (val_decision in ('valide','refuse')), val_note text, val_nom text, val_le timestamptz,
+  transmis_rh_le timestamptz,
+  annule_nom text, annule_le timestamptz, annule_note text,
+  pj jsonb not null default '[]'
+);
+create index if not exists demandes_agent_mat on public.demandes_agent(matricule, created_at desc);
+create index if not exists demandes_agent_st on public.demandes_agent(statut);
+alter table public.demandes_agent enable row level security;
+create policy dem_r on public.demandes_agent for select to authenticated using (public.acces_ok(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops','responsable_rh','assistante_rh','responsable_comptabilite']));
+create trigger zz_audit after insert or delete or update on public.demandes_agent for each row execute function audit_trig();
+create trigger zz_flux after insert or delete or update on public.demandes_agent for each row execute function flux_trig('demandes_agent');
+
+insert into storage.buckets (id, name, public) values ('dossiers-agents','dossiers-agents',false) on conflict (id) do nothing;
+create policy dag_i on storage.objects for insert to authenticated with check (bucket_id = 'dossiers-agents' and public.mon_role() = any(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops','responsable_rh','assistante_rh']));
+create policy dag_r on storage.objects for select to authenticated using (bucket_id = 'dossiers-agents' and public.mon_role() = any(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops','responsable_rh','assistante_rh','responsable_comptabilite']));
+
+create or replace function public.dem_libelle(t text) returns text language sql immutable as $$
+  select case t when 'permission_depart' then 'Permission de départ' when 'permission_jours' then 'Permission de quelques jours'
+    when 'pret' then 'Demande de prêt' when 'anticipation_conge' then 'Demande d''anticipation de congé'
+    when 'justificatif' then 'Justificatif d''absence' else 'Autre document' end $$;
+
+create or replace function public.dem_manque(d public.demandes_agent) returns text language sql stable as $$
+  select nullif(concat_ws(', ', case when d.sig_agent is null then 'signature de l''agent' end,
+    case when d.sig_sup is null then 'signature du superviseur' end,
+    case when d.rh_decision is null then 'approbation RH' end,
+    case when d.val_decision is null then 'validation du responsable des opérations' end), '') $$;
+
+create or replace function public.demande_creer(p jsonb) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid()); t text := p->>'type'; nat text; n int; pre text;
+begin
+  if not acces_ok(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops','responsable_rh','assistante_rh']) then raise exception 'Accès refusé'; end if;
+  nat := case when t in ('justificatif','autre') then t else 'demande' end;
+  if nat = 'demande' and not acces_ok(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops']) then
+    raise exception 'Seuls les superviseurs, les superviseurs principaux et la direction peuvent lancer une demande'; end if;
+  if not exists (select 1 from agents where matricule = p->>'matricule') then raise exception 'Agent introuvable'; end if;
+  pre := case when nat = 'demande' then 'DEM' else 'DOC' end;
+  select count(*) + 1 into n from demandes_agent where ref like pre || '-' || to_char(now(), 'YYYY') || '-%';
+  insert into demandes_agent (ref, matricule, agent_nom, nature, type, objet, date_debut, date_fin, heure_depart, heure_retour, nb_jours, montant, nb_echeances, motif, note, statut, lance_nom, lance_role)
+  values (pre || '-' || to_char(now(), 'YYYY') || '-' || lpad(n::text, 4, '0'), p->>'matricule', (select nom from agents where matricule = p->>'matricule'), nat, t,
+    nullif(p->>'objet',''), nullif(p->>'date_debut','')::date, nullif(p->>'date_fin','')::date, nullif(p->>'heure_depart','')::time, nullif(p->>'heure_retour','')::time,
+    nullif(p->>'nb_jours','')::numeric, nullif(p->>'montant','')::numeric, nullif(p->>'nb_echeances','')::int, nullif(p->>'motif',''), nullif(p->>'note',''),
+    case when nat = 'demande' then 'en_attente' else 'depose' end, moi, mon_role())
+  returning * into r;
+  return r;
+end $$;
+
+create or replace function public.demande_notifier_creation(p_id bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent;
+begin
+  select * into r from demandes_agent where id = p_id; if r.id is null or r.lance_par is distinct from auth.uid() then return; end if;
+  if r.nature = 'demande' then
+    perform notifier(array['responsable_ops','responsable_rh','assistante_rh'], null, 'rh', dem_libelle(r.type) || ' — ' || r.agent_nom || ' (à approuver)',
+      'Lancée par ' || coalesce(r.lance_nom,'—') || coalesce(' · ' || to_char(r.date_debut,'DD/MM/YYYY'),'') || '. Manque : ' || coalesce(dem_manque(r),'rien') || '. Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  else
+    perform notifier(array['responsable_rh','assistante_rh'], null, 'rh', dem_libelle(r.type) || ' déposé — ' || r.agent_nom,
+      coalesce(r.objet,'') || coalesce(' · ' || to_char(r.date_debut,'DD/MM/YYYY'),'') || ' · par ' || coalesce(r.lance_nom,'—') || '. Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  end if;
+end $$;
+
+create or replace function public.demande_signer(p_id bigint, p_qui text, p_chemin text) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  if not acces_ok(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops']) then raise exception 'Accès refusé'; end if;
+  select * into r from demandes_agent where id = p_id for update; if r.id is null then raise exception 'Demande introuvable'; end if;
+  if r.statut <> 'en_attente' then raise exception 'La demande n''est plus en attente'; end if;
+  if p_qui = 'agent' then update demandes_agent set sig_agent = p_chemin, sig_agent_le = now(), sig_agent_par = moi where id = p_id returning * into r;
+  elsif p_qui = 'sup' then
+    if r.lance_par is distinct from auth.uid() then raise exception 'Seul le superviseur qui a lancé la demande peut la signer'; end if;
+    update demandes_agent set sig_sup = p_chemin, sig_sup_nom = moi, sig_sup_le = now() where id = p_id returning * into r;
+  else raise exception 'Signataire inconnu'; end if;
+  return r;
+end $$;
+
+create or replace function public.demande_rh(p_id bigint, p_decision text, p_note text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  if not acces_ok(array['responsable_rh','assistante_rh']) then raise exception 'Réservé aux ressources humaines'; end if;
+  if p_decision not in ('approuve','refuse') then raise exception 'Décision invalide'; end if;
+  update demandes_agent set rh_decision = p_decision, rh_note = nullif(p_note,''), rh_nom = moi, rh_le = now()
+   where id = p_id and nature = 'demande' and statut in ('en_attente','validee') returning * into r;
+  if r.id is null then raise exception 'Demande introuvable ou close'; end if;
+  perform notifier(array['responsable_ops'], array[r.lance_par], 'rh', dem_libelle(r.type) || ' — ' || r.agent_nom || ' : ' || case p_decision when 'approuve' then 'approuvée par les RH' else 'refusée par les RH' end,
+    coalesce(p_note,'') || ' Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  return r;
+end $$;
+
+create or replace function public.demande_valider(p_id bigint, p_decision text, p_note text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  if not acces_ok(array['responsable_ops']) then raise exception 'Réservé au responsable des opérations'; end if;
+  select * into r from demandes_agent where id = p_id for update;
+  if r.id is null or r.nature <> 'demande' then raise exception 'Demande introuvable'; end if;
+  if r.statut <> 'en_attente' then raise exception 'La demande n''est plus en attente'; end if;
+  if p_decision = 'valide' and (r.sig_agent is null or r.sig_sup is null) then raise exception 'Signatures manquantes : %', concat_ws(', ', case when r.sig_agent is null then 'agent' end, case when r.sig_sup is null then 'superviseur' end); end if;
+  if p_decision not in ('valide','refuse') then raise exception 'Décision invalide'; end if;
+  update demandes_agent set val_decision = p_decision, val_note = nullif(p_note,''), val_nom = moi, val_le = now(),
+    statut = case p_decision when 'valide' then 'validee' else 'refusee' end, transmis_rh_le = case p_decision when 'valide' then now() end
+   where id = p_id returning * into r;
+  perform notifier(array['responsable_rh','assistante_rh'], array[r.lance_par], 'rh',
+    dem_libelle(r.type) || ' — ' || r.agent_nom || case p_decision when 'valide' then ' : validée, transmise aux RH' else ' : refusée' end,
+    coalesce(p_note || ' ', '') || case when p_decision = 'valide' and r.rh_decision is null then 'Approbation RH encore attendue. ' else '' end || 'Réf. ' || r.ref, 'eff', r.ref, auth.uid());
+  return r;
+end $$;
+
+create or replace function public.demande_annuler(p_id bigint, p_note text default null) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent; moi text := (select nom from profiles where id = auth.uid());
+begin
+  select * into r from demandes_agent where id = p_id for update; if r.id is null then raise exception 'Introuvable'; end if;
+  if not (r.lance_par = auth.uid() or acces_ok(array['responsable_ops','direction'])) then raise exception 'Seul l''auteur ou la direction peut annuler'; end if;
+  if r.statut not in ('en_attente','depose') then raise exception 'Déjà traitée'; end if;
+  update demandes_agent set statut = 'annulee', annule_nom = moi, annule_le = now(), annule_note = nullif(p_note,'') where id = p_id returning * into r;
+  return r;
+end $$;
+
+create or replace function public.demande_pj(p_id bigint, p_item jsonb) returns public.demandes_agent
+language plpgsql security definer set search_path = public as $$
+declare r public.demandes_agent;
+begin
+  if not acces_ok(array['superviseur_nettoyage','superviseur_bagages','superviseur_principal','direction','responsable_ops','coordinateur_ops','responsable_rh','assistante_rh']) then raise exception 'Accès refusé'; end if;
+  update demandes_agent set pj = pj || jsonb_build_array(p_item || jsonb_build_object('le', now(), 'par', (select nom from profiles where id = auth.uid())))
+   where id = p_id and statut <> 'annulee' returning * into r;
+  if r.id is null then raise exception 'Introuvable'; end if;
+  return r;
+end $$;
+
+grant execute on function public.demande_creer(jsonb), public.demande_notifier_creation(bigint), public.demande_signer(bigint,text,text), public.demande_rh(bigint,text,text), public.demande_valider(bigint,text,text), public.demande_annuler(bigint,text), public.demande_pj(bigint,jsonb) to authenticated;
