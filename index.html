@@ -240,13 +240,15 @@ const BC = { alertes: 0, pres: 0 };
 function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
-let RA = [], PSV = [];
+let RA = [], PSV = [], MYPS = null;
 /* prise / fin de service (chefs d'équipe et superviseurs) avec position au moment du clic */
 const PSR = ["chef_nettoyage", "chef_bagages", "superviseur_nettoyage", "superviseur_bagages", "superviseur_principal"];
 const PSVW = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "responsable_rh", "assistante_rh"];
 function psvCard() {
-  const mine = PSV.filter(p => p.user_id == UID), last = mine[mine.length - 1], on = last && last.type == "prise", lieu = p => p.sur_site == null ? "position indisponible" : p.sur_site ? `sur le site (${Math.round(p.distance_m)} m)` : `hors site (${(p.distance_m / 1000).toFixed(1)} km)`;
-  const me = PSR.includes(ME.role) ? `<div class="row" style="flex-wrap:wrap;gap:8px"><div><b>${on ? "En service" : last ? "Service terminé" : "Service non pris"}</b><div class="m">${last ? `${last.type == "prise" ? "Pris" : "Quitté"} à ${hm(new Date(last.le))} · ${lieu(last)}` : "Marquez votre arrivée à l’aéroport : les minuteurs de 30 min des tâches de début de shift démarrent à la première prise de service."}</div></div>${on ? `<button type="button" class="btn" data-a="psv" data-t="fin">🏁 Je quitte le service</button>` : `<button type="button" class="btn p" data-a="psv" data-t="prise">📍 Je prends service</button>`}</div>` : "";
+  /* dernier pointage de la personne, tous shifts confondus (cas d’un shift qui continue) */
+  const last = MYPS, on = last && last.type == "prise", jsNow = ymd(shiftStart()), suite = on && last.jour_shift < jsNow, lieu = p => p.sur_site == null ? "position indisponible" : p.sur_site ? `sur le site (${Math.round(p.distance_m)} m)` : `hors site (${(p.distance_m / 1000).toFixed(1)} km)`;
+  const me = PSR.includes(ME.role) ? `<div><b>${on ? (suite ? "Toujours en service depuis le shift du " + dmy(last.jour_shift + "T08:00:00Z") : "En service") + (last.supplementaire ? " · shift supplémentaire" : "") : last ? "Service terminé" : "Service non pris"}</b><div class="m">${last ? `${last.type == "prise" ? "Pris" : "Quitté"} le ${dmy(last.le)} à ${hm(new Date(last.le))} · ${lieu(last)}` : "Marquez votre arrivée à l’aéroport : les minuteurs de 30 min des tâches de début de shift démarrent à la première prise de service."}</div></div>
+<div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><button type="button" class="btn ${on ? "" : "p"}" data-a="psv" data-t="prise">📍 Je prends service</button><button type="button" class="btn ${on ? "p" : ""}" data-a="psv" data-t="fin">🏁 Je quitte le service</button>${suite ? `<button type="button" class="btn w" data-a="psvsup">➕ Shift supplémentaire (renfort)</button>` : ""}</div>` : "";
   const PSVs = PSV.filter(p => !svcRole() || ["superviseur_principal", "direction", "responsable_ops", "coordinateur_ops"].includes(p.role) || (svcRole() == "N" ? /nettoy/i.test(p.service || "") : !/nettoy/i.test(p.service || ""))), all = PSVW.includes(ME.role) && PSVs.length ? `<div class="m" style="margin-top:8px">Prises de service du shift</div>${[...new Set(PSVs.map(p => p.user_id))].map(u => { const L = PSVs.filter(p => p.user_id == u), a = L.find(p => p.type == "prise"), f = [...L].reverse().find(p => p.type == "fin"); return `<div class="li"><div><b>${E(L[0].nom)}</b> <span class="m">${E(RL[L[0].role] || L[0].role)}${L[0].equipe ? " · " + E(L[0].equipe) : ""}</span></div><div class="m" style="text-align:right">${a ? "↗ " + hm(new Date(a.le)) + " · " + lieu(a) : ""}${f ? "<br>↘ " + hm(new Date(f.le)) + " · " + lieu(f) : ""}</div></div>`; }).join("")}` : "";
   return me || all ? `<div class="card"><h2>📍 Prise de service</h2>${me}${all}</div>` : "";
 }
@@ -269,7 +271,8 @@ async function loadRA() {
   const s = shiftStart(), g = garde(s), now = Date.now(), t0 = s.getTime();
   const [{ data }, { data: dsp }] = await Promise.all([sb.from("situation_staff").select("service,groupe,cree_le").gte("cree_le", new Date(t0 - 3 * H).toISOString().slice(0, 19).replace("T", " ")),
     sb.from("rapports_staff").select("recu_le,brut").eq("categorie", "dispatching").gte("recu_le", new Date(t0 - 2 * H).toISOString()),
-    sb.from("prises_service").select("user_id,nom,role,service,equipe,type,le,distance_m,sur_site").eq("jour_shift", ymd(s)).order("le").then(r => (PSV = r.data || [], r), () => ({ data: [] }))]);
+    sb.from("prises_service").select("user_id,nom,role,service,equipe,type,le,distance_m,sur_site").eq("jour_shift", ymd(s)).order("le").then(r => (PSV = r.data || [], r), () => ({ data: [] })),
+    UID ? sb.from("prises_service").select("type,le,jour_shift,distance_m,sur_site,supplementaire").eq("user_id", UID).order("le", { ascending: false }).limit(1).then(r => (MYPS = (r.data || [])[0] || null, r), () => ({ data: [] })) : null]);
   /* minuteur : 1re prise de service du service (chef d'équipe ou superviseur) ; à défaut, horaire standard */
   const arr = sv => { const x = PSV.find(p => p.type == "prise" && p.service == (sv == "bagages" ? "manutention" : sv)); return x ? new Date(x.le).getTime() : null; };
   const rap = (a, n0) => `rappel n°${Math.floor((now - a) / (30 * 60000))}${n0}`;
@@ -2461,6 +2464,11 @@ Object.assign(ACT, {
     };
     if (!navigator.geolocation) return confirm("Localisation indisponible sur cet appareil. Enregistrer sans position ?") ? send(null) : (b.disabled = false);
     navigator.geolocation.getCurrentPosition(p => send(p.coords), () => { if (confirm("Position non obtenue (autorisation refusée ou signal GPS faible). Enregistrer sans position ?")) send(null); else b.disabled = false; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  },
+  async psvsup(b) {
+    if (!confirm("Vous restez en service pour le shift en cours (shift supplémentaire / renfort) ?")) return;
+    b.disabled = true; const send = async c => { const { data, error } = await sb.rpc("service_supplementaire", { p_lat: c ? c.latitude : null, p_lon: c ? c.longitude : null, p_prec: c ? c.accuracy : null }); b.disabled = false; if (error) return toast("Refusé : " + error.message); toast(`Shift supplémentaire enregistré (${data.equipe}) · superviseurs prévenus`); await loadRA(); draw(1); };
+    if (!navigator.geolocation) return send(null); navigator.geolocation.getCurrentPosition(p => send(p.coords), () => send(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   },
   async relance(b) {
     const sv = b.dataset.s, nom = b.dataset.n; b.disabled = true;

@@ -118,3 +118,8 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- 20/11/2026 — Justification / autorisation d'un retard ou d'une absence (appliqué) :
 -- retard_traiter notifie RH + comptabilité pour une justification ; recap_paie ne la compte ni comme absence ni comme retard ;
 -- trigger retard_justifie_clore : une justification clôt d'elle-même la « suite à donner » (aucune mesure).
+
+-- 20/11/2026 — Prise de service et descente (migration prise_service_rappels, appliquée) :
+-- prises_service.supplementaire ; table horaires_individuels (Ismail Niass 1101 : lundi→samedi 08h30–16h00, repos dimanche) ;
+-- horaire_shift(matricule, jour) ; service_supplementaire() ; rappels_service() toutes les 15 min (cron rappels-prise-service) :
+-- prise à l'heure prévue ; descente journée à l'heure de fin ; 24 h : 09h30 « n'oubliez pas de dépointer », 10h30 « descente ou shift supplémentaire ».
