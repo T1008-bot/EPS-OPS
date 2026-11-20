@@ -142,3 +142,9 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- table sites (AINO Nettoyage, AINO Manutention, AINO Nettoyage cabine, Sûreté nationale, Direction, CHN, ENAJM) ; agents.site + site_agent() ;
 -- personnel_admin (salaires saisis par la comptabilité) ; paie_ajustements + paie_ajuster() (saisie dans l'app ou import Excel) ;
 -- prets_avances.echeances_payees ; commandes.site, factures.site ; paie_site(annee, mois) (agents embauchés après la période exclus).
+
+-- 2026-11-20 : retenue absences / mise à pied (paie_periode)
+-- 500 MRU par jour d'absence non justifiée (hors retard) ou de mise à pied ;
+-- un même jour n'est retenu qu'une fois. Grille : ('retenue','jour_absence_map',500).
+-- Fonction paie_periode(p_annee, p_mois) = paie_site + jours_retenus, tarif_retenue, retenue_absences.
+-- Webhook ITGHANE enregistré : app_secrets.itghane_webhook_url.
