@@ -1364,7 +1364,13 @@ async function fiche(mat, k) {
   const [d, s, su] = await Promise.all([dOk ? sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("matricule", mat).order("created_at", { ascending: false }) : { data: null }, sb.from("statuts_jour").select("jour,statut,justification").eq("matricule", mat).gte("jour", since).order("jour", { ascending: false }), sb.from("suivi_absences").select("*").eq("matricule", mat).maybeSingle()]);
   const dd = d.error ? null : d.data; if (dd) DL = dd;
   const ab = s.data || [], c = { nj: 0, j: 0, c: 0, mp: 0 }; ab.forEach(x => { if (c[x.statut] != null) c[x.statut]++; });
-  FC = { a, dd, ab, c, sv: su.data || null }; ficheDraw(k);
+  /* historique global des retards (justifiés ou non) : statuts confirmés + appels faits dans l’app */
+  const [r1, r2] = await Promise.all([sb.from("statuts_jour").select("jour,retard,retard_heure,retard_issue,retard_motif,retard_autorise_par,retard_suite,retard_suite_note,retard_traite_nom").eq("matricule", mat).or("retard.eq.true,retard_issue.eq.retard,retard_issue.eq.justifie").order("jour", { ascending: false }),
+    sb.from("appels").select("jour,equipe,lignes,fait_nom").contains("lignes", [{ m: mat, s: "r" }]).order("jour", { ascending: false })]);
+  const RT = {}; (r2.data || []).forEach(x => { const l = (x.lignes || []).find(y => y.m == mat && y.s == "r") || {}; RT[x.jour] = { jour: x.jour, h: l.h, mo: l.mo, j: false, src: "appel · " + (x.fait_nom || "") }; });
+  (r1.data || []).forEach(x => { if (x.retard_issue == "absent") return; const o = RT[x.jour] || { jour: x.jour }; RT[x.jour] = { ...o, h: x.retard_heure || o.h, j: x.retard_issue == "justifie", mo: x.retard_issue == "justifie" ? `${x.retard_autorise_par || ""} : ${x.retard_motif || ""}` : o.mo, suite: x.retard_suite ? (RTS[x.retard_suite] || x.retard_suite) + (x.retard_suite_note ? " — " + x.retard_suite_note : "") : null, src: x.retard_traite_nom || o.src }; });
+  const rt = Object.values(RT).sort((x, y) => y.jour.localeCompare(x.jour));
+  FC = { a, dd, ab, c, sv: su.data || null, rt }; ficheDraw(k);
 }
 function ficheDraw(k) {
   const { a, dd, c, sv } = FC, g = grpOf(a), st = stt(a), tl = a.tel ? a.tel.replace(/\s/g, "") : "";
@@ -1379,6 +1385,7 @@ ${go("Groupe", `${g.g} · ${g.dp}`, `data-eq="${E(a.equipe)}"`)}${go("Service", 
 ${ch("auj", "Aujourd’hui", `<span class="bd ${st == "p" ? "ok" : st == "h" ? "info" : "bad"}">${SL[st]}</span>`)}${ch("suivi", "Suivi RH", sve ? `<span class="bd ${sve[1]}">${sve[0]}</span>` : '<span style="color:var(--m)">Aucun</span>')}
 ${ch("nj", "Abs. non justifiées (90 j)", `<span style="color:${c.nj ? "#e11d48" : "inherit"}">${c.nj}</span>`)}${ch("j", "Abs. justifiées (90 j)", c.j)}
 ${ch("c", "Congés (90 j)", c.c)}${ch("mp", "Mises à pied (90 j)", c.mp)}
+${ch("ret", "Retards (historique total)", `<span style="color:${(FC.rt || []).length ? "#d97706" : "inherit"}">${(FC.rt || []).length}</span>${(FC.rt || []).some(x => x.j) ? `<small>dont ${(FC.rt || []).filter(x => x.j).length} justifié(s) ou autorisé(s)</small>` : ""}`, 'style="grid-column:1/-1"')}
 ${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
 <div id="fx">${k ? fxHTML(k) : '<div class="m" style="text-align:center">Touchez un élément pour afficher le détail.</div>'}</div>
 <div class="row" style="justify-content:flex-end">${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no2">Fermer</button></div>`;
@@ -1388,6 +1395,7 @@ ${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:$
 }
 function fxHTML(k) {
   const { a, dd, ab, sv } = FC, nn = NNI[a.matricule], li = L => L.map(x => `<div class="li"><div>${fd(x.jour)} · <span class="bd ${x.statut == "nj" ? "bad" : "info"}">${SL[x.statut]}</span>${x.justification ? `<div class="m">${E(JU(x.justification))}</div>` : ""}</div></div>`).join("");
+  if (k == "ret") { const R = FC.rt || []; return `<h2>Retards — historique total (${R.length})</h2><div class="m">Tous les retards, justifiés ou non, pour l’évaluation et le contrôle.</div>${R.map(x => `<div class="li"><div>${fd(x.jour)}${x.h ? ` · arrivée ${E(String(x.h).replace(":", "h"))}` : ""} <span class="bd ${x.j ? "info" : "warn"}">${x.j ? "justifié / autorisé" : "retard"}</span>${x.mo ? `<div class="m">${E(x.mo)}</div>` : ""}${x.suite ? `<div class="m">Suite : ${E(x.suite)}</div>` : ""}</div><span class="m">${E(x.src || "")}</span></div>`).join("") || '<div class="m">Aucun retard enregistré.</div>'}`; }
   if (k == "id") return `<div class="li"><div>Matricule</div><b>${E(a.matricule)}</b></div><div class="li"><div>N° badge</div><b>${E(a.badge) || "—"}</b></div>${nn ? `<div class="li"><div>NNI</div><b ${nn.a_confirmer ? 'style="color:#e11d48"' : ""}>${E(nn.nni)}${nn.a_confirmer ? " (à confirmer)" : ""}</b></div>` : ""}<div class="li"><div>Équipe</div><b>${E(a.equipe)}</b></div>${a.zone ? `<div class="li"><div>Zone</div><b>${E(a.zone)}</b></div>` : ""}<div class="li"><div>Téléphone</div><b>${E(a.tel) || "—"}</b></div>`;
   if (k == "emb") return `<div class="li"><div>Date d’embauche</div><b>${a.date_embauche ? fd(a.date_embauche) + " · " + anc(a.date_embauche) : "non renseignée"}</b></div>${AGW.includes(ME.role) ? `<div class="row" style="gap:8px"><input id="fxe" type="date" value="${E(a.date_embauche || "")}" style="flex:1"><button type="button" class="btn p" data-a="embsave">Enregistrer</button></div>` : ""}`;
   if (k == "auj") { const x = ST[a.matricule]; return `<div class="li"><div>Shift du ${fd(ymd(shiftStart()))}</div><b>${SL[stt(a)]}</b></div>${x?.justification ? `<div class="m">${E(JU(x.justification))}</div>` : ""}`; }
@@ -2541,24 +2549,28 @@ function apSum() {
 }
 const apRen = () => (APX.ren.map((r, i) => `<div class="li"><div><b>${E(r.n)}</b><div class="m">ID ${E(r.m)}${r.de ? " · vient de " + E(apLab(r.de)) : ""}${r.conf ? ` · <span class="bd ok">arrivé, confirmé ${hm(r.conf)}</span>` : ""}</div></div><button type="button" class="btn" data-a="aprdel" data-i="${i}">Retirer</button></div>`).join("") || '<div class="m">Aucun renfort.</div>')
   + (APX.ren.some(r => !r.conf) ? `<div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="btn w" data-a="aprval">Valider les renforts (${APX.ren.filter(r => !r.conf).length})</button></div>` : "");
+/* 2e case de confirmation : arrivée des renforts, ou aucun renfort déployé */
+const apRok = () => { const c = $("#aprok2"), t = $("#aprokt"); if (!c || !t) return; const n = APX.ren.length;
+  t.textContent = APX.none ? "Je confirme qu’aucun agent n’a été déployé en renfort pour ce shift" : n ? `Je confirme l’arrivée des renforts sur le terrain (${n} agent${n > 1 ? "s" : ""})` : "Renforts : ajoutez les agents ci-dessus ou cochez « Aucun renfort »";
+  c.disabled = !APX.none && !n; if (c.disabled) c.checked = false; if (n && !APX.none) c.checked = APX.ren.every(r => r.conf); $("#aprin").hidden = !!APX.none; };
 /* suggestions des renforts : nom, matricule ou badge, dès le 1er caractère */
 const apSug = q => { q = N(q.trim()); const box = $("#aprs"); if (!box) return; if (!q) { box.innerHTML = ""; box.hidden = true; return; }
   const pris = new Set(APX.ren.map(r => r.m)), L = AG.filter(a => a.equipe != APX.e && !enc(a) && !pris.has(a.matricule) && (N(a.nom).includes(q) || String(a.matricule).startsWith(q) || (a.badge && String(a.badge).startsWith(q)))).slice(0, 8);
-  box.innerHTML = L.map(a => `<button type="button" class="aprsi" data-a="apradd" data-m="${E(a.matricule)}"><b>${E(a.matricule)}</b> ${E(a.nom)} <span class="m">${E(apLab(a.equipe || ""))}${a.badge ? " · badge " + E(a.badge) : ""}</span></button>`).join("") || '<div class="m" style="padding:8px">Aucun agent trouvé.</div>'; box.hidden = false; };
+  box.innerHTML = L.map(a => `<button type="button" class="aprsi" data-a="apradd" data-m="${E(a.matricule)}"><b>${E(a.matricule)}</b> ${E(a.nom)} <span class="m">${E(apLab(a.equipe || ""))}${a.badge ? " · badge " + E(a.badge) : ""}</span></button>`).join("") || '<div class="m" style="padding:8px">Aucun agent trouvé.</div>'; box.hidden = false; box.scrollIntoView({ block: "nearest" }); };
 function apRenConf() {
   const L = APX.ren.filter(r => !r.conf); if (!L.length) return;
   const o = document.createElement("div"); o.id = "aprc"; o.style.cssText = "position:fixed;inset:0;z-index:12;background:#0f2a5a80;display:flex;align-items:flex-end;justify-content:center";
-  o.innerHTML = `<div style="background:var(--s);color:var(--t);width:min(480px,100%);max-height:88%;overflow:auto;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px"><h2>Confirmer les renforts · ${apLab(APX.e)}</h2><div class="m">${L.length} agent${L.length > 1 ? "s" : ""} :</div><div>${L.map(r => `<div class="li"><div><b>${E(r.n)}</b><div class="m">ID ${E(r.m)}${r.de ? " · vient de " + E(apLab(r.de)) : ""}</div></div></div>`).join("")}</div><button type="button" class="btn p" data-a="aprok">Je confirme que ces agents sont arrivés à l’aéroport pour renfort</button><button type="button" class="btn" data-a="aprno">Retour</button><div class="m" style="border-top:1px solid var(--b);padding-top:8px">⚠ Confirmez uniquement après l’arrivée effective des agents sur l’aéroport.</div></div>`;
+  o.innerHTML = `<div style="background:var(--s);color:var(--t);width:min(480px,100%);max-height:88%;overflow:auto;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px"><h2>Confirmer les renforts · ${apLab(APX.e)}</h2><div class="m">${L.length} agent${L.length > 1 ? "s" : ""} :</div><div>${L.map(r => `<div class="li"><div><b>${E(r.n)}</b><div class="m">ID ${E(r.m)}${r.de ? " · vient de " + E(apLab(r.de)) : ""}</div></div></div>`).join("")}</div><button type="button" class="btn p" data-a="aprok">Je confirme que les renforts sont déjà sur place</button><button type="button" class="btn" data-a="aprno">Retour</button><div class="m" style="border-top:1px solid var(--b);padding-top:8px">⚠ Confirmez uniquement après l’arrivée effective des agents sur l’aéroport.</div></div>`;
   document.body.appendChild(o);
 }
 async function apOpen(e) {
   if (!APW.includes(ME.role)) return toast("Réservé aux chefs d’équipe, superviseurs et responsables");
   const old = APL.find(x => x.equipe == e) || null;
   let prev = old; if (!prev) { const { data } = await sb.from("appels").select("superviseurs,chefs").eq("equipe", e).order("jour", { ascending: false }).limit(1); prev = (data || [])[0] || null; }
-  APX = { e, s: {}, ren: [], sel: { sp: [], su: (prev && prev.superviseurs) || [], ch: (prev && prev.chefs) || [] } };
+  APX = { e, s: {}, ren: [], none: false, sel: { sp: [], su: (prev && prev.superviseurs) || [], ch: (prev && prev.chefs) || [] } };
   const F = APF[apSv(e)], Gsp = F.G.find(x => x[0] == "sp");
   if (Gsp) { APX.sel.sp = APX.sel.su.filter(n => Gsp[3].includes(n)); APX.sel.su = APX.sel.su.filter(n => !Gsp[3].includes(n)); }
-  if (old) { (old.lignes || []).forEach(l => APX.s[l.m] = { s: l.s, h: l.h || "", mo: l.mo || "" }); APX.ren = (old.renforts || []).slice(); }
+  if (old) { (old.lignes || []).forEach(l => APX.s[l.m] = { s: l.s, h: l.h || "", mo: l.mo || "" }); APX.ren = (old.renforts || []).slice(); APX.none = !APX.ren.length; }
   else apAg(e).forEach(a => { const st = ST[a.matricule]?.statut; if (st == "c" || st == "mp") APX.s[a.matricule] = { s: st, mo: "" }; });
   const L = apAg(e), s = shiftStart(), oth = AG.filter(a => a.equipe != e && !enc(a));
   const f = $("#mf");
@@ -2567,17 +2579,20 @@ async function apOpen(e) {
 <div class="m">Shift du ${dmy(s)} 08h00 au ${dmy(new Date(s.getTime() + 24 * H))} 08h00${old ? ` · modification de l’appel fait à ${hm(old.fait_le)} par ${E(old.fait_nom || "")}` : ""}. Tout le monde est présent par défaut : touchez NJ, J, C ou R pour les exceptions.</div>
 <div><label>En service (cases du formulaire Situation du staff)</label>${F.G.map(([k, , lb, opts]) => `<div class="m" style="margin-top:4px">${lb}</div><div class="apck">${opts.map(o => `<label><input type="checkbox" data-aps="${k}" value="${E(o)}" ${APX.sel[k].includes(o) ? "checked" : ""}> ${E(o)}</label>`).join("")}</div>`).join("")}</div>
 <div><div class="row"><label style="margin:0">Agents (${L.length})</label><span class="m">P · NJ · J · C · R</span></div><input id="apq" placeholder="Chercher un nom ou un matricule…" autocomplete="off"><div id="apl">${L.map(apRow).join("")}</div></div>
-<div><label>Renforts (agents d’autres équipes)</label><div style="position:relative"><input id="apri" placeholder="Tapez un nom, un matricule ou un badge…" autocomplete="off"><div id="aprs" hidden style="position:absolute;left:0;right:0;top:100%;z-index:3;background:var(--s);border:1px solid var(--b);border-radius:10px;box-shadow:var(--sh);max-height:260px;overflow:auto"></div></div><div id="aprl">${apRen()}</div></div>
-<div class="aps"><div id="apsum"></div><label class="m" style="display:flex;gap:8px;align-items:flex-start;color:var(--t);font-weight:600;margin:0"><input type="checkbox" id="apok" style="width:auto;margin-top:3px"> Je confirme la présence des agents marqués P</label><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p" id="apgo">Valider l’appel</button></div></div>`;
-  $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on"); apSum();
+<div><div class="row"><label style="margin:0">Renforts (agents d’autres équipes)</label><label class="m" style="display:flex;gap:6px;align-items:center;margin:0;color:var(--t);font-weight:600"><input type="checkbox" id="aprnone" style="width:auto" ${APX.none ? "checked" : ""}> Aucun renfort</label></div><div id="aprin" ${APX.none ? "hidden" : ""}><input id="apri" placeholder="Tapez les premières lettres du nom ou les premiers chiffres du matricule…" autocomplete="off"><div id="aprs" hidden style="border:1px solid var(--b);border-radius:10px;margin-top:4px;max-height:280px;overflow:auto;background:var(--s)"></div><div id="aprl">${apRen()}</div></div></div>
+<div class="aps"><div id="apsum"></div><label class="m" style="display:flex;gap:8px;align-items:flex-start;color:var(--t);font-weight:600;margin:0"><input type="checkbox" id="apok" style="width:auto;margin-top:3px"> Je confirme la présence des agents non cochés</label><label class="m" style="display:flex;gap:8px;align-items:flex-start;color:var(--t);font-weight:600;margin:0"><input type="checkbox" id="aprok2" style="width:auto;margin-top:3px"> <span id="aprokt"></span></label><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p" id="apgo">Valider l’appel</button></div></div>`;
+  $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on"); apSum(); apRok();
+  $("#aprnone").onchange = ev => { APX.none = ev.target.checked; if (APX.none) { APX.ren = []; $("#aprl").innerHTML = apRen(); $("#apri").value = ""; apSug(""); } $("#aprok2").checked = false; apSum(); apRok(); };
   $("#apq").oninput = ev => { const q = N(ev.target.value.trim()); f.querySelectorAll(".apr").forEach(r => r.style.display = !q || r.dataset.n.includes(q) ? "" : "none"); };
-  $("#apri").oninput = ev => apSug(ev.target.value); $("#apri").onkeydown = ev => { if (ev.key == "Enter") { ev.preventDefault(); $("#aprs .aprsi")?.click(); } };
+  $("#apri").oninput = ev => { const v = ev.target.value.trim(); if (/^(0|aucun|aucune|néant|neant)$/i.test(v)) { $("#aprnone").checked = true; $("#aprnone").onchange({ target: $("#aprnone") }); return; } apSug(v); }; $("#apri").onkeydown = ev => { if (ev.key == "Enter") { ev.preventDefault(); $("#aprs .aprsi")?.click(); } };
   f.oninput = ev => { const t = ev.target; if (t.dataset.apm) (APX.s[t.dataset.apm] = APX.s[t.dataset.apm] || { s: "p" })[t.dataset.apf] = t.value; };
   f.onsubmit = ev => { ev.preventDefault(); if (!ev.submitter || ev.submitter.id == "apgo") apSave(); };
 }
 async function apSave() {
   if (!$("#apok").checked) return toast("Cochez la confirmation de présence avant de valider");
-  if (APX.ren.some(r => !r.conf)) { toast("Confirmez d’abord l’arrivée des renforts"); return apRenConf(); }
+  if (!APX.none && !APX.ren.length) return toast("Renforts : ajoutez les agents déployés ou cochez « Aucun renfort »");
+  if (!$("#aprok2").checked) return toast(APX.none ? "Cochez la confirmation « aucun agent déployé en renfort »" : "Cochez la confirmation de l’arrivée des renforts");
+  { const t = new Date().toISOString(); APX.ren.forEach(r => { if (!r.conf) r.conf = t; }); }
   const e = APX.e, L = apAg(e), lignes = [];
   for (const a of L) { const x = APX.s[a.matricule]; if (!x || x.s == "p") continue; if (x.s == "r" && !x.h) return toast("Indiquez l’heure d’arrivée de " + a.nom); lignes.push({ m: a.matricule, n: a.nom, s: x.s, h: x.h || null, mo: (x.mo || "").trim() || null }); }
   const sel = k => [...document.querySelectorAll(`[data-aps="${k}"]:checked`)].map(i => i.value), sup = [...sel("sp"), ...sel("su")], chefs = sel("ch");
@@ -2672,10 +2687,10 @@ Object.assign(ACT, {
   apvoir(b) { apVoir(b.dataset.e); },
   async apvoirj(b) { const { data } = await sb.from("appels").select("*").eq("id", b.dataset.i).maybeSingle(); if (!data) return; if (!APL.some(x => x.id == data.id)) APL.push(data); const e = data.equipe; APL = APL.filter(x => x.equipe != e || x.id == data.id); apVoir(e); },
   apch(b) { const m = b.dataset.m, v = b.dataset.v; APX.s[m] = { ...(APX.s[m] || {}), s: v }; const a = AG.find(x => x.matricule == m), r = document.getElementById("apr_" + m); if (a && r) { const d = r.style.display; r.outerHTML = apRow(a); document.getElementById("apr_" + m).style.display = d; } apSum(); if (v == "r") setTimeout(() => document.querySelector(`[data-apm="${m}"][data-apf="h"]`)?.focus(), 0); },
-  aprdel(b) { APX.ren.splice(+b.dataset.i, 1); $("#aprl").innerHTML = apRen(); apSum(); },
-  apradd(b) { const a = AG.find(x => x.matricule == b.dataset.m); if (!a) return; if (!APX.ren.some(r => r.m == a.matricule)) APX.ren.push({ m: a.matricule, n: a.nom, de: a.equipe || "" }); const i = $("#apri"); i.value = ""; apSug(""); $("#aprl").innerHTML = apRen(); apSum(); i.focus(); },
+  aprdel(b) { APX.ren.splice(+b.dataset.i, 1); $("#aprl").innerHTML = apRen(); apSum(); apRok(); },
+  apradd(b) { const a = AG.find(x => x.matricule == b.dataset.m); if (!a) return; if (!APX.ren.some(r => r.m == a.matricule)) APX.ren.push({ m: a.matricule, n: a.nom, de: a.equipe || "" }); const i = $("#apri"); i.value = ""; apSug(""); $("#aprl").innerHTML = apRen(); apSum(); apRok(); i.focus(); },
   aprval() { apRenConf(); },
-  aprok() { const t = new Date().toISOString(); APX.ren.forEach(r => { if (!r.conf) r.conf = t; }); $("#aprc")?.remove(); $("#aprl").innerHTML = apRen(); apSum(); toast("Renforts confirmés"); },
+  aprok() { const t = new Date().toISOString(); APX.ren.forEach(r => { if (!r.conf) r.conf = t; }); $("#aprc")?.remove(); $("#aprl").innerHTML = apRen(); apSum(); apRok(); $("#aprok2").checked = true; toast("Renforts confirmés"); },
   aprno() { $("#aprc")?.remove(); },
   async appdf(b) { const a = APL.find(x => x.equipe == b.dataset.e); if (!a) return; b.disabled = true; try { await apPDF(a); } catch (e) { toast("PDF impossible : " + e.message); } b.disabled = false; },
   async apshare(b) { const a = APL.find(x => x.equipe == b.dataset.e); if (!a) return; const t = apTxt(a); if (navigator.share) { try { await navigator.share({ title: "Appel " + apLab(a.equipe), text: t }); return; } catch (e) { if (e.name == "AbortError") return; } } open("https://wa.me/?text=" + encodeURIComponent(t), "_blank"); },
