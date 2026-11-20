@@ -46,3 +46,12 @@
 - Page publique « Vols réguliers NKC » figée sur le 18–24/11 : à remplacer ou mettre à jour.
 - Situation du recrutement à renseigner (config_alertes.recrutement).
 - Nouveautés du 18/11 non vérifiées dans l'application ouverte.
+
+## 20/11/2026 — Liaison ITGHANE et nouveaux modules (base faite, écrans à faire)
+- Accès lecture ITGHANE : fonction serveur `itghane` (clé dédiée dans app_secrets `itghane_cle`, jamais dans le dépôt), journal `api_journal`. Note Codex remise à l'utilisateur.
+- Base créée : `prets_avances`, `primes_mois`, `fournisseurs`, `factures`, colonnes de validation comptable sur `commandes`,
+  `recap_paie(annee, mois)` (26→25, renforts, primes, retenues), `taches_synthese`, `alertes_synthese`,
+  `evaluations` + `evaluations_calculer` (cron le 26) → `evaluation_revoir` (sup. principal) → `evaluation_valider` (resp. ops, transmission RH),
+  `audit_journal` (empreintes chaînées, triggers zz_audit sur 24 tables).
+- Écrans OPS à construire : onglet Comptabilité (récap paie + export, prêts/avances, primes, fournisseurs, factures, validation des achats),
+  écran Évaluations (revue / validation / transmission), page Journal (audit, réservée au responsable des opérations / direction), bouton Historique sur les fiches.
