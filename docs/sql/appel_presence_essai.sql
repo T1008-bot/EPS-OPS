@@ -123,3 +123,7 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- prises_service.supplementaire ; table horaires_individuels (Ismail Niass 1101 : lundi→samedi 08h30–16h00, repos dimanche) ;
 -- horaire_shift(matricule, jour) ; service_supplementaire() ; rappels_service() toutes les 15 min (cron rappels-prise-service) :
 -- prise à l'heure prévue ; descente journée à l'heure de fin ; 24 h : 09h30 « n'oubliez pas de dépointer », 10h30 « descente ou shift supplémentaire ».
+
+-- 20/11/2026 — Paie (migration grille_salaire_periode_essai, appliquée) : grille_salaire (notes de service n° 0016 et 0017),
+-- salaire_base(matricule, date), recap_paie_mois(annee, mois), confirmations_essai + essais_verifier() (cron quotidien 06h20 :
+-- au début du dernier mois de la période d'essai de 3 mois, notification RH + comptabilité) et essai_decider() (responsable de la comptabilité).
