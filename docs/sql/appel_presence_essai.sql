@@ -137,3 +137,8 @@ select cron.schedule('presence-retards-rappels', '6-59/15 * * * *', $$select pub
 -- paie, grille, prêts/avances, primes réservés au responsable de la comptabilité, au responsable des opérations et à la direction ;
 -- commande_compta() (validation comptable des demandes d'achat) ; table conges + conges_rappel() (cron du 20 au 28 à 07h41 :
 -- planifier les congés du mois suivant avant le 1er) ; acces_ok() autorise les appels internes (tâches planifiées).
+
+-- 20/11/2026 — Comptabilité par site (migrations compta_sites_ajustements, paie_site_correctif, paie_site_embauche, appliquées) :
+-- table sites (AINO Nettoyage, AINO Manutention, AINO Nettoyage cabine, Sûreté nationale, Direction, CHN, ENAJM) ; agents.site + site_agent() ;
+-- personnel_admin (salaires saisis par la comptabilité) ; paie_ajustements + paie_ajuster() (saisie dans l'app ou import Excel) ;
+-- prets_avances.echeances_payees ; commandes.site, factures.site ; paie_site(annee, mois) (agents embauchés après la période exclus).
