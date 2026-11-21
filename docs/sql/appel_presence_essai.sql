@@ -470,3 +470,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 2026-11-21 : chevauchements interdits (migration demandes_chevauchement)
 -- dem_chevauchement(matricule, debut, fin) : demande de permission/congé en attente ou validée, ou congé planifié, sur ces dates.
 -- demande_creer refuse « Ces dates sont déjà couvertes : … ».
+
+-- 2026-11-21 : prolongation et retour anticipé (migration demandes_retour_prolongation)
+-- demandes_agent : prolonge_de, date_fin_initiale, retour_le, retour_nom, retour_motif ; conges : date_fin_initiale, retour_nom, retour_motif.
+-- retour_anticipe(matricule, jour_de_reprise, motif) : la permission / le congé s'arrête la veille, situation et paie corrigées, RH + resp. ops notifiés.
