@@ -338,6 +338,9 @@ const V = {};
 const nl = x => { if (x == null || x === "") return ""; let a = x; if (typeof x == "string") { try { a = JSON.parse(x); } catch (_) { a = x; } } return Array.isArray(a) ? a.filter(Boolean).join(", ") : String(a); };
 const sn = x => String(x || "").replace(/^\s*(M\.?|Mr\.?|Mme\.?)\s+/i, "").trim();
 let SHO = 0, SHRURL = "", SHV = 0;
+const JSUP = ["Cheikh Bay Ly", "Cheikh Melaynine Boukhreys", "El Moustapha A. Dedda", "Sidi Med Bouna'Issa", "Moulaye Boukhreys", "El Houssein Ba", "Cheikh Melaynine Mohamed"], JCHEF = ["Alpha Koné", "El Houssein Sene", "Mohamed Boubacar", "Sidi Mohamed Koné"];
+const jpick = (opts, nm) => { const t = x => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\bm\.?\s/g, "").split(/[^a-z0-9]+/).filter(w => w.length > 1); const a = t(nm); if (!a.length) return ""; let best = "", bs = 0; opts.forEach(o => { const b = t(o), sc = a.filter(w => b.includes(w)).length / Math.max(a.length, b.length); if (sc > bs) { bs = sc; best = o; } }); return bs >= 0.5 ? best : ""; };
+const JAIR = { MAI: "MAURITANIA AIRLINES INTERNATIONAL (MAI)", RAM: "ROYAL AIR MAROC", THY: "TURKISH AIRLINES", DAH: "AIR ALGERIE", AFR: "AIR FRANCE", ASY: "ASKY", IBB: "BINTER CANARIAS", BIN: "BINTER CANARIAS", TAR: "TUNISAIR", HMS: "AIR SENEGAL", SZN: "AIR SENEGAL", TU: "TUNISAIR" }, JPAIR = { "AH4014": "AH4014/AH4015", "AH4015": "AH4014/AH4015", "AT510": "AT510/AT511", "AT511": "AT510/AT511", "AT520": "AT520/AT521", "AT521": "AT520/AT521", "NT1804": "NT1804/NT1805", "NT1805": "NT1804/NT1805", "TK583": "TK583/TK584", "TK584": "TK583/TK584", "TK585": "TK585/TK586", "TK586": "TK585/TK586", "TU563": "TU563/TU564", "TU564": "TU563/TU564" };
 const SHRR = ["superviseur_principal", "superviseur_bagages", "responsable_ops", "coordinateur_ops", "direction"];
 async function shiftRep() {
   if (!SHRR.includes(ME.role)) return "";
@@ -364,9 +367,9 @@ async function shiftRep() {
   const rb = (rr.data || []).find(x => x.service == "bagages"), mat = n => (AG.find(a => sn(a.nom).toLowerCase() == sn(n).toLowerCase()) || {}).matricule || "", f1 = x => sn(nl(x).split(/[,;]/)[0]);
   const pr = rb ? rb.present : null, eff = pr != null ? pr : team("Manutention " + g).c.p, ren = rb ? rb.renforts : null, sp = sn(nl(((rr.data || []).find(x => x.sup_principal) || {}).sup_principal)), su = f1(rb && rb.superviseurs), ch = f1(rb && rb.chefs);
   const o = { "de[day]": p2(s.getUTCDate()), "de[month]": p2(s.getUTCMonth() + 1), "de[year]": s.getUTCFullYear(), "au[day]": p2(en.getUTCDate()), "au[month]": p2(en.getUTCMonth() + 1), "au[year]": en.getUTCFullYear(), "a[hourSelect]": "08", "a[minuteSelect]": "00", "a31[hourSelect]": "08", "a31[minuteSelect]": "00",
-    superviseurPrincipal: sp, "superviseur18[first]": su, "superviseur18[last]": mat(su), "chefDequipe[first]": ch, "chefDequipe[last]": mat(ch), faitPar: ME.nom,
-    "situationDu[0][0]": "Equipe M" + g, "situationDu[0][1]": eff ? p2(eff) : "", "situationDu[0][5]": +ren ? (+ren == 1 ? "1" : p2(ren)) : "" };
-  [["0", TA], ["2", TD]].forEach(([r, t]) => { o[`operationsEffectuees[${r}][6]`] = String(t.n); o[`operationsEffectuees[${r}][7]`] = String(t.pax); o[`operationsEffectuees[${r}][4]`] = String(t.pmr); o[`operationsEffectuees[${r}][8]`] = String(t.bag); o[`operationsEffectuees[${r}][9]`] = String(t.kg); });
+    superviseurPrincipal: jpick(JSUP, sp) || sp, "superviseur18[first]": su, "chefDequipe[first]": ch, faitPar: sn(ME.nom), "a[timeInput]": "08:00", "a31[timeInput]": "08:00",
+    "situationDu[0][0]": "Equipe M" + g, "situationDu[0][1]": eff ? p2(eff) : "", "situationDu[0][2]": +ren ? String(+ren) : "" };
+  [["0", TA], ["1", TD]].forEach(([r, t]) => { ["n", "pax", "pmr", "bag", "kg"].forEach((k, i) => { o[`operationsEffectuees[${r}][${i}]`] = String(t[k]); }); });
   SHRURL = "https://form.jotform.com/250364290148051?" + Object.entries(o).filter(([, x]) => x !== "" && x != null).map(([k, x]) => k + "=" + encodeURIComponent(x)).join("&");
   const bad = F.filter(x => x.miss.length), late = F.filter(x => !x.due).length;
   return `<div class="card"><div class="row"><h2>Rapport du shift Ops (manutention)</h2>${SHV ? "" : `<button class="btn" data-a="shrsw">${SHO ? "← Shift en cours" : "Shift précédent"}</button>`}</div>
@@ -1644,15 +1647,15 @@ ${apTache(t)}<div class="row" style="justify-content:flex-start;gap:6px;margin-t
     const CL = { wheelchairs: "Wheelchairs", flight_ops: "Flight Ops", cargo: "Cargo", cabin: "Nettoyage cabine", pmr_shift: "PMR Shift" };
     const d = new Date(v.heure_estimee || v.heure_reelle || v.heure_prevue), A = v.sens == "A";
     const AL = [[/MAURITANIA|MAI\b|MAURITANIE/, "MAURITANIA AIRLINES INTERNATIONAL (MAI)"], [/ROYAL|MAROC/, "ROYAL AIR MAROC"], [/TURK/, "TURKISH AIRLINES"], [/ALG/, "AIR ALGERIE"], [/FRANCE/, "AIR FRANCE"], [/ASKY/, "ASKY"], [/BINTER/, "BINTER CANARIAS"], [/TUNIS/, "TUNISAIR"], [/SENEGAL|SÉNÉGAL/, "AIR SENEGAL"]];
-    const cp = String(v.compagnie || "").toUpperCase(), air = (AL.find(([r]) => r.test(cp)) || [])[1] || "";
+    const cp = String(v.compagnie || "").toUpperCase(), air = JAIR[cp] || JAIR[String(v.numero || "").slice(0, 2)] || (AL.find(([r]) => r.test(cp)) || [])[1] || "", vn = JPAIR[String(v.numero || "").replace(/\s/g, "")] || String(v.numero || "").replace(/\s/g, ""), isup = /superviseur|responsable|coordinateur|direction/.test(ME.role) ? jpick(JSUP, ME.nom) : "";
     const mk = (base, o) => base + "?" + Object.entries(o).filter(([, x]) => x).map(([k, x]) => k + "=" + encodeURIComponent(x)).join("&");
     const dt = (n) => ({ [n + "[month]"]: String(d.getUTCMonth() + 1).padStart(2, "0"), [n + "[day]"]: String(d.getUTCDate()).padStart(2, "0"), [n + "[year]"]: d.getUTCFullYear() });
-    const uw = mk("https://form.jotform.com/252936581138565", { airlinespan: air, flightNumber: v.numero, arrivalAndor: A ? "Arrival" : "Départure", ...dt("date19") });
-    const uo = mk("https://form.jotform.com/261972772336567", { airlinespan: air, numVol: v.numero, appareil: v.type_appareil, arriveeEtou: A ? "Arrivée" : "Départ", ...dt("date") });
+    const uw = mk("https://form.jotform.com/252936581138565", { airlinespan: air, flightNumber: vn, "saisissezUne[0]": vn, epsSupervisor: isup, arrivalAndor: A ? "Arrival" : "Départure", ...dt("date19") });
+    const uo = mk("https://form.jotform.com/261972772336567", { airlinespan: air, numVol: vn, appareil: v.type_appareil, superviseurs122: isup, volRegulier: "Regulier", arriveeEtou: A ? "Arrivée" : "Départ", ...dt("date") });
     return `<h2>Vol ${E(vNum(v))} · ${A ? "Arrivée" : "Départ"}</h2>
 <div class="m">${E(v.compagnie) || ""} ${E(v.provenance_destination) ? "· " + E(v.provenance_destination) : ""} ${E(v.type_appareil) ? "· " + E(v.type_appareil) : ""} ${E(v.immat) ? "· " + E(v.immat) : ""}<br>${dmy(v.heure_prevue)} · <b>${A ? "STA" : "STD"} ${SCH}</b>${ETA ? ` · <b>${A ? "ETA" : "ETD"} ${ETA}</b>` : ""} <span class="bd ${SV[1]}">${E(SV[0])}</span>${v.verif_le ? ` <span class="m">(vérifié ${hm(v.verif_le)})</span>` : ""}</div>
 ${fcard}${acard}${mcard}
-<div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : vol, date, sens${air ? ", compagnie" : ""}. Les autres champs restent à compléter.</div></div>
+<div class="card"><b>Remplir un rapport (formulaire prérempli)</b><div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><a class="btn p" href="${uw}" target="_blank" rel="noopener">Rapport Wheelchairs</a><a class="btn p" href="${uo}" target="_blank" rel="noopener">Rapport Flight Ops</a></div><div class="m">Préremplis : compagnie, vol, appareil, date, sens${isup ? ", superviseur" : ""}. Un menu déroulant ne se pré-remplit que si la valeur existe dans la liste du formulaire ; les autres champs restent à compléter.</div></div>
 <div class="card sc"><b>Rapports liés (${all.length})</b><table><tr><th>Type</th><th>Date</th><th>PDF</th></tr>${all.map(r => `<tr><td>${E(CL[r.categorie] || r.categorie)}</td><td>${dmy(r.jour_vol)}</td><td><a class="lk" href="${E(r.pdf_url)}" target="_blank" rel="noopener">Ouvrir le PDF</a></td></tr>`).join("") || `<tr><td colspan="3" class="m">Aucun rapport reçu pour ce vol.</td></tr>`}</table></div>`;
   },
   async volreel(b) {
