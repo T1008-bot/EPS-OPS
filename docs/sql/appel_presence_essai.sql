@@ -466,3 +466,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
     case when d.type = 'pret' and d.rh_decision is null then 'approbation RH' end,
     case when d.val_decision is null then case when d.type = 'pret' then 'signature de la DG' else 'validation du responsable des opérations' end end), '') $$;
 
+
+-- 2026-11-21 : chevauchements interdits (migration demandes_chevauchement)
+-- dem_chevauchement(matricule, debut, fin) : demande de permission/congé en attente ou validée, ou congé planifié, sur ces dates.
+-- demande_creer refuse « Ces dates sont déjà couvertes : … ».

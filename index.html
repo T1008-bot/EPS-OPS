@@ -1417,7 +1417,7 @@ ${ch("auj", "Aujourd’hui", `<span class="bd ${st == "p" ? "ok" : st == "h" ? "
 ${ch("nj", "Abs. non justifiées (90 j)", `<span style="color:${c.nj ? "#e11d48" : "inherit"}">${c.nj}</span>`)}${ch("j", "Abs. justifiées (90 j)", c.j)}
 ${ch("c", "Congés (90 j)", c.c)}${ch("mp", "Mises à pied (90 j)", c.mp)}
 ${ch("ret", "Retards (historique total)", `<span style="color:${(FC.rt || []).length ? "#d97706" : "inherit"}">${(FC.rt || []).length}</span>${(FC.rt || []).some(x => x.j) ? `<small>dont ${(FC.rt || []).filter(x => x.j).length} justifié(s) ou autorisé(s)</small>` : ""}`, 'style="grid-column:1/-1"')}
-${FC.dm ? ch("dem", "Demandes et documents", `${FC.dm.length ? FC.dm.length : "Aucun"}${FC.dm.some(x => x.statut == "en_attente") ? `<small style="color:#d97706">${FC.dm.filter(x => x.statut == "en_attente").length} en attente</small>` : ""}`, 'style="grid-column:1/-1"') : ""}${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
+${FC.dm ? ch("dem", "Permissions et demandes", (() => { const t = today(), V = FC.dm.filter(x => DMP.includes(x.type) && x.statut == "validee"), c = V.filter(x => x.date_debut <= t && dmFin(x) >= t).length, v = V.filter(x => x.date_debut > t).length, w = FC.dm.filter(x => x.statut == "en_attente").length; return (c ? `<span style="color:#16a34a">En permission</span>` : FC.dm.length ? FC.dm.length + " au total" : "Aucune") + ([v && v + " à venir", w && w + " en attente"].filter(Boolean).length ? `<small style="color:#d97706">${[v && v + " à venir", w && w + " en attente"].filter(Boolean).join(" · ")}</small>` : ""); })(), 'style="grid-column:1/-1"') : ""}${ndd != null ? ch("disc", "Antécédents disciplinaires", `<span style="color:${ndd ? "#e11d48" : "inherit"}">${ndd ? ndd + " dossier" + (ndd > 1 ? "s" : "") : "Aucun"}</span>`, 'style="grid-column:1/-1"') : ""}</div>
 <div id="fx">${k ? fxHTML(k) : '<div class="m" style="text-align:center">Touchez un élément pour afficher le détail.</div>'}</div>
 <div class="row" style="justify-content:flex-end;flex-wrap:wrap;gap:6px">${DML.includes(ME.role) || DMRH.includes(ME.role) ? `<button type="button" class="btn p" data-a="demnew" data-m="${E(a.matricule)}">+ Demande / justificatif / autre</button>` : ""}${dd ? `<button type="button" class="btn w" data-a="dnew" data-m="${E(a.matricule)}">+ Dossier disciplinaire</button>` : ""}<button type="button" class="btn" id="no2">Fermer</button></div>`;
   const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
@@ -2776,8 +2776,13 @@ let DMO = null;
 const dmManque = d => d.nature != "demande" || d.statut != "en_attente" ? [] : [!d.sig_agent && "signature de l’agent", !d.sig_sup && "signature du superviseur", d.type == "pret" && !d.rh_decision && "approbation RH", !d.val_decision && (d.type == "pret" ? "signature de la DG" : "validation du responsable des opérations")].filter(Boolean);
 const dmPer = d => d.type == "permission_depart" ? `${d.date_debut ? fd(d.date_debut) : ""}${d.heure_depart ? " · départ " + String(d.heure_depart).slice(0, 5).replace(":", "h") : ""}${d.heure_retour ? " · retour " + String(d.heure_retour).slice(0, 5).replace(":", "h") : ""}` : d.type == "pret" ? `${mru(d.montant || 0)}${d.nb_echeances ? " · " + d.nb_echeances + " échéance(s)" : ""}` : d.date_debut ? (d.date_fin && d.date_fin != d.date_debut ? `du ${fd(d.date_debut)} au ${fd(d.date_fin)}` : fd(d.date_debut)) + (d.nb_jours ? ` · ${d.nb_jours} j` : "") : "";
 const dmLi = (d, nom) => { const m = dmManque(d), s = DMS[d.statut] || [d.statut, "info"]; return `<div class="li" data-a="demo" data-i="${d.id}" style="cursor:pointer;flex-wrap:wrap"><div><b>${E(DMT[d.type])}</b>${nom ? ` — ${E(d.agent_nom || "")}` : ""} <span class="bd ${s[1]}">${s[0]}</span>${d.objet ? `<div>${E(d.objet)}</div>` : ""}<div class="m">${E(dmPer(d))}${dmPer(d) ? " · " : ""}${E(d.ref)} · par ${E(d.lance_nom || "—")} le ${fd(String(d.created_at).slice(0, 10))}${(d.pj || []).length ? ` · 📎${d.pj.length}` : ""}</div>${m.length ? `<div>${m.map(x => `<span class="bd bad" style="margin:1px">manque : ${x}</span>`).join("")}</div>` : ""}${d.statut == "validee" && !d.rh_decision ? `<div><span class="bd info">avis RH facultatif</span></div>` : ""}${d.type == "pret" && d.statut == "validee" ? `<div><span class="bd ${d.verse_le ? "ok" : "warn"}">${d.verse_le ? "versé le " + fd(d.verse_le) + " · ajouté à la paie" : "versement à confirmer (comptabilité)"}</span></div>` : ""}${(d.ecarts || []).length ? `<div><span class="bd bad">${d.ecarts.length} écart(s) avec la situation</span></div>` : ""}</div><span class="m">›</span></div>`; };
+const DMP = ["permission_depart", "permission_jours", "anticipation_conge"];
+const dmFin = d => d.date_fin || d.date_debut;
 function demListe(L) {
-  return `<h2>Demandes et documents (${L.length})</h2>${DML.includes(ME.role) || DMRH.includes(ME.role) ? `<div class="row" style="justify-content:flex-start"><button type="button" class="btn p" data-a="demnew" data-m="${E(FC.a.matricule)}">+ Ajouter une demande, un justificatif ou autre</button></div>` : ""}${L.map(d => dmLi(d)).join("") || '<div class="m">Aucune demande ni document.</div>'}`;
+  const t = today(), P = L.filter(d => DMP.includes(d.type)), act = P.filter(d => d.statut == "validee");
+  const G = [["⏳ En attente de validation", P.filter(d => d.statut == "en_attente")], ["🟢 En cours", act.filter(d => d.date_debut <= t && dmFin(d) >= t)], ["📅 À venir", act.filter(d => d.date_debut > t).sort((a, b) => a.date_debut.localeCompare(b.date_debut))], ["Passées", act.filter(d => dmFin(d) < t)],
+    ["💵 Prêts", L.filter(d => d.type == "pret" && !["refusee", "annulee"].includes(d.statut))], ["📎 Justificatifs et autres documents", L.filter(d => d.nature != "demande" && d.statut != "annulee")], ["Refusées ou annulées", L.filter(d => ["refusee", "annulee"].includes(d.statut))]];
+  return `<div class="row"><h2>Permissions et demandes</h2>${DML.includes(ME.role) || DMRH.includes(ME.role) ? `<button type="button" class="btn p" data-a="demnew" data-m="${E(FC.a.matricule)}">+ Nouvelle demande</button>` : ""}</div>${L.length ? G.filter(g => g[1].length).map(([l, X]) => `<div class="svt" style="margin-top:8px">${l} (${X.length})</div>${X.map(d => dmLi(d)).join("")}`).join("") : '<div class="m">Aucune permission, demande ni document.</div>'}`;
 }
 async function demCard() {
   if (!DMR.includes(ME.role)) return "";
@@ -2793,15 +2798,17 @@ async function demCard() {
   return `<details class="card" style="border-left:4px solid #2358A8" open><summary style="cursor:pointer"><b>📝 Demandes ${t} : ${L.length}</b><div class="m">Permissions, prêts, anticipations de congé — touchez une demande pour signer, approuver ou valider.</div></summary>${L.map(d => dmLi(d, 1)).join("")}</details>`;
 }
 async function dmSigURL(p) { if (!p) return null; const { data } = await DST2().download(p); return data ? await blobURL(data) : null; }
-function demNew(mat, typ) {
+async function demNew(mat, typ) {
   const a = AG.find(x => x.matricule == mat); if (!a) return;
+  if (!DMB || DMB.mat != mat || Date.now() - DMB.t > 6e4) DMB = { mat, t: Date.now(), bl: await dmBloques(mat) };
   const peutDem = DML.includes(ME.role), T = typ || (peutDem ? "permission_depart" : "justificatif");
   const types = Object.entries(DMT).filter(([k]) => peutDem || ["justificatif", "autre"].includes(k));
   const isDem = !["justificatif", "autre"].includes(T);
   const f = (id, l, ty = "text", x = "") => `<div><label>${l}</label><input id="${id}" type="${ty}" ${x}></div>`;
-  const champs = { permission_depart: f("dmd", "Date", "date", `value="${today()}"`) + `<div class="row" style="gap:8px"><div style="flex:1"><label>Heure de départ</label><input id="dmhd" type="time" value="${hhmm()}"></div><div style="flex:1"><label>Heure de retour prévue (facultatif)</label><input id="dmhr" type="time"></div></div>`,
-    permission_jours: `<div class="row" style="gap:8px"><div style="flex:1"><label>Du</label><input id="dmd" type="date"></div><div style="flex:1"><label>Au</label><input id="dmf" type="date"></div></div>` + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
-    anticipation_conge: `<div class="row" style="gap:8px"><div style="flex:1"><label>Congé souhaité du</label><input id="dmd" type="date"></div><div style="flex:1"><label>Au</label><input id="dmf" type="date"></div></div>` + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
+  const cal = `<div id="dmcal"></div><input type="hidden" id="dmd"><input type="hidden" id="dmf">`;
+  const champs = { permission_depart: `<label>Date (jour de la permission)</label>` + cal + `<div class="row" style="gap:8px"><div style="flex:1"><label>Heure de départ</label><input id="dmhd" type="time" value="${hhmm()}"></div><div style="flex:1"><label>Heure de retour prévue (facultatif)</label><input id="dmhr" type="time"></div></div>`,
+    permission_jours: `<label>Période : touchez le premier jour puis le dernier</label>` + cal + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
+    anticipation_conge: `<label>Congé souhaité : touchez le premier jour puis le dernier</label>` + cal + f("dmj", "Nombre de jours", "number", 'min="0" step="0.5"'),
     pret: f("dmm", "Montant demandé (MRU)", "number", 'min="0" step="100"') + f("dme", "Nombre d’échéances de remboursement", "number", 'min="1" step="1" value="1"'),
     justificatif: f("dmo", "Nature de l’absence (maladie, décès, convocation…)") + `<div class="row" style="gap:8px"><div style="flex:1"><label>Absence du</label><input id="dmd" type="date" value="${today()}"></div><div style="flex:1"><label>Au (facultatif)</label><input id="dmf" type="date"></div></div>`,
     autre: f("dmo", "Objet du document") + f("dmd", "Date concernée (facultatif)", "date") };
@@ -2818,6 +2825,7 @@ ${isDem ? `<div class="svt">Signatures</div>
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="dmx">Annuler</button><button type="button" class="btn p" id="dmok">${isDem ? "Lancer la demande" : "Enregistrer"}</button></div>`);
   const back = () => fiche(mat, "dem"); $("#no").onclick = back; $("#dmx").onclick = back;
   $("#dmt").onchange = e => demNew(mat, e.target.value);
+  if ($("#dmcal")) dmCal($("#dmcal"), { a, bl: DMB.bl, mode: T == "permission_depart" ? "un" : "periode", onChange: (d0, d1) => { $("#dmd").value = d0 || ""; $("#dmf").value = T == "permission_depart" ? "" : d1 || ""; if ($("#dmj")) $("#dmj").value = d0 && d1 ? Math.round((Date.parse(d1) - Date.parse(d0)) / 864e5) + 1 : d0 ? 1 : ""; } });
   let pa = null, ps = null, maS = null;
   if (isDem) {
     pa = sigPad($("#dmpa")); $("#dmpacl").onclick = () => pa.clear();
@@ -2829,7 +2837,8 @@ ${isDem ? `<div class="svt">Signatures</div>
     const p = { matricule: mat, type: t, objet: v("dmo"), date_debut: v("dmd"), date_fin: v("dmf"), heure_depart: v("dmhd"), heure_retour: v("dmhr"), nb_jours: v("dmj"), montant: v("dmm"), nb_echeances: v("dme"), motif: isDem ? v("dmmo").trim() : "", note: isDem ? "" : v("dmmo").trim() };
     const files = [...($("#dmpj").files || [])];
     if (t == "permission_depart" && !p.date_debut) return toast("Indiquez la date");
-    if (["permission_jours", "anticipation_conge"].includes(t) && (!p.date_debut || !p.date_fin)) return toast("Indiquez les dates de début et de fin");
+    if (["permission_jours", "anticipation_conge"].includes(t) && !p.date_debut) return toast("Choisissez les dates dans le calendrier");
+    if (["permission_jours", "anticipation_conge"].includes(t) && !p.date_fin) p.date_fin = p.date_debut;
     if (p.date_fin && p.date_debut && p.date_fin < p.date_debut) return toast("La date de fin précède la date de début");
     if (t == "pret" && !(+p.montant > 0)) return toast("Indiquez le montant");
     if (isDem && !p.motif) return toast("Indiquez le motif");
@@ -2847,9 +2856,40 @@ ${isDem ? `<div class="svt">Signatures</div>
       if (ss) { const r = await sb.rpc("demande_signer", { p_id: d.id, p_qui: "sup", p_chemin: await up("superviseur", ss) }); if (r.error) throw r.error; }
       for (const x of files) await dmUp(d.id, x);
       await sb.rpc("demande_notifier_creation", { p_id: d.id });
-      toast(isDem ? "Demande lancée : " + d.ref : "Document enregistré : " + d.ref); demOpen(d.id, mat);
+      DMB = null; toast(isDem ? "Demande lancée : " + d.ref : "Document enregistré : " + d.ref); demOpen(d.id, mat);
     } catch (e) { toast("Refusé : " + (e.message || e)); b.disabled = false; b.textContent = isDem ? "Lancer la demande" : "Enregistrer"; }
   };
+}
+let DMB = null;
+async function dmBloques(mat) {
+  const [a, b] = await Promise.all([sb.from("demandes_agent").select("ref,type,statut,date_debut,date_fin").eq("matricule", mat).in("statut", ["en_attente", "validee"]).in("type", DMP), sb.from("conges").select("date_debut,date_fin,statut").eq("matricule", mat).neq("statut", "annule")]);
+  const M = {}, add = (d0, d1, l) => { if (!d0) return; for (let t = Date.parse(d0); t <= Date.parse(d1 || d0); t += 864e5) M[ymd(t)] = M[ymd(t)] || l; };
+  (a.data || []).forEach(d => add(d.date_debut, d.date_fin, `${DMT[d.type]} ${d.ref} (${d.statut == "validee" ? "validée" : "en attente"})`));
+  (b.data || []).forEach(c => add(c.date_debut, c.date_fin, "Congé planifié"));
+  return M;
+}
+/* calendrier : jours déjà couverts non cliquables ; mode « un » (un jour) ou « periode » (premier puis dernier jour) */
+function dmCal(el, o) {
+  const N0 = (o.a.equipe || "").match(/^(?:Équipe|Manutention) ([123])$/), gd = d => N0 && garde(new Date(Date.parse(d) + 8 * 36e5)) == +N0[1];
+  let d0 = null, d1 = null, vm = today().slice(0, 7);
+  const ok = d => !o.bl[d];
+  const rend = () => {
+    const [y, m] = vm.split("-").map(Number), first = new Date(Date.UTC(y, m - 1, 1)), nb = new Date(Date.UTC(y, m, 0)).getUTCDate(), dec = (first.getUTCDay() + 6) % 7, t = today();
+    let h = `<div class="card" style="padding:8px;margin:0"><div class="row"><button type="button" class="btn" data-k="-1" aria-label="Mois précédent">‹</button><b>${MOIS[m - 1]} ${y}</b><button type="button" class="btn" data-k="1" aria-label="Mois suivant">›</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:6px;text-align:center">${["L", "M", "M", "J", "V", "S", "D"].map(x => `<small class="m">${x}</small>`).join("")}${"<span></span>".repeat(dec)}`;
+    for (let i = 1; i <= nb; i++) { const d = `${vm}-${String(i).padStart(2, "0")}`, b = o.bl[d], sel = d == d0 || d == d1, inr = d0 && d1 && d > d0 && d < d1;
+      h += `<button type="button" data-d="${d}" ${b ? `disabled title="Déjà couvert : ${E(b)}"` : ""} style="position:relative;padding:8px 0;border-radius:8px;border:1px solid ${d == t ? "var(--p)" : "var(--b)"};font-weight:${sel ? 800 : 500};background:${b ? "repeating-linear-gradient(45deg,#fde2e2 0 4px,#fff 4px 8px)" : sel ? "var(--p)" : inr ? "#dbe7fb" : "#fff"};color:${b ? "#b91c1c" : sel ? "#fff" : "inherit"};${b ? "cursor:not-allowed;text-decoration:line-through" : "cursor:pointer"}">${i}${gd(d) ? `<span style="position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:${sel ? "#fff" : "#16a34a"}"></span>` : ""}</button>`; }
+    const nbj = d0 ? (d1 ? Math.round((Date.parse(d1) - Date.parse(d0)) / 864e5) + 1 : 1) : 0, ng = d0 && N0 ? Array.from({ length: nbj }, (_, k) => ymd(Date.parse(d0) + k * 864e5)).filter(gd).length : null;
+    h += `</div><div class="m" style="margin-top:6px">${d0 ? (o.mode == "un" || !d1 ? `${o.mode == "un" ? "Le" : "Du"} ${fd(d0)}${o.mode == "un" ? "" : " — touchez le dernier jour"}` : `Du ${fd(d0)} au ${fd(d1)} · ${nbj} jour(s)`) + (ng != null ? ` · ${ng} jour(s) de garde` : "") : "Aucune date choisie."}</div>
+<div class="m" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px"><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:repeating-linear-gradient(45deg,#fde2e2 0 3px,#fff 3px 6px);border:1px solid #f5b5b5;vertical-align:middle"></span> déjà couvert (permission ou congé)</span>${N0 ? `<span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;vertical-align:middle"></span> jour de garde de l’agent</span>` : ""}</div></div>`;
+    el.innerHTML = h;
+    el.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { let [yy, mm] = vm.split("-").map(Number); mm += +b.dataset.k; if (mm < 1) { mm = 12; yy--; } if (mm > 12) { mm = 1; yy++; } vm = `${yy}-${String(mm).padStart(2, "0")}`; rend(); });
+    el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { const d = b.dataset.d;
+      if (o.mode == "un" || !d0 || d1 || d < d0) { d0 = d; d1 = null; }
+      else { const bad = Array.from({ length: Math.round((Date.parse(d) - Date.parse(d0)) / 864e5) + 1 }, (_, k) => ymd(Date.parse(d0) + k * 864e5)).find(x => !ok(x)); if (bad) { toast(`Le ${fd(bad)} est déjà couvert : ${o.bl[bad]}`); d0 = d; d1 = null; } else d1 = d; }
+      o.onChange(d0, o.mode == "un" ? null : d1 || (o.mode == "periode" ? null : d0)); rend(); });
+  };
+  if (o.mode == "un" && ok(today())) { d0 = today(); o.onChange(d0, null); }
+  rend();
 }
 async function dmUp(id, file) {
   const nom = file.name.replace(/[^\w.\-]+/g, "_").slice(-80), ch = `dem/${id}/${Date.now()}_${nom}`;
@@ -2858,7 +2898,7 @@ async function dmUp(id, file) {
 }
 async function demOpen(id, mat) {
   const { data: d, error } = await sb.from("demandes_agent").select("*").eq("id", id).maybeSingle(); if (error || !d) return toast("Demande introuvable");
-  DMO = { d, mat: mat || d.matricule };
+  DMO = { d, mat: mat || d.matricule }; DMB = null;
   const [sa, ss, sg] = await Promise.all([dmSigURL(d.sig_agent), dmSigURL(d.sig_sup), dmSigURL(d.sig_dg)]);
   let U = {}; if ((d.pj || []).length) { const { data } = await DST2().createSignedUrls(d.pj.map(p => p.chemin), 3600); (data || []).forEach(x => U[x.path] = x.signedUrl); }
   const s = DMS[d.statut] || [d.statut, "info"], m = dmManque(d), att = d.statut == "en_attente", isDem = d.nature == "demande";
