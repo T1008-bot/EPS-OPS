@@ -474,3 +474,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 2026-11-21 : prolongation et retour anticipé (migration demandes_retour_prolongation)
 -- demandes_agent : prolonge_de, date_fin_initiale, retour_le, retour_nom, retour_motif ; conges : date_fin_initiale, retour_nom, retour_motif.
 -- retour_anticipe(matricule, jour_de_reprise, motif) : la permission / le congé s'arrête la veille, situation et paie corrigées, RH + resp. ops notifiés.
+
+-- 2026-11-21 : dossier de l'agent (migration dossier_agent_evaluations_parcours_documents)
+-- dos_visible(matricule) : chef = son dossier ; superviseur = chefs et agents de son service ; sup. principal, direction, RH, compta = tous.
+-- evaluations_agents + evaluations_agents_calculer (cron evaluations-agents-mensuelles, le 26) : 80 % présence + 20 % ponctualité − 10 pts / dossier disciplinaire.
+-- parcours_agent (+ trigger parcours_agent_auto sur agents : fonction → promotion/régression/changement de poste ; équipe/service/zone → affectation).
+-- documents_agent (pièce d'identité, photo, casier judiciaire, badge, formation, contrat, autre) ; stockage dossiers-agents/agents/<matricule>/.
