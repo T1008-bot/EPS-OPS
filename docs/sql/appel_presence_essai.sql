@@ -519,3 +519,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v53 : renommage des tâches régulières ; rapports_vols / rapports_wchr désactivés (uniquement par vol) ; fiche de nettoyage cabine par vol (MAI pour L6, Afroport sinon) préremplie ; trigger rs_cabin_lier (rattachement des fiches cabine à leur vol).
 
 -- v54 : comptes_rendus (jour/semaine/mois) + fonction compte-rendu (IA) + crons 08h41 / lundi 09h13 / 1er 09h23 ; cr_donnees_jour, cr_donnees_periode, cr_demander ; rapports_staff.envoye_le (heure exacte d envoi Jotform) ; tâches par vol vol_cc (fiche cabine) ; compagnie / type d appareil Afroport par correspondance.
+
+-- v55 : rs_vol() (rapport de vol / fiche cabine : rattachement direct ou n° cité, rotations comptées pour les 2 vols) ; lier_rapports_vols préfère les vols radar ; retard des rotations mesuré après le départ.

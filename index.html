@@ -1245,6 +1245,10 @@ V.tach = async () => { await BOOT; await apLoad().catch(() => { });
   const [ck, rp] = ids.length ? await Promise.all([sb.from("alerte_checks").select("*").in("vol_id", ids), sb.from("rapports_staff").select("vol_id,categorie,pdf_url,recu_le,envoye_le").in("vol_id", ids)]) : [{ data: [] }, { data: [] }];
   const CK = {}; (ck.data || []).forEach(c => CK[c.vol_id + "|" + c.item] = c);
   const RP = {}; (rp.data || []).forEach(r => (RP[r.vol_id + "|" + r.categorie] = RP[r.vol_id + "|" + r.categorie] || r));
+  /* rotations : un même rapport cite l'arrivée et le départ → compté pour les deux vols */
+  const nv = x => String(x || "").replace(/\s/g, "").toUpperCase(), nums = [...new Set(VL.map(v => nv(v.numero)).filter(Boolean))];
+  if (nums.length) { const { data: rx } = await sb.from("rapports_staff").select("vol_id,categorie,pdf_url,recu_le,envoye_le,numeros_vol,numero_vol").overlaps("numeros_vol", nums).gte("recu_le", new Date(s0.getTime() - 12 * H).toISOString()).lt("recu_le", new Date(s1.getTime() + 12 * H).toISOString());
+    (rx || []).forEach(r => VL.forEach(v => { const k = v.id + "|" + r.categorie, t = new Date(r.envoye_le || r.recu_le).getTime(), ref = new Date(v.heure_reelle || v.heure_prevue).getTime(); if (!RP[k] && (r.numeros_vol || []).map(nv).includes(nv(v.numero)) && t > ref - 6 * H && t < ref + 24 * H) RP[k] = r; })); }
 
   const MGRV = ["direction", "responsable_ops", "coordinateur_ops"].includes(ME.role), ASGL = ta.data || [], nw = Date.now();
   const dueOf = t => t.echeance ? new Date(t.echeance).getTime() : (() => { const m = String(t.heure || "").match(/(\d{1,2})\s*[h:]\s*(\d{0,2})/); return new Date(t.jour + "T00:00:00Z").getTime() + (m ? (+m[1] * 60 + (+m[2] || 0)) * 60000 : 24 * 3600000 - 1); })();
