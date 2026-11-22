@@ -480,3 +480,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- evaluations_agents + evaluations_agents_calculer (cron evaluations-agents-mensuelles, le 26) : 80 % présence + 20 % ponctualité − 10 pts / dossier disciplinaire.
 -- parcours_agent (+ trigger parcours_agent_auto sur agents : fonction → promotion/régression/changement de poste ; équipe/service/zone → affectation).
 -- documents_agent (pièce d'identité, photo, casier judiciaire, badge, formation, contrat, autre) ; stockage dossiers-agents/agents/<matricule>/.
+
+-- 2026-11-22 : signalements — rappel_vols(texte, ref) : notification « vols en cours ou proches » aux chefs d'équipe et superviseurs.
+-- Fonction ia-texte : fournisseur OpenAI (OPENAI_API_KEY) ou Anthropic ; mode signalement : destinataire interne/externe, vols proches, a_preciser.
