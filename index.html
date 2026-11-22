@@ -892,7 +892,7 @@ function supCard(sj) {
 }
 function tCard(e, sh, st, rr) {
   const p = st.tot ? Math.round(st.c.p / st.tot * 100) : 0, r = rr[0];
-  return `<div class="card tcd" data-a="tcard" data-e="${E(e)}" role="button" tabindex="0"><div class="row" style="gap:6px"><b style="font-size:15px">${teqLab(e)}</b>${sh.on ? '<span class="bd ok">● En service</span>' : '<span class="bd info">Dernier shift</span>'}</div><div class="m">${tPer(sh)}</div><div class="k">${st.c.p} / ${st.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:4px 0 6px"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">NJ ${st.c.nj} · J ${st.c.j} · Congés ${st.c.c} · MAP ${st.c.mp}</div>${ecartTxt(e, st.tot)}${e == "Chauffeurs" ? "" : r ? `<div class="m" style="margin-top:6px">${tRepLine(r, st)}${rr.length > 1 ? ` · ${rr.length} rapports` : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
+  return `<div class="card tcd" data-a="tecard" data-e="${E(e)}" role="button" tabindex="0"><div class="row" style="gap:6px"><b style="font-size:15px">${teqLab(e)}</b>${sh.on ? '<span class="bd ok">● En service</span>' : '<span class="bd info">Dernier shift</span>'}</div><div class="m">${tPer(sh)}</div><div class="k">${st.c.p} / ${st.tot} <span class="m">(${p} %)</span></div><div style="height:6px;border-radius:4px;background:var(--b);margin:4px 0 6px"><div style="width:${p}%;height:100%;border-radius:4px;background:${p < 80 ? "#e11d48" : "#16a34a"}"></div></div><div class="m">NJ ${st.c.nj} · J ${st.c.j} · Congés ${st.c.c} · MAP ${st.c.mp}</div>${ecartTxt(e, st.tot)}${e == "Chauffeurs" ? "" : r ? `<div class="m" style="margin-top:6px">${tRepLine(r, st)}${rr.length > 1 ? ` · ${rr.length} rapports` : ""}</div>` : `<div class="m" style="margin-top:6px"><span class="bd warn">Aucun rapport de situation reçu pour ce shift</span></div>`}</div>`;
 }
 let TCE = "", TCK = 0;
 async function tDetail() {
@@ -2917,7 +2917,7 @@ function post(root) {
 const sxLoad = k => BOOT.then(() => V[k]()).then(h => (SXC[k] = h), e => `<div class="al">Erreur : ${E(e.message)}</div>`);
 const sxPut = (k, h) => { const el = $("#sx-" + k); if (el && SXOPEN.has(k)) { el.innerHTML = h; post(el); } };
 const sxScroll = () => { if (!SXS) return; const el = $(`#mn [data-sx="${SXS}"]`); SXS = null; if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); };
-Object.assign(ACT, { tcard(b) { TCE = b.dataset.e; TCK = 0; tDetail(); }, tck(b) { const v = +b.dataset.v; if (v < 0) return; TCK = v; tDetail(); } });
+Object.assign(ACT, { tecard(b) { TCE = b.dataset.e; TCK = 0; tDetail(); }, tck(b) { const v = +b.dataset.v; if (v < 0) return; TCK = v; tDetail(); } });
 Object.assign(ACT, {
   sxt(b) {
     const k = b.dataset.k, o = !SXOPEN.has(k), el = $("#sx-" + k); o ? SXOPEN.add(k) : SXOPEN.delete(k); sxSave();
