@@ -491,3 +491,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 2026-11-22 : accès (migrations acces_coordinateur_compta_tech_appro_signalements, paie_ajuster_coordinateur)
 -- coordinateur_ops : comptabilité (prêts, primes, grille, personnel admin, ajustements, factures, fonctions de paie).
 -- responsable_technique, approvisionnement : création et lecture des signalements, pièces jointes, historique.
+
+-- 2026-11-22 : marquer_taches_auto compare le numéro d'équipe (les situations Jotform indiquent « Équipe M3 », plus « Groupe 3 ») ;
+-- cron taches-reguliere-auto toutes les 5 min ; tc_r : tâches personnelles visibles seulement par la personne, l'auteur
+-- et direction / responsable / coordinateur des opérations.

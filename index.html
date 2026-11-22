@@ -3532,7 +3532,13 @@ document.addEventListener("click", async e => {
   $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
 });
 new MutationObserver(insBtn).observe(document.body, { childList: true, subtree: true });
-if ("serviceWorker" in navigator) { const hadSW = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadSW && !rl) { rl = true; location.reload(); } }); navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => { }); }
+/* mise à jour : vérifiée au démarrage, au retour dans l'app et toutes les 10 min ; rechargement immédiat sauf si une fenêtre de saisie est ouverte */
+if ("serviceWorker" in navigator) { const hadSW = !!navigator.serviceWorker.controller; let rl = false, REG = null;
+  const maj = () => { if (rl) return; if ($("#md") && $("#md").classList.contains("on")) { if (!$("#majbar")) { const d = document.createElement("div"); d.id = "majbar"; d.style.cssText = "position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;background:#2358A8;color:#fff;border-radius:12px;padding:10px 12px;display:flex;gap:8px;align-items:center;justify-content:space-between;box-shadow:0 6px 20px #0005"; d.innerHTML = '<span>Nouvelle version disponible</span><button type="button" class="btn" style="background:#fff;color:#2358A8">Mettre à jour</button>'; d.querySelector("button").onclick = () => { rl = true; location.reload(); }; document.body.appendChild(d); } return; } rl = true; location.reload(); };
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadSW) maj(); });
+  navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then(r => { REG = r; r.update(); }).catch(() => { });
+  const chk = () => { if (REG) REG.update().catch(() => { }); };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState == "visible") chk(); }); setInterval(chk, 10 * 60000); }
 insBtn();
 </script>
 </body>
