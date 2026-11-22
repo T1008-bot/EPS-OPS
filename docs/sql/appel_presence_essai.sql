@@ -511,3 +511,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v45 : identifiant numérique (doc_hash) retiré du document imprimé, affiché dans l application (Discipline) avec l auteur, sa fonction et la date.
 
 -- v47 : écran Évaluations mensuelles (revue SP → validation resp. ops → RH) depuis Mon profil / Tâches ; Journal des modifications (audit_journal) depuis Mon profil (resp. ops, direction).
+
+-- v48 : évaluation de l encadrement (eval_enc, eval_enc_avis, eval_enc_lancer/auto/enreg/avis_enreg/signer/stats), cron evaluations-encadrement 15/03,06,09,12 07h37 (S2-2026 le 15/12/2026), evaluations mensuelles visibles par chefs/superviseurs seulement après partage (partage_le), bucket discipline : chemins ee/.
