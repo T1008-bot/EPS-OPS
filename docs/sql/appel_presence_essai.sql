@@ -487,3 +487,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 2026-11-22 : performance — vue situation_staff limitée aux formulaires qui contiennent une situation du staff
 -- (nettoyage, bagages, shift_ops) et protégée contre les réponses d'erreur Jotform (answers non objet) ;
 -- index rapports_staff(service, recu_le). Requêtes situation_staff / rapports_detail : de 1,3–1,7 s à 4–12 ms.
+
+-- 2026-11-22 : accès (migrations acces_coordinateur_compta_tech_appro_signalements, paie_ajuster_coordinateur)
+-- coordinateur_ops : comptabilité (prêts, primes, grille, personnel admin, ajustements, factures, fonctions de paie).
+-- responsable_technique, approvisionnement : création et lecture des signalements, pièces jointes, historique.
