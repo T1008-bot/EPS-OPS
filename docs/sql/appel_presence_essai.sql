@@ -495,3 +495,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 2026-11-22 : marquer_taches_auto compare le numéro d'équipe (les situations Jotform indiquent « Équipe M3 », plus « Groupe 3 ») ;
 -- cron taches-reguliere-auto toutes les 5 min ; tc_r : tâches personnelles visibles seulement par la personne, l'auteur
 -- et direction / responsable / coordinateur des opérations.
+
+-- 2026-11-22 : tâches (migration taches_cloture_remontees_photos) — colonnes de clôture (texte, lieu, GPS, auteur, RAS),
+-- taches_remontees (incidents / informations, plusieurs par shift), taches_pj + stockage taches-pj (photos avant / après / remontées),
+-- tache_cloturer(), modèle n_remontee_incidents (nettoyage), échéance à la descente. ia-texte : mode « transcrire » (OpenAI).
