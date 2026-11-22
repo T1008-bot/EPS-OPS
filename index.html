@@ -402,7 +402,7 @@ V.shift = async () => {
   const open = AL.filter(a => (a.statut == "ouverte" || a.statut == "prise_en_charge") && pourMoi(a.titre));
   const apc = SHV ? "" : await apCard().catch(() => "");
   return `<div class="card"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${RL[ME.role] || ""}</div></div>${SHV || !(ACC[ME.role] || []).includes("sig") ? "" : `<div class="row" style="justify-content:flex-start;gap:8px;margin-top:10px"><button class="btn w" data-a="signew">📣 + Signalement</button>${TMG.includes(ME.role) ? `<button class="btn" data-a="tnew">+ Tâche</button>` : ""}</div>`}</div>
-${SHV ? "" : psvCard()}
+${SHV ? "" : await pushCard().catch(() => "")}${SHV ? "" : psvCard()}
 <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><div><h2>${shLab(SHV, s)}</h2>${SHV < 0 ? `<div class="m">Shift à venir : affichage prévisionnel</div>` : ""}</div><div class="shn"><button class="btn" data-a="shv" data-i="${SHV + 1}" aria-label="Shift précédent">‹</button><input type="date" id="shd" value="${ymd(s)}" aria-label="Choisir la date du shift"><button class="btn" data-a="shv" data-i="${SHV - 1}" aria-label="Shift suivant">›</button>${SHV ? `<button class="btn p" data-a="shv" data-i="0">Shift en cours</button>` : ""}</div></div><div class="dys shd">${shStrip()}</div><div class="g" style="margin-top:8px"><div><div class="m">Début</div><b>${dmy(s)} ${hm(s)}</b></div><div><div class="m">Fin</div><b>${dmy(en)} ${hm(en)}</b></div><div><div class="m">Équipes en service</div><b>${svcRole() == "M" ? "M" + g : svcRole() == "N" ? teams.map(LB).join(" + ").replace(/Nettoyage · /g, "") : teams.map(LB).join(" + ").replace(/Nettoyage · /g, "") + " + M" + g}</b><div class="m">Éq. 1-2-3 : 24 h (08h→08h) · Éq. 4 : 08h→16h ${SHV ? "" : h4 ? "(en service)" : "(hors service)"}</div></div></div>
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(nl((rp || []).find(r => r.sup_principal)?.sup_principal)) || "—"}</b></div></div>
 ${svcRole() == "N" ? "" : `<div class="svl"><div class="svt">Manutention · M${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rb?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rb?.chefs)) || "—"}</b></div></div></div>
@@ -2002,6 +2002,12 @@ async function pushEtat() {
   if (Notification.permission == "granted" && s) { const { data } = await sb.from("push_abonnements").select("id").eq("endpoint", s.endpoint); if (data && data.length) return { ok: true, on: true, txt: "Activées sur cet appareil." }; }
   return { ok: true, on: false, txt: "Désactivées sur cet appareil." };
 }
+/* invitation à activer les notifications tant qu'elles ne le sont pas sur cet appareil */
+async function pushCard() {
+  if (typeof VUE != "undefined" && VUE) return ""; let tard = 0; try { tard = +localStorage.getItem("pushTard") || 0; } catch (e) { } if (Date.now() - tard < 2 * 864e5) return "";
+  const pe = await pushEtat(); if (pe.on) return "";
+  return `<div class="card" style="border-left:4px solid #d97706"><b>🔔 Activez les notifications sur ce téléphone</b><div class="m">Sans elles, vous ne recevez pas les rappels : prise de service, appel, vols proches, rapports à remettre, demandes à valider.</div>${pe.ok ? `<div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px"><button type="button" class="btn p" data-a="ntonb">Activer maintenant</button><button type="button" class="btn" data-a="nttard">Plus tard</button></div>` : `<div class="al" style="margin-top:6px">${E(pe.txt)}</div><div class="row" style="justify-content:flex-start;margin-top:6px"><button type="button" class="btn" data-a="nttard">Plus tard</button></div>`}</div>`;
+}
 async function ntInit() {
   await ntCount();
   sb.channel("notif").on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ME.id }, p => { NTU++; setB(); toast((p.new.titre || "Nouvelle notification")); }).subscribe();
@@ -2040,6 +2046,8 @@ ${rgB("rglo", "⎋ Se déconnecter", "d")}`);
     try { if (pushOK()) { const s = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); if (s) await sb.from("push_abonnements").delete().eq("endpoint", s.endpoint); } } catch (e) { }
     await sb.auth.signOut(); location.reload();
   },
+  async ntonb() { try { const p = await Notification.requestPermission(); if (p != "granted") return toast("Autorisation refusée : autorisez les notifications dans les réglages du téléphone"); await pushSub(); await sb.from("notif_prefs").upsert({ user_id: ME.id, push: true }, { onConflict: "user_id" }); toast("Notifications activées sur ce téléphone"); draw(); } catch (e) { toast("Activation impossible : " + (e.message || e)); } },
+  nttard() { try { localStorage.setItem("pushTard", Date.now()); } catch (e) { } draw(); },
   async nton() {
     try {
       const p = await Notification.requestPermission(); if (p != "granted") { toast("Autorisation refusée : les notifications restent désactivées"); return ACT.rgl(); }
