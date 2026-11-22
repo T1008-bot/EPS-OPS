@@ -1010,7 +1010,7 @@ function docHTML(d, im = {}) {
   const RECID = "Toute récidive vous exposera aux mesures disciplinaires les plus strictes, pouvant aller jusqu’au licenciement sans droits pour faute grave ou faute lourde.";
   const avtTxt = `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}${/récidive/i.test(d.qualification || "") ? "" : `<p>En conséquence, nous vous adressons, par la présente, un avertissement écrit. ${RECID}</p>`}<p>Le présent avertissement est versé à votre dossier personnel.</p><p>Veuillez agréer, ${cv}, l’expression de nos salutations distinguées.</p>`;
   const corps = avt ? avtTxt : map ? `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}${sanction}<p>Veuillez agréer, ${cv}, l’expression de nos salutations distinguées.</p>`
-    : `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}<p>À défaut de réponse ou si les éléments fournis ne permettent pas de justifier ce manquement, une mesure disciplinaire pourra être prise conformément au règlement intérieur de l’entreprise.</p>`;
+    : `<p>${cv},</p>${paras(d.faits)}${paras(d.qualification)}<p>${DEFIN}</p><p><b>${DEREFUS}</b></p>`;
   const sig = d.etabli_nom ? `<div class="sg"><b>ÉTABLIE PAR</b><br>${E(d.etabli_nom)}<br>${E(d.etabli_fonction || "")}<br>${im.etab ? `<img src="${im.etab}" style="height:60px;max-width:230px;margin-top:4px">` : "<br>Signature : ____________________"}</div>`
     : `<div class="sg"><b>ÉTABLIE PAR</b><br>El Moustapha A. Dedda<br>Responsable des Opérations<br><br>Signature : ____________________</div>`;
   const sl = d.signe_le ? dmy(d.signe_le) + "/" + new Date(d.signe_le).getUTCFullYear() + " à " + hm(d.signe_le) : "";
@@ -2359,28 +2359,47 @@ function agSug(q) {
 }
 document.addEventListener("input", e => { if (e.target.id != "deq") return; const L = agSug(e.target.value); $("#deql").innerHTML = L.map(a => `<button type="button" class="dsg" data-a="desel" data-m="${E(a.matricule)}"><b>${E(a.nom)}</b><span class="m">ID ${E(a.matricule)}${a.badge ? " · badge " + E(a.badge) : ""} · ${E(a.equipe || "")}</span></button>`).join("") || (e.target.value.trim() ? `<div class="m" style="padding:6px">Aucun agent ne correspond.</div>` : ""); });
 
+/* postes d'affectation (les agents de terminal comprennent ceux affectés aux vols ; la mosquée comprend devanture et parking) */
+const DEPOSTES = ["Terminal (y compris agents affectés aux vols)", "Mosquée, devanture et parking", "Fret", "Manutention — tapis bagages arrivée", "Manutention — tri bagages et rayon X", "Manutention — comptoir wheelchair (PMR)", "Manutention — chargement / déchargement avion", "Bâtiment administratif et annexes", "Vitrerie et façades", "Pavillon présidentiel", "Chauffeurs", "Autre"];
+const dePoste = a => { const z = (a.zone || "") + " " + (a.service || ""); return /mosqu|devanture|parking/i.test(z) ? DEPOSTES[1] : /fret/i.test(z) ? DEPOSTES[2] : /administratif/i.test(z) ? DEPOSTES[7] : /vitr/i.test(z) ? DEPOSTES[8] : /pavillon/i.test(z) ? DEPOSTES[9] : /chauff/i.test(z) ? DEPOSTES[10] : /manut/i.test(z) ? "" : /terminal/i.test(z) ? DEPOSTES[0] : ""; };
+const DEQ = cv => `Vous êtes donc ${cv == "Mme" ? "priée" : "prié"} de bien vouloir nous fournir une explication écrite, claire et détaillée de ces faits, accompagnée de tout justificatif utile.`;
+const DEFIN = "À défaut de réponse, ou si les explications et justificatifs présentés ne sont pas convaincants ou cohérents, des mesures disciplinaires pourront être appliquées conformément au règlement intérieur de l’entreprise.";
+const DEREFUS = "Un refus de répondre à la présente demande vaut reconnaissance des faits et constitue un manque de respect envers votre hiérarchie ainsi qu’une insubordination aux procédures.";
 async function denewOpen(pre) {
   if (!(await maSig())) { toast("Enregistrez d’abord votre signature : elle sera apposée sur la demande."); return msigOpen(() => denewOpen(pre)); }
   DESEL = null; const co = ((await sb.rpc("collaborateurs")).data || []).filter(c => DE_DELEG.includes(c.role) && c.id != UID);
   mdOpen(`<div class="row"><h2>Nouvelle demande d’explication</h2><button type="button" class="btn" id="no">✕</button></div>
-<div><label>1. Agent concerné</label><input id="deq" placeholder="Nom, matricule ou badge…" autocomplete="off"><div id="deql" class="dsl"></div><div id="dech"></div></div>
+<div><label>1. Dictez ou écrivez les faits</label><div class="m">L’agent (nom ou matricule), le poste où il était déployé, l’heure du constat, ce qui a été constaté et les circonstances. L’IA rédige ensuite la demande : agent, objet, poste d’affectation, date et faits.</div><textarea id="defx" rows="5" placeholder="Ex. : Cette nuit vers 3h20, l’agent Moussa Diallo (1215), affecté au vol AT510 pour la zone départ, a été trouvé endormi dans la salle de prière ; la zone départ n’était pas faite avant l’embarquement."></textarea>
+<div class="row" style="justify-content:flex-end;gap:6px"><span class="m" id="deias" style="flex:1"></span><button type="button" class="btn p" id="deia">✨ Rédiger la demande (IA)</button></div></div>
+<div class="svt" style="margin-top:6px">2. Vérifiez la demande rédigée</div>
+<div><label>Agent concerné</label><input id="deq" placeholder="Nom, matricule ou badge…" autocomplete="off"><div id="deql" class="dsl"></div><div id="dech"></div></div>
 <div class="fc"><div><label>Civilité</label><select id="decv"><option>M.</option><option>Mme</option></select></div><div><label>Date des faits</label><input id="dedf" type="date" value="${today()}" max="${today()}"></div></div>
-<div><label>2. Objet</label><input id="deob" placeholder="Ex. Absence injustifiée – Shift du 17/11/2026"></div>
-<div><label>Faits constatés</label><textarea id="defa" rows="5">Il a été constaté que, </textarea></div>
-<div><label>Explication demandée</label><textarea id="dequ" rows="3">Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur ces faits, accompagnée de tout justificatif utile.</textarea></div>
-<div><label>Affectation</label><input id="deaf"></div>
+<div><label>Poste d’affectation</label><select id="deaf"><option value="">— Choisir —</option>${DEPOSTES.map(x => `<option>${E(x)}</option>`).join("")}</select></div>
+<div><label>Objet</label><input id="deob" placeholder="Rempli par l’IA à partir des faits"></div>
+<div><label>Faits constatés</label><textarea id="defa" rows="6" placeholder="Rédigés par l’IA à partir de votre dictée"></textarea></div>
+<div><label>Explication demandée (texte unifié)</label><div class="card" style="margin:0;padding:10px;font-size:13px" id="dequt"></div></div>
 <div><label>3. Remise à l’agent (lecture, réponse et signature)</label><select id="dedl"><option value="">Je m’en charge moi-même</option>${co.map(c => `<option value="${c.id}">Déléguer à ${E(c.nom)} — ${E(RL[c.role] || c.role)}</option>`).join("")}</select></div>
 <div id="decw" style="display:none"><label>Consigne pour la personne déléguée (facultatif)</label><input id="deco" placeholder="Ex. À remettre avant la fin du shift"></div>
 <div class="m">Vous êtes l’émetteur (« Établie par ») : votre signature enregistrée est apposée sur le document.</div>
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="deok">Établir la demande</button></div>`);
   const cl = () => $("#md").classList.remove("on"); $("#no").onclick = cl; $("#no2").onclick = cl;
   $("#dedl").onchange = e => { $("#decw").style.display = e.target.value ? "" : "none"; };
+  const qt = () => { $("#dequt").innerHTML = `${E(DEQ($("#decv").value))}<br>${E(DEFIN)}<br><b>${E(DEREFUS)}</b>`; }; qt(); $("#decv").onchange = qt;
+  $("#deia").onclick = async () => { const tx = $("#defx").value.trim(); vxStop(); if (tx.length < 15) return toast("Dictez ou écrivez d’abord les faits"); const b = $("#deia"); b.disabled = true; b.textContent = "Rédaction…"; $("#deias").textContent = "";
+    try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { mode: "demande_explication", texte: tx, maintenant: nowL().replace("T", " "), postes: DEPOSTES, agent: DESEL ? DESEL.nom + " (" + DESEL.matricule + ")" : "" } }); if (error) throw error; if (data.erreur) throw new Error(data.erreur);
+      const c = data.champs || {}, g = k => String(c[k] || "").trim();
+      if (!DESEL && g("agent")) { const mt = g("agent").match(/\b(\d{3,4}D?)\b/), L = mt ? AG.filter(a => a.matricule == mt[1]) : agSug(g("agent").replace(/\(.*?\)|\d+/g, " ").trim()); if (L.length == 1) { DESEL = L[0]; deChip(DESEL); } else { $("#deq").value = g("agent"); $("#deq").dispatchEvent(new Event("input", { bubbles: true })); } }
+      if (["M.", "Mme"].includes(g("civilite"))) $("#decv").value = g("civilite"); if (/^\d{4}-\d\d-\d\d$/.test(g("date_faits")) && g("date_faits") <= today()) $("#dedf").value = g("date_faits");
+      if (DEPOSTES.includes(g("poste"))) $("#deaf").value = g("poste"); else if (DESEL && !$("#deaf").value) $("#deaf").value = dePoste(DESEL);
+      if (g("objet")) { let ob = g("objet"); const dfx = g("date_faits"), hx = g("heure"); if (/^\d{4}-\d\d-\d\d$/.test(dfx) && /^\d\d:\d\d$/.test(hx) && hx < "08:00") { const sh = ymd(Date.parse(dfx + "T00:00:00Z") - 864e5); ob = ob.replace(fd(dfx), fd(sh)); } $("#deob").value = ob; } if (g("faits")) $("#defa").value = g("faits"); qt();
+      const ap = Array.isArray(c.a_preciser) ? c.a_preciser.filter(Boolean) : []; $("#deias").innerHTML = ap.length ? `<span style="color:#b91c1c">⚠ À préciser : ${ap.map(E).join(" · ")}</span>` : "✓ Demande rédigée : relisez avant d’établir"; if (!DESEL) $("#deias").innerHTML += ` <span style="color:#b91c1c">· Choisissez l’agent dans la liste</span>`;
+    } catch (x) { $("#deias").textContent = "IA indisponible : complétez à la main (" + (x.message || x) + ")"; } b.disabled = false; b.textContent = "✨ Rédiger la demande (IA)"; };
   if (pre && pre.m) { DESEL = AG.find(a => a.matricule == pre.m) || null; if (DESEL) deChip(DESEL); if (pre.date) $("#dedf").value = pre.date; if (pre.objet) $("#deob").value = pre.objet; if (pre.faits) $("#defa").value = pre.faits; }
   $("#deok").onclick = async () => {
     if (!DESEL) return toast("Choisissez l’agent concerné"); const ob = $("#deob").value.trim(), fa = $("#defa").value.trim();
-    if (!ob || fa.length < 25) return toast("Renseignez l’objet et décrivez les faits");
+    if (!ob || fa.length < 25) return toast("Renseignez l’objet et décrivez les faits (bouton « Rédiger la demande »)"); if (!$("#deaf").value) return toast("Choisissez le poste d’affectation");
     const b = $("#deok"); b.disabled = true; b.textContent = "Enregistrement…";
-    const { data, error } = await sb.rpc("de_creer", { p_matricule: DESEL.matricule, p_civilite: $("#decv").value, p_date: $("#dedf").value, p_objet: ob, p_faits: fa, p_qualif: $("#dequ").value.trim() || null, p_affect: $("#deaf").value.trim() || null, p_delegue: $("#dedl").value || null, p_consigne: $("#deco").value.trim() || null });
+    const { data, error } = await sb.rpc("de_creer", { p_matricule: DESEL.matricule, p_civilite: $("#decv").value, p_date: $("#dedf").value, p_objet: ob, p_faits: fa, p_qualif: DEQ($("#decv").value), p_affect: $("#deaf").value || null, p_delegue: $("#dedl").value || null, p_consigne: $("#deco").value.trim() || null });
     if (error) { b.disabled = false; b.textContent = "Établir la demande"; return toast("Refusé : " + error.message); }
     const pth = `de/${data.id}/etab.png`, cp = await DST().copy("signatures/" + UID + ".png", pth);
     if (!cp.error) await sb.rpc("de_sig_etab", { p_id: data.id, p_chemin: pth });
@@ -2389,7 +2408,7 @@ async function denewOpen(pre) {
     await draw(); if (!del && confirm("Remettre maintenant la demande à l’agent (lecture, réponse et signature) ?")) deRemise(data.id);
   };
 }
-function deChip(a) { $("#dech").innerHTML = `<div class="card" style="padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>${E(a.nom)}</b><div class="m">ID ${E(a.matricule)} · badge ${E(a.badge || "—")} · ${E(a.equipe || "")} · ${E(a.service || "")}</div></div><button type="button" class="btn" data-a="dedesel">Changer</button></div>`; $("#deq").style.display = "none"; $("#deql").innerHTML = ""; if (!$("#deaf").value) $("#deaf").value = (a.service || "") + " – AINO"; }
+function deChip(a) { $("#dech").innerHTML = `<div class="card" style="padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>${E(a.nom)}</b><div class="m">ID ${E(a.matricule)} · badge ${E(a.badge || "—")} · ${E(a.equipe || "")} · ${E(a.service || "")}</div></div><button type="button" class="btn" data-a="dedesel">Changer</button></div>`; $("#deq").style.display = "none"; $("#deql").innerHTML = ""; if ($("#deaf") && !$("#deaf").value) $("#deaf").value = dePoste(a); }
 
 async function deImgs(d) { const [etab, agent, temoin, avis] = await Promise.all([stURL(d.sig_etab), stURL(d.sig_agent), stURL(d.sig_temoin), stURL(d.sig_avis)]); return { etab, agent, temoin, avis }; }
 async function deLoad(id) { const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("id", id).single(); if (error) throw error; return data; }
