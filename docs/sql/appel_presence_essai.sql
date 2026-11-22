@@ -505,3 +505,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v43 : interventions pas à pas — table taches_etapes (demarrage GPS / position_refusee / photos_avant / pause / reprise / photos_apres / cloture),
 --        taches_pj + pris_le, precision_m ; bucket taches-pj 100 Mo (vidéos). Photos horodatées + géolocalisées (incrustation), consultation avec déroulé et SLA.
+
+-- v44 : PDF discipline nommés « MAP - Nom de l agent - référence » / « DE - Nom de l agent - référence » (téléchargement, partage, impression).

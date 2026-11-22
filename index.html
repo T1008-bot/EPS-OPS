@@ -1025,7 +1025,7 @@ function docHTML(d, im = {}) {
   const trace = d.signe_le ? `<br>Document établi et signé électroniquement dans EPS OPS. Remis le ${sl} par ${E(d.recueilli_nom)} (${E(d.recueilli_fonction || "")})${d.explication_attestee ? `, qui atteste avoir lu et fait comprendre à l’agent${fem ? "e" : ""} les faits reprochés` : ""}.${d.doc_hash ? "<br>Empreinte du document : " + E(d.doc_hash) : ""}` : "";
   const fin = map || avt ? `<table class="two"><tr><td>${sig}</td><td>${accuse}</td></tr></table>`
     : `<div class="bx"><b>RÉPONSE DE L’AGENT${fem ? "E" : ""}</b>${rep}</div><div class="bx"><b>AVIS DU SUPERVISEUR PRINCIPAL</b>${avis}</div><table class="two"><tr><td>${sig}</td><td>${remise}</td></tr></table>`;
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${E(d.ref)}</title><style>
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${E(deFichier(d).replace(/\.pdf$/, ""))}</title><style>
 @page{size:A4;margin:16mm}body{font:12.5px/1.5 Arial,Helvetica,sans-serif;color:#111;max-width:760px;margin:0 auto;padding:16px;position:relative}
 .hd{display:flex;justify-content:space-between;border-bottom:3px solid #072448;padding-bottom:8px;margin-bottom:14px}.hd b{font-size:16px;color:#072448}.hd span{font-size:11px;color:#444;text-align:right}
 h1{text-align:center;font-size:16px;margin:14px 0 4px;color:#072448}.ob{text-align:center;font-weight:700;margin-bottom:14px}.dt{text-align:right}
@@ -2489,6 +2489,9 @@ async function denewOpen(pre) {
 function deChip(a) { $("#dech").innerHTML = `<div class="card" style="padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>${E(a.nom)}</b><div class="m">ID ${E(a.matricule)} · badge ${E(a.badge || "—")} · ${E(a.equipe || "")} · ${E(a.service || "")}</div></div><button type="button" class="btn" data-a="dedesel">Changer</button></div>`; $("#deq").style.display = "none"; $("#deql").innerHTML = ""; if ($("#deaf") && !$("#deaf").value) $("#deaf").value = dePoste(a); }
 
 async function deImgs(d) { const [etab, agent, temoin, avis] = await Promise.all([stURL(d.sig_etab), stURL(d.sig_agent), stURL(d.sig_temoin), stURL(d.sig_avis)]); return { etab, agent, temoin, avis }; }
+/* nom du fichier PDF : « MAP - Nom de l'agent - référence » / « DE - Nom de l'agent - référence » */
+const deFichier = d => { const nom = (d.agents && d.agents.nom) || (AG.find(a => a.matricule == d.matricule) || {}).nom || d.matricule || "";
+  return `${d.type || "DE"} - ${String(nom).trim()} - ${String(d.ref || "").replace(/[\/\\:*?"<>|]+/g, "-")}.pdf`.replace(/\s+/g, " "); };
 async function deLoad(id) { const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").eq("id", id).single(); if (error) throw error; return data; }
 
 /* remise à l'agent : lecture, attestation, réponse, signature (ou refus constaté avec témoin) */
@@ -2547,7 +2550,7 @@ Object.assign(ACT, {
   deremise(b) { deRemise(+b.dataset.i); },
   async depdf(b) { const d = DL.find(x => x.id == b.dataset.i); if (!d) return; const w = window.open("", "_blank");
     if (!d.doc_pdf) { toast("Génération du PDF…"); try { await dePDF(d.id); await draw(); } catch (e) { if (w) w.close(); return toast("Échec : " + e.message); } }
-    const p = d.doc_pdf || `de/${d.id}/document.pdf`, { data, error } = await DST().createSignedUrl(p, 600); if (error) { if (w) w.close(); return toast("PDF indisponible : " + error.message); } if (w) w.location = data.signedUrl; else location.href = data.signedUrl; },
+    const p = d.doc_pdf || `de/${d.id}/document.pdf`, { data, error } = await DST().createSignedUrl(p, 600, { download: deFichier(d) }); if (error) { if (w) w.close(); return toast("PDF indisponible : " + error.message); } if (w) w.location = data.signedUrl; else location.href = data.signedUrl; },
   async deprev(b) { const w = window.open("", "_blank"); if (!w) return toast("Autorisez les fenêtres pop-up pour ouvrir le document"); w.document.write("<p style='font:14px Arial'>Chargement…</p>"); const d = await deLoad(+b.dataset.i), im = await deImgs(d); w.document.open(); w.document.write(docHTML(d, im)); w.document.close(); }
 });
 
@@ -2656,7 +2659,7 @@ Object.assign(ACT, {
   dedec(b) { const d = DL.find(x => x.id == b.dataset.i); deDecider(+b.dataset.i, d && d.avis_mesure == "map" ? "MAP" : "AVT"); },
   async deshare(b) { const d = DL.find(x => x.id == b.dataset.i); if (!d) return; if (!d.doc_pdf) { toast("Génération du PDF…"); try { await dePDF(d.id); } catch (e) { return toast("Échec : " + e.message); } }
     const { data, error } = await DST().download(d.doc_pdf || `de/${d.id}/document.pdf`); if (error) return toast("PDF indisponible");
-    const f = new File([data], d.ref.replace(/\//g, "-") + ".pdf", { type: "application/pdf" });
+    const f = new File([data], deFichier(d), { type: "application/pdf" });
     if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: d.ref }); } catch (e) { } }
     else { const u = URL.createObjectURL(f), l = document.createElement("a"); l.href = u; l.download = f.name; l.click(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast("PDF téléchargé : partagez-le depuis vos fichiers"); } },
   inpres(b) { const m = b.dataset.m, a = AG.find(x => x.matricule == m);
