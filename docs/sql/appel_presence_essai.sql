@@ -502,3 +502,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- 2026-11-22 : marquer_taches_auto v2 — rattachement au « Début du shift » du formulaire (jf_debut) ; situation 17h = rapport avec
 -- nombre de renforts renseigné (0 ou plus) qui n'est pas le premier du shift, ou rapport envoyé après 13h ; taches.rapport_sub = soumission liée.
+
+-- v43 : interventions pas à pas — table taches_etapes (demarrage GPS / position_refusee / photos_avant / pause / reprise / photos_apres / cloture),
+--        taches_pj + pris_le, precision_m ; bucket taches-pj 100 Mo (vidéos). Photos horodatées + géolocalisées (incrustation), consultation avec déroulé et SLA.
