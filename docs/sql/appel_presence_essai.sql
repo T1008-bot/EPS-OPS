@@ -483,3 +483,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- 2026-11-22 : signalements — rappel_vols(texte, ref) : notification « vols en cours ou proches » aux chefs d'équipe et superviseurs.
 -- Fonction ia-texte : fournisseur OpenAI (OPENAI_API_KEY) ou Anthropic ; mode signalement : destinataire interne/externe, vols proches, a_preciser.
+
+-- 2026-11-22 : performance — vue situation_staff limitée aux formulaires qui contiennent une situation du staff
+-- (nettoyage, bagages, shift_ops) et protégée contre les réponses d'erreur Jotform (answers non objet) ;
+-- index rapports_staff(service, recu_le). Requêtes situation_staff / rapports_detail : de 1,3–1,7 s à 4–12 ms.
