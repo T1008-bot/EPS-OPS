@@ -515,3 +515,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v48 : évaluation de l encadrement (eval_enc, eval_enc_avis, eval_enc_lancer/auto/enreg/avis_enreg/signer/stats), cron evaluations-encadrement 15/03,06,09,12 07h37 (S2-2026 le 15/12/2026), evaluations mensuelles visibles par chefs/superviseurs seulement après partage (partage_le), bucket discipline : chemins ee/.
 
 -- v52 : taches.demarre_le/demarre_nom (trigger taches_demarrage) ; renommage modeles n_appel, n_situation_0930, situation_0930 (09h30), n_dispatch (09h30 → 10h00) ; liste des tâches minimaliste.
+
+-- v53 : renommage des tâches régulières ; rapports_vols / rapports_wchr désactivés (uniquement par vol) ; fiche de nettoyage cabine par vol (MAI pour L6, Afroport sinon) préremplie ; trigger rs_cabin_lier (rattachement des fiches cabine à leur vol).
