@@ -2029,7 +2029,7 @@ ${rgB("ntpar", "🎛 Paramètres des notifications")}
 <div style="margin-top:10px"><b>Notifications push (sur le téléphone)</b><div class="m">${E(pe.txt)}</div>${pe.ok ? (pe.on ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn" data-a="nttest">Envoyer un test</button><button type="button" class="btn" data-a="ntoff">Désactiver sur cet appareil</button></div>` : `<button type="button" class="btn p" data-a="nton" style="margin-top:6px">Activer les notifications push</button>`) : ""}</div></div>
 <div class="card"><h2>🎨 Affichage</h2><div class="m">Thème</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${tb("bleu", "Bleu EPS")}${tb("clair", "Clair")}${tb("nuit", "🌙 Mode nuit")}</div><div class="m">Taille du texte</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${zb(1, "Normale")}${zb(1.1, "Grande")}${zb(1.2, "Très grande")}</div></div>
 <div class="card"><h2>✈️ Vols</h2><div class="m">Bouton « Vols réguliers » dans le volet Vols (programme indicatif de la semaine)</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${[["1", "Affiché"], ["0", "Masqué"]].map(([v, l]) => `<button type="button" class="btn ${VREGON.get() == v ? "p" : ""}" data-a="rgvreg" data-k="${v}">${l}</button>`).join("")}</div></div>
-${vueAutorise() ? `<div class="card"><h2>👁 Voir comme</h2><div class="m">Afficher l’app comme n’importe quel autre compte : direction, RH, technique, comptabilité, approvisionnement, superviseurs, chefs d’équipe (lecture seule).</div>${VUE ? `<div class="m">En cours : <b>${E(VUE.nom)}</b></div><button type="button" class="btn p" data-a="vuequit">Revenir à mon compte</button>` : rgB("vuechoix", "👁 Choisir un compte à consulter")}</div>` : ""}
+${vueAutorise() ? `<div class="card"><h2>👁 Voir comme</h2><div class="m">Afficher l’app comme n’importe quel autre compte : direction, RH, technique, comptabilité, approvisionnement, superviseurs, chefs d’équipe (lecture seule).</div>${VUE ? `<div class="m">En cours : <b>${E(VUE.nom)}</b></div><div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><button type="button" class="btn" data-a="vuechoix">🔁 Changer de compte</button><button type="button" class="btn p" data-a="vuequit">Revenir à mon compte</button></div>` : rgB("vuechoix", "👁 Choisir un compte à consulter")}</div>` : ""}
 <div class="card"><h2>📱 Application</h2>${DIP ? rgB("rgins", "⬇️ Installer EPS OPS sur cet appareil") : ""}${rgB("rgprof", "👤 Mon profil et mot de passe")}${rgB("rgrel", "↻ Actualiser l’application")}</div>
 ${rgB("rglo", "⎋ Se déconnecter", "d")}`);
   },
@@ -2513,14 +2513,15 @@ function vueRaz() {
   const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
   const un = $("#un"); if (un) un.textContent = ME.nom;
   let b = $("#vuebar"); if (VUE && !b) { b = document.createElement("div"); b.id = "vuebar"; $("#pg").insertBefore(b, $("#mn")); } if (!VUE && b) b.remove();
-  if (VUE) b.innerHTML = `<span>👁 Vue du compte de <b>${E(VUE.nom)}</b> · ${E(RL[VUE.role] || VUE.role)} · lecture seule</span><button type="button" class="btn" data-a="vuequit">Revenir à mon compte</button>`;
+  if (VUE) b.innerHTML = `<span>👁 Vue du compte de <b>${E(VUE.nom)}</b> · ${E(RL[VUE.role] || VUE.role)} · lecture seule</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn" data-a="vuechoix">🔁 Changer de compte</button><button type="button" class="btn" data-a="vuequit">Revenir à mon compte</button></span>`;
   draw(1);
 }
 async function vueChoisir() {
   if (!vueAutorise()) return;
-  const { data, error } = await sb.from("profiles").select("id,nom,role,matricule").eq("actif", true).neq("id", VUE_UID).order("nom");
-  if (error) return toast("Liste indisponible : " + error.message);
-  const L = data || [];
+  /* la liste est toujours lue avec votre propre compte, même pendant une consultation */
+  const v0 = VUE; VUE = null; let res; try { res = await sb.from("profiles").select("id,nom,role,matricule").eq("actif", true).neq("id", VUE_UID).order("nom"); } finally { VUE = v0; }
+  const { data, error } = res; if (error) return toast("Liste indisponible : " + error.message);
+  const L = (data || []).filter(p => !VUE || p.id != VUE.id);
   mdOpen(`<div class="row"><h2>👁 Voir comme…</h2><button type="button" class="btn" id="no">✕</button></div>
 <div class="m">L’app s’affiche exactement comme pour la personne choisie : ses menus, ses tâches, ses alertes et <b>uniquement les données auxquelles son compte a accès</b>. Lecture seule : aucune action n’est enregistrée. Session de consultation valable 1 heure.</div>
 ${VUE_ROLES.concat([...new Set(L.map(p => p.role))].filter(r => !VUE_ROLES.includes(r))).map(r => { const G = L.filter(p => p.role == r); return G.length ? `<div><div class="m" style="font-weight:700;margin:6px 0 4px">${E(RL[r] || r)}</div>${G.map(p => `<button type="button" class="dsg" data-a="vueset" data-i="${p.id}"><b>${E(p.nom)}</b><span class="m">${p.matricule ? "ID " + E(p.matricule) : ""}</span></button>`).join("")}</div>` : ""; }).join("")}`);
