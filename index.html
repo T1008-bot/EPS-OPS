@@ -1120,7 +1120,8 @@ function tRemontee(id) { const t = TK.find(x => x.id == id) || {};
       if (F.length) await tUpPhotos(id, "incident", F, data.id, pos); if (t.statut == "a_faire") await sb.rpc("tache_statut", { p_id: id, p_statut: "en_cours", p_comm: null });
       toast("Remontée enregistrée"); const sg = $("#trs").checked; mdClose(); await draw(); if (sg) { await ACT.signew(); const a = $("#svt"); if (a) a.value = tx + ($("#trl")?.value ? "" : ""); } } catch (e) { $("#trok").disabled = false; toast("Refusé : " + (e.message || e)); } }; }
 let TMOD = null;
-async function tRapport(t) { if (!t.modele) return null; if (!TMOD) { const { data } = await sb.from("taches_modeles").select("code,auto"); TMOD = Object.fromEntries((data || []).map(m => [m.code, m.auto])); } const au = TMOD[t.modele]; if (!au) return null;
+async function tRapport(t) { if (t.rapport_sub) { const { data: r } = await sb.from("rapports_staff").select("pdf_url,recu_le").eq("submission_id", t.rapport_sub).maybeSingle(); if (r) return { le: t.fait_le || r.recu_le, pdf: r.pdf_url || null }; }
+  if (!t.modele) return null; if (!TMOD) { const { data } = await sb.from("taches_modeles").select("code,auto"); TMOD = Object.fromEntries((data || []).map(m => [m.code, m.auto])); } const au = TMOD[t.modele]; if (!au) return null;
   const j0 = new Date(t.jour + "T08:00:00Z").getTime(), iso = ms => new Date(ms).toISOString();
   if (au == "situation") { const n = /^n_/.test(t.modele), mat = /1700/.test(t.modele), a = j0 + (mat ? 5 : 0) * 36e5, z = j0 + (mat ? 24 : 5) * 36e5; const g = String(t.cible || "").slice(-1);
     const { data } = await sb.from("situation_staff").select("submission_id,groupe,cree_le").eq("service", n ? "nettoyage" : "bagages").gte("cree_le", iso(a).slice(0, 19)).lt("cree_le", iso(z).slice(0, 19)).order("cree_le"); const s = (data || []).find(x => (String(x.groupe).match(/(\d)\s*$/) || [])[1] == g); if (!s) return null;
