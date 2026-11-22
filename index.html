@@ -387,7 +387,7 @@ ${late ? `<div class="m">${late} vol(s) pas encore échu(s) (messages non encore
 /* calendrier des shifts : SHV = nombre de jours avant le shift en cours (négatif = à venir) */
 function shLab(o, s) { return o == 0 ? "Shift en cours" : o == 1 ? "Shift d’hier" : o == -1 ? "Shift de demain" : `Shift du ${WD[s.getUTCDay()].toLowerCase()}. ${dmy(s)}${o < 0 ? " (à venir)" : ""}`; }
 function shStrip() { const r = []; for (let o = SHV + 7; o >= SHV - 7; o--) { const d = new Date(shiftStart().getTime() - o * 24 * H); r.push(`<button class="dy ${o == SHV ? "on" : ""} ${o == 0 ? "td" : ""} ${o < 0 ? "fut" : ""}" data-a="shv" data-i="${o}">${o == 0 ? "Auj." : WD[d.getUTCDay()]}<b>${p2(d.getUTCDate())}</b><small>Éq. ${garde(d)}</small></button>`); } return r.join(""); }
-function shGo(o) { SHV = o; SHO = o; VD = -o; const s = new Date(shiftStart().getTime() - o * 24 * H), t = Math.round((Date.parse(ymd(s)) - Date.parse(today())) / 864e5); if (t >= -1 && t <= 6) TD = t; draw(); }
+function shGo(o) { SHV = o; SHO = o; VD = -o; const s = new Date(shiftStart().getTime() - o * 24 * H), t = Math.round((Date.parse(ymd(s)) - Date.parse(ymd(shiftStart()))) / 864e5); if (t >= -1 && t <= 6) TD = t; draw(); }
 document.addEventListener("change", e => { if (e.target.id != "shd" || !e.target.value) return; shGo(Math.round((shiftStart().getTime() - Date.parse(e.target.value + "T08:00:00Z")) / 864e5)); });
 V.shift = async () => {
   if (SHV) SHO = SHV; const s = new Date(shiftStart().getTime() - SHV * 24 * H), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = SHV ? true : h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
@@ -1074,7 +1074,8 @@ V.mag = async () => {
 /* ---------- Tâches & planning ---------- */
 let TK = [], TD = 0, TFL = "";
 const moisC = (ref = new Date()) => { const y = ref.getUTCFullYear(), m = ref.getUTCMonth(), d = ref.getUTCDate(), a = d >= 26 ? new Date(Date.UTC(y, m, 26)) : new Date(Date.UTC(y, m - 1, 26)), b = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 25)); return { d: ymd(a), f: ymd(b) }; };
-const dstr = o => ymd(Date.now() + o * 864e5), WD = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+/* jour du shift (08h → 08h) : avant 08h, on reste sur le shift de la veille */
+const dstr = o => ymd(shiftStart().getTime() + o * 864e5), WD = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const TS = { a_faire: "À faire", en_cours: "En cours", fait: "Fait", annule: "Annulé" }, TB = { a_faire: "warn", en_cours: "info", fait: "ok", annule: "bad" };
 const TMG = ["direction", "responsable_ops", "coordinateur_ops"];
 let TSV = "", TV = "jour", TVF = "", TC = "shift";
