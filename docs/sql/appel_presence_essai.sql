@@ -521,3 +521,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v54 : comptes_rendus (jour/semaine/mois) + fonction compte-rendu (IA) + crons 08h41 / lundi 09h13 / 1er 09h23 ; cr_donnees_jour, cr_donnees_periode, cr_demander ; rapports_staff.envoye_le (heure exacte d envoi Jotform) ; tâches par vol vol_cc (fiche cabine) ; compagnie / type d appareil Afroport par correspondance.
 
 -- v55 : rs_vol() (rapport de vol / fiche cabine : rattachement direct ou n° cité, rotations comptées pour les 2 vols) ; lier_rapports_vols préfère les vols radar ; retard des rotations mesuré après le départ.
+
+-- v55b : notifications vol — ids_vol(), msg_vol_notif (PSM / LDM reçus, trigger messages_vol), rappels_approche (cron */5, 40 min avant l arrivée).
