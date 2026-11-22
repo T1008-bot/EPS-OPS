@@ -2197,7 +2197,32 @@ function sigPad(cv) {
   cv.onpointerdown = e => { on = true; used = true; [lx, ly] = pos(e); cv.setPointerCapture(e.pointerId); c.beginPath(); c.arc(lx, ly, 1.2, 0, 7); c.fillStyle = "#0d2a6e"; c.fill(); };
   cv.onpointermove = e => { if (!on) return; const [x, y] = pos(e); c.beginPath(); c.moveTo(lx, ly); c.lineTo(x, y); c.stroke(); lx = x; ly = y; };
   cv.onpointerup = cv.onpointercancel = () => { on = false; };
-  return { used: () => used, clear() { c.clearRect(0, 0, w, h); used = false; }, png: () => trimPNG(cv) };
+  let img = null;
+  const pad = { used: () => used, clear() { c.clearRect(0, 0, w, h); used = false; img = null; }, png: () => img || trimPNG(cv),
+    set(png) { const im = new Image(); im.onload = () => { c.clearRect(0, 0, w, h); const k = Math.min((w - 16) / im.width, (h - 16) / im.height, 1.5); c.drawImage(im, (w - im.width * k) / 2, (h - im.height * k) / 2, im.width * k, im.height * k); }; im.src = png; img = png; used = true; } };
+  /* signature photographiée ou téléversée (fichier déjà sur l'appareil) : nettoyage puis confirmation */
+  if (!cv.dataset.noext && !cv.nextElementSibling?.classList.contains("sgx")) {
+    const qui = (cv.previousElementSibling && cv.previousElementSibling.tagName == "LABEL" ? cv.previousElementSibling.textContent : "").replace(/^(Votre|Ma) signature.*$/i, "Votre signature").trim();
+    const bx = document.createElement("div"); bx.className = "sgx"; bx.style.cssText = "display:grid;gap:6px;margin-top:6px";
+    bx.innerHTML = `<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><span class="m">ou</span><label class="btn">📷 Photographier<input type="file" accept="image/*" capture="environment" hidden></label><label class="btn">⬆ Téléverser une image<input type="file" accept="image/png,image/jpeg,image/webp,image/*" hidden></label></div><div class="sgxp"></div>`;
+    cv.after(bx);
+    bx.querySelectorAll("input[type=file]").forEach(i => i.onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; sigChoix(bx.querySelector(".sgxp"), f, qui, png => { pad.set(png); bx.querySelector(".sgxp").innerHTML = `<div class="m" style="color:#0b7f58;font-weight:700">✓ Signature importée et acceptée — elle remplace le tracé du cadre.</div>`; }); });
+  }
+  return pad;
+}
+/* image déjà détourée (PNG transparent) : on peut garder l'original */
+function sigOrig(file) { return new Promise(ok => { if (!/png|webp/i.test(file.type)) return ok(null); const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { const cv = document.createElement("canvas"), k = Math.min(1, 1400 / Math.max(im.width, im.height)); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); const c = cv.getContext("2d"); c.drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); const d = c.getImageData(0, 0, cv.width, cv.height).data; let t = 0; for (let i = 3; i < d.length; i += 400) if (d[i] < 200) t++; ok(t > d.length / 400 * 0.2 ? trimPNG(cv) : null); }; im.onerror = () => ok(null); im.src = u; }); }
+/* aperçu de la signature traitée, choix de la version et confirmation du propriétaire */
+async function sigChoix(box, file, qui, onOk) {
+  box.innerHTML = `<div class="m">Traitement de l’image : suppression du fond, encre renforcée, recadrage…</div>`;
+  let net = null, ori = null; try { [net, ori] = await Promise.all([sigPhoto(file).catch(() => null), sigOrig(file)]); } catch (_) { }
+  if (!net && !ori) { box.innerHTML = `<div class="al">Aucune signature détectée : photographiez une signature à l’encre foncée sur papier blanc, ou téléversez une image nette.</div>`; return; }
+  let cur = ori || net; const tag = `chk${Date.now()}`;
+  const draw = () => { box.innerHTML = `<b>Aperçu (fond transparent)</b>${net && ori ? `<div class="row" style="justify-content:flex-start;gap:6px"><button type="button" class="btn ${cur == net ? "p" : ""}" data-v="n">Version nettoyée</button><button type="button" class="btn ${cur == ori ? "p" : ""}" data-v="o">Image d’origine (déjà détourée)</button></div>` : ""}<div style="${SGBG};padding:10px;text-align:center"><img src="${cur}" style="max-height:120px;max-width:100%"></div><div class="m">${cur == net ? "Améliorée automatiquement : fond supprimé, ombres corrigées, encre renforcée, recadrée." : "Image téléversée conservée telle quelle (fond déjà transparent)."}</div>
+<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input type="checkbox" id="${tag}" style="width:auto;margin-top:3px"> Je confirme que cette signature est bien celle de son propriétaire${qui ? " (" + E(qui.replace(/^Signature (de |du |d’)?/i, "")) + ")" : ""} et qu’il l’accepte pour ce document.</label><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" data-v="x">Annuler</button><button type="button" class="btn p" data-v="ok" disabled>Utiliser cette signature</button></div>`;
+    const ok = box.querySelector('[data-v="ok"]'); box.querySelector("#" + tag).onchange = e => { ok.disabled = !e.target.checked; };
+    box.querySelectorAll("[data-v]").forEach(b => b.onclick = ev => { ev.preventDefault(); const v = b.dataset.v; if (v == "n") { cur = net; draw(); } else if (v == "o") { cur = ori; draw(); } else if (v == "x") box.innerHTML = ""; else if (v == "ok") onOk(cur); }); };
+  draw();
 }
 function trimPNG(cv) {
   const c = cv.getContext("2d"), { width: W, height: H } = cv, d = c.getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
@@ -2233,15 +2258,16 @@ function msigOpen(apres) {
   mdOpen(`<div class="row"><h2>✍️ Ma signature</h2><button type="button" class="btn" id="no">✕</button></div>
 <div class="m">Elle est apposée sur les demandes d’explication que vous établissez. Elle n’est lisible que depuis votre compte ; chaque document reçoit sa propre copie.</div>
 <div id="sgcur" style="${SGBG};min-height:90px;display:flex;align-items:center;justify-content:center"><span class="m">Chargement…</span></div>
-<div class="row" style="justify-content:flex-start;gap:6px"><label class="btn p">📷 Photographier ma signature (recommandé)<input type="file" id="sgph" accept="image/*" capture="environment" hidden></label><button type="button" class="btn" id="sgdr">✍️ Signer au doigt</button></div>
-<div class="m">Photo : signez à l’encre foncée (bleu ou noir) sur une feuille blanche, cadrez de près, sans ombre. Le fond est supprimé automatiquement.</div>
+<div class="row" style="justify-content:flex-start;gap:6px"><label class="btn p">📷 Photographier ma signature (recommandé)<input type="file" id="sgph" accept="image/*" capture="environment" hidden></label><label class="btn">⬆ Téléverser une image<input type="file" id="sgup" accept="image/png,image/jpeg,image/webp,image/*" hidden></label><button type="button" class="btn" id="sgdr">✍️ Signer au doigt</button></div>
+<div class="m">Photo : signez à l’encre foncée (bleu ou noir) sur une feuille blanche, cadrez de près, sans ombre. Téléverser : choisissez une image de signature déjà enregistrée sur l’appareil. Dans les deux cas, le fond est supprimé et l’encre renforcée automatiquement, puis vous confirmez la signature.</div>
 <div id="sgw" style="display:none;gap:8px;flex-direction:column"></div>`);
   $("#no").onclick = () => $("#md").classList.remove("on");
   maSig().then(u => { $("#sgcur").innerHTML = u ? `<img src="${u}" style="max-height:110px;max-width:100%">` : `<span class="m">Aucune signature enregistrée.</span>`; });
   const save = async png => { const { error } = await DST().upload("signatures/" + UID + ".png", await dURL2blob(png), { upsert: true, contentType: "image/png" }); if (error) return toast("Refusé : " + error.message); toast("Signature enregistrée"); $("#md").classList.remove("on"); if (apres) apres(); };
   const prev = png => { const w = $("#sgw"); w.style.display = "flex"; w.innerHTML = `<b>Aperçu (fond transparent)</b><div style="${SGBG};padding:10px;text-align:center"><img src="${png}" style="max-height:120px;max-width:100%"></div><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="sgre">Reprendre</button><button type="button" class="btn p" id="sgok">Enregistrer cette signature</button></div>`; $("#sgre").onclick = () => { w.style.display = "none"; }; $("#sgok").onclick = () => save(png); };
-  $("#sgph").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; try { prev(await sigPhoto(f)); } catch (x) { toast(x.message); } };
-  $("#sgdr").onclick = () => { const w = $("#sgw"); w.style.display = "flex"; w.innerHTML = `<b>Signez dans le cadre</b><canvas id="sgpad" style="width:100%;height:170px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="sgcl">Effacer</button><button type="button" class="btn p" id="sgok">Enregistrer</button></div>`; const p = sigPad($("#sgpad")); $("#sgcl").onclick = () => p.clear(); $("#sgok").onclick = () => { const png = p.used() && p.png(); if (!png) return toast("Signez d’abord dans le cadre"); save(png); }; };
+  const imp = e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; const w = $("#sgw"); w.style.display = "flex"; sigChoix(w, f, ME.nom, png => save(png)); };
+  $("#sgph").onchange = imp; $("#sgup").onchange = imp;
+  $("#sgdr").onclick = () => { const w = $("#sgw"); w.style.display = "flex"; w.innerHTML = `<b>Signez dans le cadre</b><canvas id="sgpad" data-noext="1" style="width:100%;height:170px;background:#fff;border:1px dashed var(--p);border-radius:12px"></canvas><div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="sgcl">Effacer</button><button type="button" class="btn p" id="sgok">Enregistrer</button></div>`; const p = sigPad($("#sgpad")); $("#sgcl").onclick = () => p.clear(); $("#sgok").onclick = () => { const png = p.used() && p.png(); if (!png) return toast("Signez d’abord dans le cadre"); save(png); }; };
 }
 
 /* recherche d'agent façon répertoire : nom, matricule ou badge dès les premiers caractères */
