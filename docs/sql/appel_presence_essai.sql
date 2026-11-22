@@ -509,3 +509,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v44 : PDF discipline nommés « MAP - Nom de l agent - référence » / « DE - Nom de l agent - référence » (téléchargement, partage, impression).
 
 -- v45 : identifiant numérique (doc_hash) retiré du document imprimé, affiché dans l application (Discipline) avec l auteur, sa fonction et la date.
+
+-- v47 : écran Évaluations mensuelles (revue SP → validation resp. ops → RH) depuis Mon profil / Tâches ; Journal des modifications (audit_journal) depuis Mon profil (resp. ops, direction).
