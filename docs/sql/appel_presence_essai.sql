@@ -507,3 +507,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --        taches_pj + pris_le, precision_m ; bucket taches-pj 100 Mo (vidéos). Photos horodatées + géolocalisées (incrustation), consultation avec déroulé et SLA.
 
 -- v44 : PDF discipline nommés « MAP - Nom de l agent - référence » / « DE - Nom de l agent - référence » (téléchargement, partage, impression).
+
+-- v45 : identifiant numérique (doc_hash) retiré du document imprimé, affiché dans l application (Discipline) avec l auteur, sa fonction et la date.
