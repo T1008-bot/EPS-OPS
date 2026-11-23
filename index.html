@@ -1435,14 +1435,14 @@ async function sgRec(btn, ta, st) {
     r.start(); } catch (x) { VREC = null; st.textContent = "Micro inaccessible : autorisez le micro pour l’application"; } }
 function sgPhotos() { const box = $("#sgph"); if (!box) return; box.innerHTML = SGN.ph.map((f, i) => `<span style="position:relative">${/^image/.test(f.type) ? `<img src="${f.u}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--b)">` : `<span class="bd info" style="display:inline-flex;height:64px;align-items:center">📄 ${E(f.name.slice(0, 14))}</span>`}<button type="button" data-k="${i}" style="position:absolute;top:-6px;right:-6px;border-radius:50%;border:0;background:#e11d48;color:#fff;width:22px;height:22px">×</button></span>`).join("");
   box.querySelectorAll("[data-k]").forEach(x => x.onclick = () => { SGN.ph.splice(+x.dataset.k, 1); sgPhotos(); }); }
-function sgEtape1() {
+function sgEtape1(zone) { SGN.zone = !!zone;
   const rec = window.MediaRecorder && navigator.mediaDevices;
-  $("#mf").innerHTML = `<div class="row"><h2>📣 Nouveau signalement</h2><span class="bd info">1 / 2</span></div>
+  $("#mf").innerHTML = `<div class="row"><h2>${SGN.zone ? "📍 Nouveau signalement de zone" : "📣 Nouveau signalement"}</h2><span class="bd info">1 / 2</span></div>
 <div class="m">Décrivez le problème en parlant ou en écrivant : <b>quoi</b>, <b>où</b> (zone, porte, niveau, salle), ce qui a été fait et ce que vous demandez. Le lieu et les autres informations seront repérés automatiquement.</div>
 ${rec ? `<button type="button" class="btn p" id="sgRec" style="width:100%;justify-content:center;font-size:16px;padding:14px">🎙 Enregistrer (IA)</button><div class="m" id="sgRs" style="min-height:18px"></div>` : ""}
 <textarea id="svt" data-vx="1" rows="6" placeholder="Ex. : De l’eau coule de la climatisation sur l’escalier de l’arrivée, côté porte 9, 1er étage. Panneaux « sol glissant » posés. Merci d’envoyer la maintenance.">${E(SGN.t || "")}</textarea>
 <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:6px"><label class="btn">📷 Photo<input type="file" id="sgcam" accept="image/*" capture="environment" hidden></label><label class="btn">⬆ Téléverser photos / documents<input type="file" id="sgfi" accept="image/*,application/pdf" multiple hidden></label></div><div id="sgph" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
-${sgVolsCard()}
+${SGN.zone ? "" : sgVolsCard()}
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no">Annuler</button><button type="button" class="btn p" id="sgNx">Suivant →</button></div>`;
   $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on");
   $("#no").onclick = () => { if (VREC) VREC.r.stop(); $("#md").classList.remove("on"); };
@@ -1453,9 +1453,9 @@ ${sgVolsCard()}
   $("#sgNx").onclick = async () => { const t = $("#svt").value.trim(); if (VREC) return toast("Arrêtez d’abord l’enregistrement"); if (!t) return toast("Décrivez d’abord le problème (enregistrement ou texte)"); SGN.t = t;
     const b = $("#sgNx"); b.disabled = true; b.textContent = "Analyse par l’IA…"; await sgZones().catch(() => {});
     const vt = (SGN.vols || []).map(sgVolTxt).join(" ; ") + (SGN.vols && SGN.vols.length ? (SGN.volsOk ? " (confirmé par le déclarant)" : " (non encore confirmé)") : "");
-    let c = null; try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CATL.map(x => x[0]), destinataire: "", vols: vt } }); if (!error && data && !data.erreur) c = data.champs; } catch (x) { }
+    let c = null; try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CATL.map(x => x[0]), destinataire: SGN.zone ? "interne" : "", vols: SGN.zone ? "" : vt } }); if (!error && data && !data.erreur) c = data.champs; } catch (x) { }
     if (!c) toast("L’IA n’a pas pu analyser : complétez à la main");
-    sgEtape2(c || {}); }; }
+    if (SGN.zone) ACT.zsform(c || {}); else sgEtape2(c || {}); }; }
 /* lien direct avec un vol : n° du vol cité par le déclarant, ou zone du même côté (arrivée / départ) et vols confirmés */
 const SG_COTE = { A: ["ARR", "PISTE", "SORTIE"], D: ["DEP_RDC", "DEP_1", "DEP_2", "ENTREE"] };
 function sgVolLie(zone, txt) { const t = ccNorm(txt).replace(/\s/g, ""); return (SGN.vols || []).find(v => { const m = (Date.parse(v.heure_estimee || v.heure_prevue) - Date.now()) / 60000; if (!(m <= 60 && m > -30)) return false;
@@ -2447,10 +2447,10 @@ Object.assign(ACT, {
     if (!confirm(`Reprendre ${L.length} affectation(s) du shift du ${fd(prev)} ? Pensez à vérifier : l’équipe de garde change à chaque shift.`)) return;
     const r = await sb.from("dispatch").insert(L.map(d => ({ ...d, jour_shift: ZJ, cree_nom: ME.nom }))); toast(r.error ? "Refusé : " + r.error.message : L.length + " affectation(s) reprises"); draw();
   },
-  async zsnew() {
-    if (!ZG.length) await zLoad();
+  async zsnew() { if (!ZG.length) await zLoad(); SGN = { d: "interne", vols: [], ph: [], t: "" }; await sgZones().catch(() => {}); sgEtape1(true); },
+  async zsform(c) { if (!ZG.length) await zLoad(); const g = k => String(c[k] || "").trim();
     const sel = (id, o) => `<select id="${id}">${o.map(x => `<option value="${E(x[0])}">${E(x[1])}</option>`).join("")}</select>`;
-    $("#mf").innerHTML = `<h2>Nouveau signalement de zone</h2>
+    $("#mf").innerHTML = `<div class="row"><h2>📍 Nouveau signalement de zone</h2><span class="bd info">2 / 2</span></div><div class="m">Vérifiez ce qui a été repéré dans votre description et complétez si besoin. 📎 ${SGN.ph.length} photo(s) jointe(s).</div>
 <div><label>1. Zone globale</label>${sel("zz", [["", "— Choisir la zone —"]].concat(ZG.map(z => [z.code, z.libelle + (z.statut == "ouverte" ? "" : " — pas encore ouverte")])))}</div><div id="zzn" class="m"></div>
 <div><label>2. Localisation précise</label>${sel("zl", [["", "— Choisir d’abord la zone —"]])}</div><div id="zlw" style="display:none"><label>Préciser la localisation</label><input id="zla"></div>
 <div><label>3. Nature de l’enceinte</label>${sel("zn", [["", "— Choisir —"]].concat(ZN_NAT.map(x => [x, x]), [["Autre", "Autre (à préciser)"]]))}</div><div id="znw" style="display:none"><label>Préciser la nature</label><input id="zna"></div>
@@ -2460,8 +2460,8 @@ Object.assign(ACT, {
 <div><label>Priorité</label>${sel("zp", [["normale", "Normale"], ["basse", "Basse"], ["haute", "Haute"], ["urgente", "Urgente"]])}</div>
 <div><label>Délai d’intervention attendu (minutes)</label><input id="zd" type="number" min="5" step="5" value="${ZN_DL.normale}"></div>
 <div><label>Date et heure du constat</label><input id="zc" type="datetime-local" value="${nowL()}"></div>
-<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Enregistrer</button></div>`;
-    $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
+<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="zsb">← Retour</button><button class="btn p">✓ Enregistrer</button></div>`;
+    $("#md").classList.add("on"); $("#zsb").onclick = () => sgEtape1(true);
     const prev = async () => {
       const z = zZone($("#zz").value), lc = $("#zl").value, nat = $("#zn").value;
       $("#zzn").textContent = z.statut && z.statut != "ouverte" ? "Zone pas encore ouverte : le signalement est enregistré et suivi par l’équipe en service." : "";
@@ -2475,6 +2475,12 @@ Object.assign(ACT, {
     };
     $("#zz").onchange = () => { const c = $("#zz").value, L = ZL.filter(l => l.zones.includes(c)); $("#zl").innerHTML = c ? [["", "— Choisir —"]].concat(L.map(l => [l.code, l.libelle]), [["__autre", "Autre (à préciser)"]]).map(x => `<option value="${E(x[0])}">${E(x[1])}</option>`).join("") : `<option value="">— Choisir d’abord la zone —</option>`; prev(); };
     $("#zl").onchange = prev; $("#zn").onchange = prev; $("#zc").onchange = prev;
+    { const txt = [g("zone"), SGN.t].join(" "), det = sgDetect(txt), T = ccNorm(txt);
+      if (det.zone) { $("#zz").value = det.zone; $("#zz").onchange(); if (det.lieu) $("#zl").value = det.lieu; }
+      const nat = ZN_NAT.find(n => ccNorm(n).split(/ /).filter(w => w.length > 3).some(w => T.includes(w.replace(/S$/, "")))); if (nat) $("#zn").value = nat;
+      $("#zo").value = g("objet") || SGN.t.slice(0, 80); $("#zde").value = g("description") || SGN.t;
+      if (["basse", "normale", "haute", "urgente"].includes(g("priorite"))) { $("#zp").value = g("priorite"); $("#zd").value = ZN_DL[g("priorite")]; }
+      if (/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(g("constat"))) $("#zc").value = g("constat").slice(0, 16); prev(); }
     $("#zp").onchange = () => { $("#zd").value = ZN_DL[$("#zp").value]; };
     $("#mf").onsubmit = async e => {
       e.preventDefault(); const z = $("#zz").value, lc = $("#zl").value, nat = $("#zn").value;
@@ -2483,13 +2489,17 @@ Object.assign(ACT, {
       if (nat == "Autre" && !$("#zna").value.trim()) return toast("Précisez la nature de l’enceinte");
       const { data, error } = await sb.from("signalements_zone").insert({ zone_code: z, lieu_code: lc == "__autre" ? null : lc, lieu_autre: lc == "__autre" ? $("#zla").value.trim() : null, nature: nat, nature_autre: nat == "Autre" ? $("#zna").value.trim() : null, objet: $("#zo").value.trim(), description: $("#zde").value.trim() || null, priorite: $("#zp").value, delai_min: +$("#zd").value || 30, constat_le: fromL($("#zc").value || nowL()), cree_nom: ME.nom }).select("id,ref,resp_nom,resp_role").single();
       if (error) return toast("Refusé : " + error.message);
+      if (SGN.ph.length) { const P = []; for (const f of SGN.ph) { try { let body = f, nom = f.name, mime = f.type || "application/octet-stream"; if (/^image\//.test(mime)) { body = await (await fetch(await irShrink(f))).blob(); mime = "image/jpeg"; nom = nom.replace(/\.[^.]+$/, "") + ".jpg"; }
+          const ch = "zone/" + data.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 7) + "-" + nom.replace(/[^\w.\-]+/g, "_"); const up = await sb.storage.from("signalements-pj").upload(ch, body, { contentType: mime }); if (!up.error) P.push(ch); } catch (x) { } }
+        if (P.length) await sb.from("signalements_zone").update({ photos: P }).eq("id", data.id); }
+      SGN = { d: "", vols: [], ph: [] };
       $("#md").classList.remove("on"); toast("Créé : " + data.ref + (data.resp_nom ? " — responsable : " + data.resp_nom : "")); ZT = "sig"; if (NAV != "zon") NAV = "zon"; draw();
     };
   },
   zso(b) {
     const s = ZS.find(x => x.id == b.dataset.i); if (!s) return; const v = ZN_V.includes(ME.role);
     $("#mf").innerHTML = `<h2>${E(s.objet)}</h2><div class="m">${E(s.ref)} · priorité <b>${s.priorite}</b> · <span class="bd ${ZN_B[s.statut]}">${ZN_ST[s.statut]}</span> ${zDelai(s)}</div>
-<div class="card"><div><b>Zone :</b> ${E(zZone(s.zone_code).libelle)}</div><div><b>Localisation :</b> ${E(s.lieu_code ? zLieu(s.lieu_code).libelle : s.lieu_autre || "—")}</div><div><b>Nature :</b> ${E(s.nature == "Autre" ? "Autre : " + (s.nature_autre || "") : s.nature)}</div><div><b>Poste :</b> ${s.poste_code ? E(zPoste(s.poste_code).libelle) : "—"}</div><div><b>Agent responsable :</b> ${zResp(s)}</div><div class="m">Shift du ${fd(s.jour_shift)} · équipe de garde ${s.equipe_garde || "?"}</div></div>
+<div class="card"><div><b>Zone :</b> ${E(zZone(s.zone_code).libelle)}</div><div><b>Localisation :</b> ${E(s.lieu_code ? zLieu(s.lieu_code).libelle : s.lieu_autre || "—")}</div><div><b>Nature :</b> ${E(s.nature == "Autre" ? "Autre : " + (s.nature_autre || "") : s.nature)}</div><div><b>Poste :</b> ${s.poste_code ? E(zPoste(s.poste_code).libelle) : "—"}</div><div><b>Agent responsable :</b> ${zResp(s)}</div><div class="m">Shift du ${fd(s.jour_shift)} · équipe de garde ${s.equipe_garde || "?"}</div></div>${(s.photos || []).length ? `<div id="zsph" style="display:flex;gap:6px;flex-wrap:wrap" class="m">Photos…</div>${(setTimeout(async () => { const { data } = await sb.storage.from("signalements-pj").createSignedUrls(s.photos, 600); const el = $("#zsph"); if (el) el.innerHTML = (data || []).map(x => /\.pdf$/i.test(x.path) ? `<a class="lk" href="${x.signedUrl}" target="_blank" rel="noopener">📄 Document</a>` : `<a href="${x.signedUrl}" target="_blank" rel="noopener"><img src="${x.signedUrl}" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--b)"></a>`).join(""); }, 0), "")}` : ""}
 ${s.description ? `<div class="card">${E(s.description)}</div>` : ""}
 <div class="card m">Constaté le ${dt(s.constat_le)} par ${E(s.cree_nom || "—")} · échéance ${dt(s.echeance)} (${s.delai_min} min)${s.intervention_le ? `<br>Intervention le ${dt(s.intervention_le)} par ${E(s.intervention_par || "—")}${s.intervention_comm ? " — " + E(s.intervention_comm) : ""}` : ""}${s.verifie_le ? `<br>Vérifié le ${dt(s.verifie_le)} par ${E(s.verifie_par || "—")}` : ""}</div>
 <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${v && s.statut == "ouvert" ? `<button type="button" class="btn p" data-a="zsint" data-i="${s.id}">Intervention faite</button>` : ""}${v && s.statut == "intervenu" ? `<button type="button" class="btn p" data-a="zsver" data-i="${s.id}">Vérifier et clore</button>` : ""}${v && ["ouvert", "intervenu"].includes(s.statut) ? `<button type="button" class="btn" data-a="zsann" data-i="${s.id}">Annuler</button>` : ""}<button type="button" class="btn" id="no">Fermer</button></div>`;
