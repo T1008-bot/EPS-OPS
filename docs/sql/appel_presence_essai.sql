@@ -537,3 +537,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v63 : approvisionnement = mêmes droits que la responsable comptabilité (politiques, fonctions, listes de rôles, onglet Comptabilité).
 
 -- v65 : discipline — DE pour RH/approvisionnement/comptabilité ; délégation Direction (générale ou nominative), son superviseur, son chef d équipe, autre ; AVT/MAP et refus confiés à la direction (discipline.delegue_dir).
+
+-- v66 : sites ASECNA, MIF, Ministère du Pétrole, UNPM ; personnel_admin + tel/source (42 personnes des sites ville, Equipes Ville - NKC.xlsx) ; paie_site groupe « Équipe ville » ; collecte-import (Drive Collecte infos → tel/badge/NNI/date par rapprochement de nom) ; paie : saisie sur place + colonne téléphone.
