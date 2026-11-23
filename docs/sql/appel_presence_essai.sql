@@ -529,3 +529,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v58 : signalements.urgence (ligne d urgence brève, ajoutée au message Help Desk).
 
 -- v60 : signalements de zone (internes) : même méthode en 2 étapes (description + enregistrement IA + photos ; zone, lieu et nature repérés) ; signalements_zone.photos.
+
+-- v61 : volet Ressources humaines (cartes Suivi présence / Discipline / Effectifs, filtre site et service, À traiter) ; appel : encadrement tiré de l annuaire ; conges_sans_decision_liste / _alerte (cron 09h17, RH notifiées).
