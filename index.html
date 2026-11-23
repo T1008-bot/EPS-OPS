@@ -19,7 +19,7 @@
 body{margin:0;background:var(--n);color:var(--t);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 #app{height:100%;display:flex}
 .ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-nav{width:240px;flex-shrink:0;background:linear-gradient(180deg,var(--n),var(--n2));color:#fff;display:flex;flex-direction:column;gap:4px;padding:calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));overflow-y:auto}
+nav>*{flex-shrink:0}nav{width:240px;flex-shrink:0;background:linear-gradient(180deg,var(--n),var(--n2));color:#fff;display:flex;flex-direction:column;gap:4px;padding:calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));overflow-y:auto}
 .acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.acts .btn{justify-content:center;width:100%;white-space:nowrap}
 .nl{background:#fff;border-radius:12px;padding:8px 10px 7px;margin:0 4px 16px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;overflow:hidden}.nl img{height:38px;max-width:85%;object-fit:contain}.nl b{color:#1f3a8a;font:800 13px system-ui,"Segoe UI",Arial;letter-spacing:5px;white-space:nowrap;padding-left:5px}
 .nb{display:flex;align-items:center;gap:12px;border:0;background:none;color:#dbe7fb;padding:12px;border-radius:12px;cursor:pointer;font:600 14px system-ui;text-align:left;width:100%;transition:background .15s,transform .25s var(--sp)}
@@ -114,11 +114,12 @@ header{position:relative}body.ldg header{overflow:hidden}body.ldg header::after{
 tr.vg td{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--m);background:var(--bg)}
 @media(max-width:800px){
 .sc tr.vg{background:none;border:0;box-shadow:none;padding:10px 4px 0;margin:0}
-nav{position:fixed;left:0;top:0;bottom:0;width:272px;visibility:hidden;transition:visibility 0s .5s}
-body.nvo nav{visibility:visible;transition-delay:0s}
-#pg{width:100%;transition:transform .5s var(--sp),border-radius .35s,box-shadow .35s;will-change:transform}
-body.nvo #pg{transform:translateX(236px) scale(.9);border-radius:24px;box-shadow:-10px 0 36px #0a2a6050;overflow:hidden}
-body.nvo #pg::after{content:"";position:absolute;inset:0;z-index:50}
+nav{position:fixed;left:0;top:0;bottom:0;width:min(284px,84vw);z-index:60;transform:translate3d(-104%,0,0);transition:transform .3s cubic-bezier(.22,.8,.24,1),box-shadow .3s;will-change:transform;overscroll-behavior:contain}
+body.nvo nav{transform:none;box-shadow:10px 0 34px #0008}
+#pg{width:100%}
+body::after{content:"";position:fixed;inset:0;background:#06102a;opacity:0;pointer-events:none;transition:opacity .3s;z-index:55}
+body.nvo::after{opacity:.5;pointer-events:auto}
+body.nvo{overflow:hidden}
 header{background:var(--n);color:#fff;border:0;height:calc(52px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 8px 0;gap:4px}
 #tg{display:inline-flex}#un{display:none}#ht,#hw{position:absolute;left:0;right:0;text-align:center;pointer-events:none;transition:opacity .25s,transform .25s}
 #hw{display:block;font-weight:800;letter-spacing:.5px}#ht{opacity:0;transform:translateY(8px)}header.st #ht{opacity:1;transform:none}header.st #hw{opacity:0;transform:translateY(-8px)}
@@ -840,8 +841,43 @@ async function infosCard() {
   if (!L.length && !D.length) return "";
   return `<details class="card" style="border-left:4px solid #d97706"><summary style="cursor:pointer"><b>📋 Informations à compléter : ${L.length} agent${L.length > 1 ? "s" : ""}</b><div class="m">${[nni ? `NNI ${c("NNI")}` : "", nni && c("NNI à vérifier") ? `NNI à vérifier ${c("NNI à vérifier")}` : "", `date d’embauche ${c("date d’embauche")}`, `téléphone ${c("téléphone")}`, `badge ${c("badge")}`, c("badge partagé") ? `badge partagé ${c("badge partagé")}` : "", c("téléphone partagé") ? `téléphone partagé ${c("téléphone partagé")}` : ""].filter(Boolean).join(" · ")}${D.length ? ` · <b>départs à confirmer ${D.length}</b>` : ""} — touchez pour la liste</div></summary>
 ${D.length ? `<div class="svt" style="margin-top:8px">Départs à confirmer</div>${D.map(d => `<div class="li"><div><b>${E(d.nom)}</b><div class="m">${E(d.matricule)} · ${E(d.equipe || "")} · sorti de la liste le ${d.date_depart ? fd(d.date_depart) : "—"}</div></div></div>`).join("")}` : ""}
-<div class="svt" style="margin-top:8px">Agents à compléter</div>${L.map(x => `<div class="li"><div><span class="lk" data-a="fiche" data-m="${E(x.a.matricule)}">${E(x.a.nom)}</span><div class="m">${E(x.a.matricule)} · ${E(x.a.equipe || "")}</div></div><div style="text-align:right">${x.m.map(k => `<span class="bd ${/NNI|partagé/.test(k) ? "bad" : "warn"}" style="margin:1px">${k}</span>`).join("")}</div></div>`).join("")}</details>`;
+<div class="svt" style="margin-top:8px">Agents à compléter</div>${L.map(x => `<div class="li"><div><span class="lk" data-a="fiche" data-m="${E(x.a.matricule)}">${E(x.a.nom)}</span><div class="m">${E(x.a.matricule)} · ${E(x.a.equipe || "")}</div></div><div style="text-align:right">${x.m.map(k => `<span class="bd ${/NNI|partagé/.test(k) ? "bad" : "warn"}" style="margin:1px">${k}</span>`).join("")}${AGW.includes(ME.role) ? `<div><button class="btn p" data-a="infcomp" data-m="${E(x.a.matricule)}" style="padding:4px 10px;margin-top:4px">✏️ Compléter</button></div>` : ""}</div></div>`).join("")}</details>`;
 }
+/* compléter les informations d'un agent : dossier (annuaire) + classeur Drive du service (nouvelle version datée) */
+async function clsMajAgent(a, ch) {
+  const kind = /^Manut/.test(a.equipe || "") ? "M" : "N";
+  if (!XLF.length) XLF = ((await drv({ action: "liste" })).fichiers || []).filter(f => /\.xlsx$/i.test(f.nom));
+  const F = XLF.filter(f => clsKind(f.nom) == kind).sort((x, y) => String(y.modifie).localeCompare(String(x.modifie)))[0]; if (!F) throw new Error("classeur " + (kind == "M" ? "Manutention" : "Nettoyage") + " introuvable sur Drive");
+  await xjLoad(); const f = await drv({ action: "lire", id: F.id }), wb = new ExcelJS.Workbook(); await wb.xlsx.load(b64ToBuf(f.contenu));
+  let ok = false; const faits = [];
+  wb.worksheets.forEach(ws => { if (/EX.?EMPLOY/i.test(ws.name)) return;
+    /* colonnes facultatives repérées par leur en-tête (date d'embauche, NNI) */
+    const hd = {}; for (let r = 1; r <= Math.min(ws.rowCount, 15); r++) for (let c = 1; c <= Math.max(ws.columnCount, 5); c++) { const t = clU(clsTxt(ws.getCell(r, c))); if (/EMBAUCHE/.test(t)) hd.emb = c; if (/\bNNI\b|IDENTIFIANT NATIONAL/.test(t)) hd.nni = c; }
+    for (let r = 1; r <= ws.rowCount; r++) { if (clsTxt(ws.getCell(r, 2)).trim() != String(a.matricule)) continue; ok = true;
+      if (ch.badge != null) { ws.getCell(r, 3).value = /^\d+$/.test(ch.badge) ? +ch.badge : ch.badge; faits.push("badge"); }
+      if (ch.tel != null) { ws.getCell(r, 5).value = ch.tel; faits.push("téléphone"); }
+      if (ch.emb && hd.emb) { ws.getCell(r, hd.emb).value = fd(ch.emb); faits.push("date d’embauche"); }
+      if (ch.nni && hd.nni) { ws.getCell(r, hd.nni).value = ch.nni; faits.push("NNI"); } } });
+  if (!ok) throw new Error(`matricule ${a.matricule} absent du classeur ${F.nom}`);
+  if (!faits.length) return { nom: null, faits };
+  XL = { nom: F.nom }; const nom = clsNom(F.nom); XL = null; clsMaj(wb);
+  const r = await drv({ action: "ecrire", nom, contenu: bufToB64(await wb.xlsx.writeBuffer()) }); XLF.unshift({ id: r.id, nom: r.nom, modifie: r.modifie }); return { nom: r.nom, faits: [...new Set(faits)] };
+}
+async function infComp(m) { const a = AG.find(x => x.matricule == m); if (!a) return; const nni = NNIR.includes(ME.role);
+  mdOpen(`<div class="row"><h2>✏️ Compléter — ${E(a.nom)}</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Matricule ${E(a.matricule)} · ${E(a.equipe || "")}. L’enregistrement met à jour le dossier de l’agent et le classeur ${/^Manut/.test(a.equipe || "") ? "Manutention" : "Nettoyage"} sur Drive (nouvelle version datée du jour ; l’ancienne reste dans le dossier).</div>
+<label>Téléphone</label><input id="icT" inputmode="tel" value="${E(a.tel || "")}"><label>N° de badge</label><input id="icB" inputmode="numeric" value="${E(a.badge || "")}"><label>Date d’embauche</label><input id="icE" type="date" value="${E(a.date_embauche || "")}">${nni ? `<label>NNI</label><input id="icN" inputmode="numeric" value="${E(NNI[m]?.nni || "")}">` : ""}
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="icOk">Enregistrer</button></div>`);
+  $("#no").onclick = $("#no2").onclick = mdClose;
+  $("#icOk").onclick = async () => { const b = $("#icOk"), t = $("#icT").value.replace(/\s+/g, " ").trim(), bg = $("#icB").value.trim(), e = $("#icE").value, n = $("#icN") ? $("#icN").value.replace(/\D/g, "") : "";
+    if (n && n.length != 10) return toast("Le NNI comporte 10 chiffres");
+    const ch = {}, up = {}; if (t != (a.tel || "")) { ch.tel = t || null; up.tel = t || null; } if (bg != (a.badge || "")) { ch.badge = bg || null; up.badge = bg || null; } if (e != (a.date_embauche || "")) { ch.emb = e || null; up.date_embauche = e || null; } if (nni && n && n != (NNI[m]?.nni || "")) ch.nni = n;
+    if (!Object.keys(ch).length) return toast("Aucune modification");
+    b.disabled = true; b.textContent = "Dossier…";
+    if (Object.keys(up).length) { const { error } = await sb.from("agents").update(up).eq("matricule", m); if (error) { b.disabled = false; b.textContent = "Enregistrer"; return toast("Refusé : " + error.message); } }
+    if (ch.nni) { const { error } = await sb.from("agents_nni").upsert({ matricule: m, nni: ch.nni, a_confirmer: false }); if (error) { b.disabled = false; b.textContent = "Enregistrer"; return toast("NNI refusé : " + error.message); } }
+    b.textContent = "Classeur Drive…"; let msg = "Dossier mis à jour";
+    try { const r = await clsMajAgent(a, ch); msg += r.nom ? ` · classeur enregistré : ${r.nom} (${r.faits.join(", ")})` : " · le classeur n’a pas de colonne pour ces informations"; } catch (x) { msg += " · classeur NON mis à jour : " + x.message; }
+    mdClose(); await loadAG(); toast(msg); draw(1); }; }
 V.eff = async () => {
   const ifc = (await demCard().catch(() => "")) + (await infosCard().catch(() => ""));
   const o = (k, l, key) => `<select data-f="${k}"><option value="">${l}</option>${[...new Set(AG.map(a => a[key]))].map(x => `<option ${F[k] == x ? "selected" : ""}>${E(x)}</option>`).join("")}</select>`;
@@ -2992,7 +3028,8 @@ async function draw(m) {
 }
 async function shell() {
   $("#app").innerHTML = `<nav id="nv"></nav><div id="pg"><header><button id="tg" class="hb" aria-label="Menu">${ic("menu")}</button><span id="hw">EPS OPS</span><span id="ht"></span><span class="sp"></span><span id="un">${E(ME.nom)}</span><button id="rg" class="hb" title="Réglages" aria-label="Réglages">${ic("gear")}<i id="bc"></i></button></header><main id="mn"><div class="m">Chargement…</div></main></div>`;
-  $("#tg").onclick = () => document.body.classList.toggle("nvo");
+  $("#tg").onclick = ev => { ev.stopPropagation(); document.body.classList.toggle("nvo"); };
+  if (!window.__nvc) { window.__nvc = 1; document.addEventListener("click", ev => { if (navOpen() && !ev.target.closest("nav") && !ev.target.closest("#tg")) { ev.preventDefault(); ev.stopPropagation(); navClose(); } }, true); }
   $("#pg").addEventListener("click", e => { if (navOpen()) { e.preventDefault(); e.stopPropagation(); navClose(); } }, true);
   $("#mn").addEventListener("scroll", () => $("header").classList.toggle("st", $("#mn").scrollTop > 40), { passive: true });
   $("#rg").onclick = () => ACT.rgl();
@@ -3630,7 +3667,7 @@ ${li("Nouveaux", nv, x => `${E(x.m)} ${E(x.n)} · ${E(x.e)}`)}${li("Matricule at
   const b = $("#clsgo"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "Mise à jour…"; const { data, error } = await sb.rpc("agents_import_classeur", { p_rows: R, p_service: kind == "M" ? "manutention" : "nettoyage", p_source: XL.nom }); if (error) { b.disabled = false; b.textContent = "Appliquer à l’annuaire"; return toast("Refusé : " + error.message); } mdClose(); await loadAG(); toast(`Annuaire mis à jour : ${data.nouveaux} nouveau(x), ${data.maj} mis à jour, ${data.departs} départ(s) à confirmer`); };
 }
 Object.assign(ACT, {
-  clsouvrir() { clsListe(); },
+  clsouvrir() { clsListe(); }, infcomp(b) { infComp(b.dataset.m); },
   clsopen(b) { clsOuvrir(b.dataset.i); },
   clstab(b) { XL.s = +b.dataset.i; clsDraw(); },
   clsclose() { if (XL && XL.dirty && !confirm("Fermer sans enregistrer les modifications ?")) return; $("#xled")?.remove(); XL = null; if (NAV == "eff") draw(1); },
