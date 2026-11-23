@@ -1412,6 +1412,94 @@ const sgVolTxt = v => { const t = Date.parse(v.heure_estimee || v.heure_prevue),
 function sgVolsCard() { const L = SGN.vols || [];
   return `<div class="card" style="margin:0;padding:10px;border-left:4px solid #2358A8"><b>✈️ ${L.length ? "Vols en cours ou proches" : "Aucun vol en cours ni dans l’heure et demie"}</b>${L.map(v => `<div class="m" style="margin-top:3px">${v.sens == "A" ? "🛬" : "🛫"} ${E(sgVolTxt(v))}</div>`).join("")}
 ${L.length ? `<label style="display:flex;gap:6px;align-items:center;margin-top:6px;font-weight:600"><input type="checkbox" id="sgvok" style="width:auto" ${SGN.volsOk ? "checked" : ""}> Je confirme ces vols (vérifiés sur Flightradar)</label><div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:6px"><a class="btn" href="https://www.flightradar24.com/airport/nkc" target="_blank" rel="noopener">Ouvrir Flightradar ↗</a><button type="button" class="btn w" data-a="sgvrap">📣 Rappeler les vols aux chefs d’équipe</button></div>` : `<div class="m">D’après le programme et le radar. <a class="lk" href="https://www.flightradar24.com/airport/nkc" target="_blank" rel="noopener">Vérifier sur Flightradar ↗</a></div>`}</div>`; }
+/* ===== Nouveau signalement en 2 étapes : 1. décrire (texte, enregistrement IA, photos) · 2. lieu et précisions (proposés par l'IA, non obligatoires) ===== */
+let SGZ = null;
+async function sgZones() { if (SGZ) return SGZ; const [a, b] = await Promise.all([sb.from("zones_globales").select("code,libelle").order("ordre"), sb.from("lieux").select("code,libelle,zones").order("ordre")]); SGZ = { g: a.data || [], l: b.data || [] }; return SGZ; }
+/* zone et lieu précis détectés dans le texte (portes, niveaux, salles…) */
+function sgDetect(txt) { const Z = SGZ || { g: [], l: [] }, t = ccNorm(txt); if (!t) return {};
+  const pm = t.match(/PORTE\s*(\d{1,2})/), sc = l => { const L = ccNorm(l.libelle).split(" ").filter(w => w.length > 3 || /^\d+$/.test(w)); if (!L.length) return 0; return L.filter(w => t.includes(w)).length / L.length; };
+  let best = null, bs = 0; Z.l.forEach(l => { let x = sc(l); if (pm && new RegExp("PORTE " + pm[1] + "\\b").test(ccNorm(l.libelle))) x += 1; if (x > bs) { bs = x; best = l; } });
+  const lieu = bs >= 0.6 ? best : null; let zone = lieu ? lieu.zones[0] : "";
+  if (!zone) { if (/ARRIVEE|ARRIVE\b|TAPIS|BAGAGES ARRIV/.test(t)) zone = "ARR"; else if (/MEZZANINE|2E ETAGE|DEUXIEME ETAGE/.test(t)) zone = "DEP_2"; else if (/1ER ETAGE|PREMIER ETAGE|EMBARQUEMENT/.test(t)) zone = "DEP_1"; else if (/DEPART|ENREGISTREMENT/.test(t)) zone = "DEP_RDC"; else if (/PARKING|DEVANTURE/.test(t)) zone = "DEVANT"; else if (/PISTE|PASSERELLE|PARKING AVION/.test(t)) zone = "PISTE"; }
+  return { zone, lieu: lieu ? lieu.code : "" }; }
+async function sgRec(btn, ta, st) {
+  if (VREC && VREC.b === btn) { VREC.r.stop(); return; } if (VREC) return toast("Un enregistrement est déjà en cours");
+  try { const stm = await navigator.mediaDevices.getUserMedia({ audio: true }), mt = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find(x => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x)) || "", r = new MediaRecorder(stm, mt ? { mimeType: mt } : undefined), ch = [];
+    VREC = { r, b: btn }; btn.textContent = "⏹ Arrêter l’enregistrement"; btn.classList.add("w"); st.textContent = "🔴 Enregistrement… parlez normalement, puis touchez « Arrêter »";
+    r.ondataavailable = e => e.data.size && ch.push(e.data);
+    r.onstop = async () => { stm.getTracks().forEach(x => x.stop()); VREC = null; btn.textContent = "🎙 Enregistrer (IA)"; btn.classList.remove("w"); const bl = new Blob(ch, { type: r.mimeType || mt || "audio/webm" }); if (bl.size > 10e6) return st.textContent = "Enregistrement trop long (3 min au maximum)";
+      st.textContent = "Transcription par l’IA…"; const b64 = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(bl); });
+      try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { mode: "transcrire", audio: b64, mime: bl.type, langue: "fr" } }); if (error) throw error; if (data.erreur) { st.textContent = "Transcription impossible : " + data.erreur; return; }
+        const tx = String(data.texte || "").trim().replace(/^(sous-titr|merci d'avoir regard|subtitles by|thanks for watching).*$/i, "").replace(/.*amara\.org.*/i, "").trim(); if (!tx) { st.textContent = "Rien n’a été compris : réessayez plus près du téléphone"; return; }
+        ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + tx; st.textContent = "✓ Texte ajouté : relisez-le si besoin, puis « Suivant »"; } catch (x) { st.textContent = "Transcription impossible : " + (x.message || x); } };
+    r.start(); } catch (x) { VREC = null; st.textContent = "Micro inaccessible : autorisez le micro pour l’application"; } }
+function sgPhotos() { const box = $("#sgph"); if (!box) return; box.innerHTML = SGN.ph.map((f, i) => `<span style="position:relative">${/^image/.test(f.type) ? `<img src="${f.u}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--b)">` : `<span class="bd info" style="display:inline-flex;height:64px;align-items:center">📄 ${E(f.name.slice(0, 14))}</span>`}<button type="button" data-k="${i}" style="position:absolute;top:-6px;right:-6px;border-radius:50%;border:0;background:#e11d48;color:#fff;width:22px;height:22px">×</button></span>`).join("");
+  box.querySelectorAll("[data-k]").forEach(x => x.onclick = () => { SGN.ph.splice(+x.dataset.k, 1); sgPhotos(); }); }
+function sgEtape1() {
+  const rec = window.MediaRecorder && navigator.mediaDevices;
+  $("#mf").innerHTML = `<div class="row"><h2>📣 Nouveau signalement</h2><span class="bd info">1 / 2</span></div>
+<div class="m">Décrivez le problème en parlant ou en écrivant : <b>quoi</b>, <b>où</b> (zone, porte, niveau, salle), ce qui a été fait et ce que vous demandez. Le lieu et les autres informations seront repérés automatiquement.</div>
+${rec ? `<button type="button" class="btn p" id="sgRec" style="width:100%;justify-content:center;font-size:16px;padding:14px">🎙 Enregistrer (IA)</button><div class="m" id="sgRs" style="min-height:18px"></div>` : ""}
+<textarea id="svt" data-vx="1" rows="6" placeholder="Ex. : De l’eau coule de la climatisation sur l’escalier de l’arrivée, côté porte 9, 1er étage. Panneaux « sol glissant » posés. Merci d’envoyer la maintenance.">${E(SGN.t || "")}</textarea>
+<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:6px"><label class="btn">📷 Photo<input type="file" id="sgcam" accept="image/*" capture="environment" hidden></label><label class="btn">⬆ Téléverser photos / documents<input type="file" id="sgfi" accept="image/*,application/pdf" multiple hidden></label></div><div id="sgph" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
+${sgVolsCard()}
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no">Annuler</button><button type="button" class="btn p" id="sgNx">Suivant →</button></div>`;
+  $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on");
+  $("#no").onclick = () => { if (VREC) VREC.r.stop(); $("#md").classList.remove("on"); };
+  if ($("#sgRec")) $("#sgRec").onclick = () => sgRec($("#sgRec"), $("#svt"), $("#sgRs"));
+  const addF = e => { [...e.target.files].forEach(f => SGN.ph.push(Object.assign(f, { u: URL.createObjectURL(f) }))); e.target.value = ""; sgPhotos(); };
+  $("#sgcam").onchange = addF; $("#sgfi").onchange = addF; sgPhotos();
+  if ($("#sgvok")) $("#sgvok").onchange = e => { SGN.volsOk = e.target.checked; };
+  $("#sgNx").onclick = async () => { const t = $("#svt").value.trim(); if (VREC) return toast("Arrêtez d’abord l’enregistrement"); if (!t) return toast("Décrivez d’abord le problème (enregistrement ou texte)"); SGN.t = t;
+    const b = $("#sgNx"); b.disabled = true; b.textContent = "Analyse par l’IA…"; await sgZones().catch(() => {});
+    const vt = (SGN.vols || []).map(sgVolTxt).join(" ; ") + (SGN.vols && SGN.vols.length ? (SGN.volsOk ? " (confirmé par le déclarant)" : " (non encore confirmé)") : "");
+    let c = null; try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CATL.map(x => x[0]), destinataire: "", vols: vt } }); if (!error && data && !data.erreur) c = data.champs; } catch (x) { }
+    if (!c) toast("L’IA n’a pas pu analyser : complétez à la main");
+    sgEtape2(c || {}); }; }
+function sgEtape2(c) {
+  const g = k => String(c[k] || "").trim(), cat = SG_CAT.includes(g("categorie")) ? g("categorie") : "", Z = SGZ || { g: [], l: [] };
+  const det = sgDetect([g("zone"), SGN.t].join(" ")); SGN.d = SGN.d || (cat && SG_EXT.some(x => x[0] == cat) ? "externe" : cat ? "interne" : "");
+  const V = { ob: g("objet"), zl: g("zone"), de: g("description") || SGN.t, co: g("consequences"), me: g("mesures"), iv: g("intervention"), cl: /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(g("constat")) ? g("constat").slice(0, 16) : nowL(), ca2: g("constat_par") || ME.nom, so: g("source"), pr: ["basse", "normale", "haute", "urgente"].includes(g("priorite")) ? g("priorite") : "normale" };
+  const opt = (L, v) => L.map(([k, l]) => `<option value="${E(k)}" ${k == v ? "selected" : ""}>${E(l)}</option>`).join("");
+  const lieuxDe = z => Z.l.filter(l => !z || l.zones.includes(z));
+  $("#mf").innerHTML = `<div class="row"><h2>📣 Nouveau signalement</h2><span class="bd info">2 / 2</span></div>
+<div class="m">Vérifiez ce que l’IA a repéré et complétez si vous le pouvez : <b>aucun champ n’est obligatoire</b>, sauf le problème. Tout est conservé dans la fiche du signalement.</div>
+<div class="card" style="margin:6px 0;padding:10px"><b>📍 Lieu</b>${det.zone || det.lieu ? ' <span class="bd ok">repéré dans votre description</span>' : ' <span class="bd warn">à sélectionner</span>'}
+<label>Zone</label><select id="s2z"><option value="">— Zone —</option>${opt(Z.g.map(x => [x.code, x.libelle]), det.zone)}</select>
+<label>Lieu précis</label><select id="s2l"><option value="">— Lieu précis —</option>${opt(lieuxDe(det.zone).map(x => [x.code, x.libelle]), det.lieu)}</select>
+<label>Précision (sous-zone : escalier, niveau, n° de salle…)</label><input id="s2p" value="${E(V.zl)}" placeholder="Ex. : escalier côté porte 9, palier du 1er étage"></div>
+<div class="card" style="margin:6px 0;padding:10px"><b>🏷 Classement</b>
+<div class="row" style="gap:6px;margin-top:6px"><button type="button" class="btn ${SGN.d == "interne" ? "p" : ""}" data-sd="interne" style="flex:1">🏢 Interne (EPS)</button><button type="button" class="btn ${SGN.d == "externe" ? "p" : ""}" data-sd="externe" style="flex:1">🛠️ Externe (Help Desk)</button></div>
+<label>Catégorie</label><select id="s2c"><option value="">— Catégorie —</option>${opt(SG_CATL.map(x => [x[0], x[1]]), cat)}</select>
+<div id="s2eqw" style="display:${cat == "Technique" ? "" : "none"}"><label>Équipement concerné</label><select id="s2eq"><option value="">—</option>${opt(EQC.map(e => [e.id, e.code + " — " + e.designation]), "")}</select></div>
+<div id="s2prw" style="display:${SGN.d == "externe" ? "none" : ""}"><label>Urgence</label><select id="s2pr">${opt([["urgente", "Très haute — intervention sous 5 min"], ["haute", "Haute — sous 15 min"], ["normale", "Moyenne"], ["basse", "Basse"]], sgVolProche() && !["haute", "urgente"].includes(V.pr) ? "haute" : V.pr)}</select></div></div>
+<label>Objet</label><input id="s2o" value="${E(V.ob)}" placeholder="Titre court">
+<label>Problème constaté</label><textarea id="s2d" data-vx="1" rows="4">${E(V.de)}</textarea>
+<details ${V.me || V.iv || V.co ? "open" : ""}><summary class="lk" style="padding:6px 0">Autres informations (facultatives)</summary>
+<label>Actions immédiates EPS (balisage, panneaux, agent placé…)</label><textarea id="s2m" data-vx="1" rows="2">${E(V.me)}</textarea>
+<label>Intervention demandée</label><textarea id="s2i" data-vx="1" rows="2">${E(V.iv)}</textarea>
+<label>Conséquences / risques</label><textarea id="s2co" data-vx="1" rows="2">${E(V.co)}</textarea>
+<label>Date et heure du constat</label><input id="s2cl" type="datetime-local" value="${E(V.cl)}">
+<label>Constat fait par</label><input id="s2ca" value="${E(V.ca2)}"><label>Source de l’information</label><input id="s2so" value="${E(V.so)}">
+${ASG.includes(ME.role) ? `<label>Assigner à</label><select id="s2as"><option value="">—</option><option value="rh">Assistante RH</option><option value="compta">Responsable Comptabilité</option>${opt(AG.filter(a => /hef|uperviseur/.test(a.fonction || "")).map(a => [a.matricule, a.nom + " (" + a.equipe + ")"]), "")}</select>` : ""}</details>
+<div class="m">📎 ${SGN.ph.length} photo(s) / document(s) seront joints.</div>
+<div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="s2b">← Retour</button><button type="button" class="btn p" id="s2ok">✓ Enregistrer le signalement</button></div>`;
+  loadEQC().then(() => { const e = $("#s2eq"); if (e && e.options.length < 2) e.innerHTML = `<option value="">—</option>` + EQC.map(x => `<option value="${x.id}">${E(x.code + " — " + x.designation)}</option>`).join(""); }).catch(() => {});
+  $("#s2z").onchange = () => { const z = $("#s2z").value; $("#s2l").innerHTML = `<option value="">— Lieu précis —</option>` + lieuxDe(z).map(x => `<option value="${E(x.code)}">${E(x.libelle)}</option>`).join(""); };
+  $("#s2l").onchange = () => { const l = Z.l.find(x => x.code == $("#s2l").value); if (l && !$("#s2z").value) $("#s2z").value = l.zones[0]; };
+  $("#mf").querySelectorAll("[data-sd]").forEach(b => b.onclick = () => { SGN.d = b.dataset.sd; $("#mf").querySelectorAll("[data-sd]").forEach(x => x.classList.toggle("p", x === b)); $("#s2prw").style.display = SGN.d == "externe" ? "none" : ""; });
+  $("#s2c").onchange = () => { const v = $("#s2c").value; $("#s2eqw").style.display = v == "Technique" ? "" : "none"; if (v) { SGN.d = SG_EXT.some(x => x[0] == v) ? "externe" : "interne"; $("#mf").querySelectorAll("[data-sd]").forEach(x => x.classList.toggle("p", x.dataset.sd == SGN.d)); $("#s2prw").style.display = SGN.d == "externe" ? "none" : ""; } };
+  $("#s2b").onclick = () => sgEtape1();
+  $("#s2ok").onclick = async () => { const de = $("#s2d").value.trim(); if (!de) return toast("Décrivez le problème");
+    const zg = Z.g.find(x => x.code == $("#s2z").value), li = Z.l.find(x => x.code == $("#s2l").value), pre = $("#s2p").value.trim(), zone = [zg && zg.libelle, li && li.libelle, pre].filter(Boolean).filter((x, i, a) => a.indexOf(x) == i).join(" — ");
+    const ca = $("#s2c").value || (SGN.d == "externe" ? "Autre (externe)" : "Problème / anomalie"), dest = SGN.d || (SG_EXT.some(x => x[0] == ca) ? "externe" : "interne"), cl = $("#s2cl").value, as = $("#s2as") ? $("#s2as").value : "", eq = $("#s2eq") ? $("#s2eq").value : "";
+    const pr = dest == "externe" ? (sgVolProche() ? "haute" : "normale") : $("#s2pr").value;
+    const b = $("#s2ok"); b.disabled = true; b.textContent = "Enregistrement…";
+    const { data, error } = await sb.from("signalements").insert({ objet: ($("#s2o").value.trim() || de.slice(0, 80)), zone: zone || null, categorie: ca, sous_categorie: null, priorite: pr, description: de, consequences: $("#s2co").value.trim() || null, mesures: $("#s2m").value.trim() || null, intervention_demandee: $("#s2i").value.trim() || null, constat_le: cl ? fromL(cl) : null, constat_auteur: $("#s2ca").value.trim() || null, constat_source: $("#s2so").value.trim() || null, equipement_id: eq ? +eq : null,
+      ...(ca == "Technique" ? { assigne_role: "responsable_technique" } : ME.role == "responsable_technique" ? { assigne_role: "direction" } : {}), ...(SG_EQ.includes(ca) ? { assigne_role: "equipe_service", equipe_garde: garde(shiftStart(cl ? new Date(fromL(cl)) : new Date())) } : {}), ...(as ? (as == "compta" ? { assigne_role: "responsable_comptabilite" } : as == "rh" ? { assigne_role: "assistante_rh" } : { assigne_matricule: as, assigne_role: "personne" }) : {}) }).select("id,ref").single();
+    if (error) { b.disabled = false; b.textContent = "✓ Enregistrer le signalement"; return toast("Refusé : " + error.message); }
+    if (SGN.ph.length) { SO = data.id; b.textContent = "Envoi des photos…"; try { await pjUpload(SGN.ph); } catch (x) { toast("Photos non envoyées : " + (x.message || x)); } }
+    toast("Créé : " + data.ref); SGN = { d: "", vols: [], ph: [] }; await draw(); sigF(data.id); }; }
 /* informations manquantes ou trop vagues : questions de l’IA + contrôles de l’application */
 function sgManques(v, finale) { const Q = [], add = (champ, question) => { if (!Q.some(x => x.champ == champ)) Q.push({ champ, question }); };
   (v.ap || []).forEach(x => x && x.champ && x.question && add(x.champ, x.question));
@@ -1465,7 +1553,8 @@ ${pjBlock(id)}
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
   $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on"); pjDraw(id);
 }
-function sigMsg(s) { return `HELP DESK — Signalement ${s.ref}\nObjet : ${s.objet}\nZone : ${s.zone || "—"}\nCatégorie : ${s.categorie}${s.sous_categorie ? " / " + s.sous_categorie : ""}\nPriorité : ${s.priorite}\n${s.constat_le ? "Constaté le " + dt(s.constat_le) + "\n" : ""}Problème : ${s.description || "—"}\n${s.consequences ? "Conséquences : " + s.consequences + "\n" : ""}${s.mesures ? "Mesures conservatoires : " + s.mesures + "\n" : ""}Intervention demandée : ${s.intervention_demandee || "—"}\nMerci de nous communiquer le numéro de ticket (BDM) et l’heure d’intervention prévue.\nEPS — ${ME.nom}`; }
+/* message Help Desk : uniquement localisation, problème, demande d'intervention et demande du n° de complainte (le reste reste dans la fiche) */
+function sigMsg(s) { return `HELP DESK — Signalement ${s.ref}\nLocalisation : ${s.zone || "à préciser"}\nProblème : ${s.description || s.objet || "—"}\nMerci de bien vouloir intervenir${s.intervention_demandee ? " (" + s.intervention_demandee.replace(/[.\s]+$/, "") + ")" : ""} et de nous communiquer le numéro de complainte (BDM).\nEPS — ${ME.nom}`; }
 async function sigEvent(id, type, quand, contenu, source, canal, dest, conf) { const { error } = await sb.rpc("sig_event", { p_id: id, p_type: type, p_quand: quand || new Date().toISOString(), p_contenu: contenu || null, p_source: source || null, p_canal: canal || null, p_dest: dest || null, p_confirme: !!conf }); toast(error ? "Refusé : " + error.message : "Enregistré"); await draw(); if (!error || SG.find(x => x.id == id)) sigF(id); }
 
 /* ---------- Rapports d'incident ---------- */
@@ -1483,7 +1572,7 @@ function irList() { const q = N(IRQ), L = IRL.filter(r => (!q || N([r.numero, r.
 V.ir = async () => {
   const { data, error } = await sb.from("incident_reports").select("id,numero,statut,objet,date_incident,priorite,prepare_nom,signalement_id,signalements(ref,bdm)").order("created_at", { ascending: false }).limit(500);
   if (error) throw error; IRL = (data || []).map(r => ({ ...r, sig: r.signalements }));
-  return head("Rapports d’incident", "Registre des Incident Reports (modèle EPS / AFROPORT)", `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn w" data-a="irnew">+ Nouveau rapport</button>${IRA.includes(ME.role) ? `<button class="btn" data-a="irseq">Numérotation</button>` : ""}</div>`)
+  return head("Rapports d’incident", "Registre des Incident Reports (modèle EPS / AFROPORT)", `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn w" data-a="irnew">+ Nouveau rapport</button><button class="btn p" data-a="irsig">📋 Depuis des signalements</button>${IRA.includes(ME.role) ? `<button class="btn" data-a="irseq">Numérotation</button>` : ""}</div>`)
     + `<div class="card" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><input id="irq" placeholder="Rechercher (n°, objet, réf., BDM…)" value="${E(IRQ)}"><select data-h="1"><option value="">Statut : tous</option>${Object.entries(IRS).map(([k, v]) => `<option value="${k}" ${IRFS == k ? "selected" : ""}>${v}</option>`).join("")}</select></div><div id="irl"></div><div class="m">Le numéro officiel est attribué à l’approbation et ne change plus ensuite. Un numéro attribué n’est jamais réutilisé, même si le rapport est annulé.</div>`;
 };
 const boldL = (s, b) => String(s || "").split(/\n/).filter(x => x.trim()).map(x => { let h = E(x.trim()); if (b) h = h.replace(/^((?:\d+-\s*|[-•]\s*)?)([^:<]{2,70}?):(\s|$)/, (m, a, l, z) => a + "<b>" + l + "</b>:" + z); return "<p>" + h + "</p>"; }).join("");
@@ -1616,6 +1705,25 @@ function irFromSig(s) {
     sec_b: `- Location: ${s.zone || ""}\n- Time and Date: ${c ? dd(c) : ""}\n- Detected By: ${s.constat_auteur || ""}\n- Concerned Area: ${s.zone || ""}\n- EPS Ref: ${s.ref}${s.bdm ? " / BDM " + s.bdm : ""}\n- Findings: ${s.description || ""}`,
     sec_c: lines, sec_e: s.consequences || "", sec_f: s.mesures ? "1- " + s.mesures : "", sec_g: s.intervention_demandee ? "• " + s.intervention_demandee : "" };
 }
+/* rapport d'incident préparé par l'IA à partir d'un ou plusieurs signalements (complaintes) */
+async function irDepuisSig() {
+  const { data: L } = await sb.from("signalements").select("id,ref,objet,zone,categorie,bdm,statut,constat_le,created_at").gte("created_at", new Date(Date.now() - 120 * 864e5).toISOString()).order("created_at", { ascending: false }).limit(150);
+  mdOpen(`<div class="row"><h2>📋 Rapport d’incident depuis des signalements</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Sélectionnez une ou plusieurs complaintes (de préférence avec leur n° BDM) : l’IA en détecte les sujets et remplit le rapport, que vous relisez avant de l’enregistrer.</div>
+<input id="irsq" placeholder="Filtrer : réf., BDM, lieu, objet…" style="margin:6px 0"><div id="irsl" style="max-height:52vh;overflow:auto"></div>
+<div class="row" style="justify-content:flex-end;gap:6px"><span class="m" id="irsn">0 sélectionné(s)</span><button type="button" class="btn p" id="irsgo" disabled>✨ Préparer le rapport</button></div>`);
+  $("#no").onclick = mdClose; const sel = new Set();
+  const dr = () => { const q = N($("#irsq").value.trim()); $("#irsl").innerHTML = (L || []).filter(x => !q || N([x.ref, x.bdm, x.zone, x.objet, x.categorie].join(" ")).includes(q)).map(x => `<label class="li" style="cursor:pointer;align-items:flex-start;gap:8px"><input type="checkbox" data-s="${x.id}" ${sel.has(x.id) ? "checked" : ""} style="width:auto;margin-top:4px"><div style="flex:1;min-width:0"><b>${E(x.objet)}</b><div class="m">${E(x.ref)}${x.bdm ? ` · <b>BDM ${E(x.bdm)}</b>` : ""} · ${x.constat_le ? dt(x.constat_le) : dt(x.created_at)}${x.zone ? " · " + E(x.zone) : ""} · ${E(x.categorie || "")}</div></div></label>`).join("") || '<div class="m">Aucun signalement.</div>';
+    $("#irsl").querySelectorAll("[data-s]").forEach(c => c.onchange = () => { c.checked ? sel.add(+c.dataset.s) : sel.delete(+c.dataset.s); $("#irsn").textContent = sel.size + " sélectionné(s)"; $("#irsgo").disabled = !sel.size; }); };
+  $("#irsq").oninput = dr; dr();
+  $("#irsgo").onclick = async () => { const b = $("#irsgo"); b.disabled = true; b.textContent = "Préparation…";
+    const ids = [...sel], { data: S } = await sb.from("signalements").select("*").in("id", ids), { data: EV } = await sb.from("signalement_events").select("*").in("signalement_id", ids).order("quand");
+    const faits = (S || []).map(x => [`Complaint ${x.ref}${x.bdm ? " — BDM " + x.bdm : ""}`, x.constat_le ? `Observed on ${dt(x.constat_le)}${x.constat_auteur ? " by " + x.constat_auteur : ""}` : "", `Location: ${x.zone || "to be confirmed"}`, `Category: ${x.categorie || ""}`, `Subject: ${x.objet}`, `Problem: ${x.description || ""}`, x.consequences ? `Consequences: ${x.consequences}` : "", x.mesures ? `Immediate actions by EPS: ${x.mesures}` : "", x.intervention_demandee ? `Intervention requested: ${x.intervention_demandee}` : "",
+      ...(EV || []).filter(e => e.signalement_id == x.id && e.type != "constat").map(e => `- ${dt(e.quand)} ${SG_EV[e.type] || e.type}${e.contenu ? " : " + e.contenu : ""}`)].filter(Boolean).join("\n")).join("\n\n");
+    const d0 = (S || []).map(x => x.constat_le).filter(Boolean).sort()[0];
+    const id = await irCreate({ objet: "(to be completed)", signalements: ids, ...(d0 ? { date_incident: d0.slice(0, 10) } : {}) }); if (!id) return;
+    for (let i = 0; i < 40 && !$("#irai"); i++) await new Promise(r => setTimeout(r, 150));
+    const ta = $("#irai"), bt = document.querySelector('[data-a="irai"]'); if (!ta || !bt) return toast("Rapport créé : collez les faits et lancez l’IA");
+    ta.value = "Incident report based on the following complaint(s) registered by EPS (keep complaint and BDM numbers):\n\n" + faits; ACT.irai(bt); }; }
 async function irCreate(vals) { const { data, error } = await sb.from("incident_reports").insert({ prepare_nom: ME.nom, prepare_fonction: RLE[ME.role] || "EPS", ...vals }).select("id").single(); if (error) { toast("Refusé : " + error.message); return null; } toast("Brouillon créé"); if (NAV == "ir") await draw(); irEdit(data.id); return data.id; }
 
 /* ---------- Fiche agent (carte RH) ---------- */
@@ -1742,7 +1850,7 @@ async function setSt(mat, v) {
   if (v == "p" || v == "nj") done(); else ask("Justification — " + a.nom, [{ k: "x", l: SL[v] + " : motif / justification", r: 1 }], q => done(q.x));
 }
 const ACT = {
-  async irnew() { await irCreate({ objet: "(to be completed)" }); },
+  async irnew() { await irCreate({ objet: "(to be completed)" }); }, irsig() { irDepuisSig(); },
   async irai(b) {
     const f = $("#mf"), g = n => (f.querySelector(`[name=${n}]`) || {}).value || "", t = ($("#irai") || {}).value.trim(); vxStop();
     const ctx = {}; ["objet", "site", "systeme", "date_incident", "heure_incident", "sec_a", "sec_b", "sec_c", "sec_d", "sec_e", "sec_f", "sec_g"].forEach(n => { const v = g(n).trim(); if (v && v != "(to be completed)") ctx[n] = v; });
@@ -1782,18 +1890,8 @@ const ACT = {
   async pjdel(b) { if (!confirm("Supprimer cette pièce jointe ?")) return; const p = Object.values(SPJ).flat().find(x => x.id == b.dataset.i); if (!p) return; const d = await sb.from("signalement_pj").delete().eq("id", p.id); if (d.error) return toast("Refusé : " + d.error.message); await sb.storage.from("signalements-pj").remove([p.chemin]); await pjLoadAll(); if (SO) sigF(SO); toast("Supprimée"); },
   async sig2ir(b) { const s = SG.find(x => x.id == b.dataset.i); if (!s) return; const { data } = await sb.from("incident_reports").select("numero,id").eq("signalement_id", s.id); if (data && data.length && !confirm("Ce signalement a déjà " + data.length + " rapport(s) d’incident. En créer un autre ?")) return; $("#md").classList.remove("on"); NAV = "ir"; const ph = await pjImages(s.id); await irCreate({ ...irFromSig(s), ...(ph.length ? { photos: ph } : {}) }); },
   sigo(b) { sigF(+b.dataset.i); },
-  async signew(keep) {
-    const d = SGN.d, t0 = keep ? ($("#svt") || {}).value || "" : "", c0 = keep ? ($("#svc") || {}).value || "" : ""; if (!keep) { SGN = { d: "", vols: await sgVols().catch(() => []) }; }
-    const CL = SGN.d == "interne" ? SG_INT : SGN.d == "externe" ? SG_EXT : [];
-    $("#mf").innerHTML = `<h2>Nouveau signalement</h2><label>1. Destinataire</label><div class="row" style="gap:6px"><button type="button" class="btn ${SGN.d == "interne" ? "p" : ""}" data-a="sgdest" data-d="interne" style="flex:1">🏢 Interne (EPS)</button><button type="button" class="btn ${SGN.d == "externe" ? "p" : ""}" data-a="sgdest" data-d="externe" style="flex:1">🛠️ Externe (Help Desk)</button></div>
-<label>2. Catégorie</label><select id="svc" ${SGN.d ? "" : "disabled"}><option value="">${SGN.d ? "— Choisir la catégorie —" : "Choisissez d’abord le destinataire"}</option>${CL.map(x => `<option value="${E(x[0])}" ${x[0] == c0 ? "selected" : ""}>${E(x[1].replace(/^(Interne|Externe) — /, ""))}</option>`).join("")}</select>
-${sgVolsCard()}
-<label>3. Décrivez le problème</label><div class="m">Parlez ou écrivez : quoi, <b>où exactement</b> (côté arrivée ou départ, porte, niveau, salle), depuis quand, <b>actions déjà prises par EPS</b> (balisage, panneaux…), ce que vous demandez. Les informations manquantes vous seront signalées.</div><textarea id="svt" rows="8" placeholder="Ex. : Il y a de l’eau sur les escaliers de l’arrivée, côté porte 9, elle vient de la climatisation. Nous avons posé des panneaux sol glissant. Merci d’envoyer la maintenance.">${E(t0)}</textarea><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button type="button" class="btn" data-a="sigman">Saisie manuelle</button><button type="button" class="btn p" data-a="sigia">✨ Remplir le signalement</button></div>`;
-    $("#mf").onsubmit = e => e.preventDefault(); $("#no").onclick = () => { vxStop(); $("#md").classList.remove("on"); }; $("#md").classList.add("on");
-    if ($("#sgvok")) $("#sgvok").onchange = e => { SGN.volsOk = e.target.checked; };
-    vxBar($("#svt"));
-  },
-  sgdest(b) { SGN.d = b.dataset.d; ACT.signew(true); },
+  async signew() { SGN = { d: "", vols: await sgVols().catch(() => []), ph: [], t: "" }; sgEtape1(); },
+  sgdest(b) { SGN.d = b.dataset.d; },
   async sgvrap(b) { const L = SGN.vols || []; if (!L.length) return; b.disabled = true; const { data, error } = await sb.rpc("rappel_vols", { p_texte: L.map(sgVolTxt).join(" · ") }); b.disabled = false; toast(error ? "Refusé : " + error.message : `Rappel envoyé aux chefs d’équipe et superviseurs (${data || 0} personne(s))`); },
   sigman() { const t = ($("#svt") || {}).value || "", c = ($("#svc") || {}).value; if (!SGN.d) return toast("Choisissez d’abord le destinataire : interne ou externe"); if (!c) return toast("Choisissez d’abord la catégorie"); vxStop(); ACT.sigform({ de: t, ca: c, dest: SGN.d }); },
   async sigia(b) {
