@@ -1456,16 +1456,22 @@ ${sgVolsCard()}
     let c = null; try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CATL.map(x => x[0]), destinataire: "", vols: vt } }); if (!error && data && !data.erreur) c = data.champs; } catch (x) { }
     if (!c) toast("L’IA n’a pas pu analyser : complétez à la main");
     sgEtape2(c || {}); }; }
-/* urgence en quelques mots : vol proche, conséquences ou priorité élevée */
-function sgUrgence(c) { const v = (SGN.vols || []).find(v => { const m = (Date.parse(v.heure_estimee || v.heure_prevue) - Date.now()) / 60000; return m <= 60 && m > -30; }), co = String(c.consequences || "").trim(), pr = String(c.priorite || "");
-  if (v) return `Urgent : passagers attendus (${v.sens == "A" ? "arrivée" : "départ"} ${v.numero} à ${hm(new Date(v.heure_estimee || v.heure_prevue))})`;
+/* lien direct avec un vol : n° du vol cité par le déclarant, ou zone du même côté (arrivée / départ) et vols confirmés */
+const SG_COTE = { A: ["ARR", "PISTE", "SORTIE"], D: ["DEP_RDC", "DEP_1", "DEP_2", "ENTREE"] };
+function sgVolLie(zone, txt) { const t = ccNorm(txt).replace(/\s/g, ""); return (SGN.vols || []).find(v => { const m = (Date.parse(v.heure_estimee || v.heure_prevue) - Date.now()) / 60000; if (!(m <= 60 && m > -30)) return false;
+  if (t.includes(String(v.numero || "").replace(/\s/g, "").toUpperCase())) return true; return !!SGN.volsOk && (SG_COTE[v.sens] || []).includes(zone); }); }
+/* phrases citant un vol sans lien établi : retirées (évite un message incohérent) */
+const sgSansVol = (txt, lie) => String(txt || "").split(/(?<=[.;\n])\s*/).filter(p => !/\b(vol|flight|arriv[ée]e du|d[ée]part du)\b[^.]*\b[A-Z0-9]{2}\s?\d{2,4}\b|passagers attendus/i.test(p) || (lie && p.toUpperCase().replace(/\s/g, "").includes(String(lie.numero).replace(/\s/g, "").toUpperCase()))).join(" ").trim();
+/* urgence en quelques mots : vol lié, conséquences ou priorité élevée */
+function sgUrgence(c, zone) { const lie = sgVolLie(zone, [SGN.t, c.description, c.zone].join(" ")), co = sgSansVol(c.consequences, lie), pr = String(c.priorite || "");
+  if (lie) return `Urgent : passagers attendus (${lie.sens == "A" ? "arrivée" : "départ"} ${lie.numero} à ${hm(new Date(lie.heure_estimee || lie.heure_prevue))})`;
   if (!co && !["haute", "urgente"].includes(pr)) return "";
   const t = (co.split(/[.;:,\n]/)[0] || "").replace(/^(risque de|risques? :?|cela (peut|pourrait) (entraîner|provoquer|causer))\s*/i, "").trim(); const k = t.length > 60 ? t.slice(0, 60).replace(/\s+\S*$/, "") + "…" : t;
   return k ? "Urgent : " + k.charAt(0).toLowerCase() + k.slice(1) : "Urgent"; }
 function sgEtape2(c) {
   const g = k => String(c[k] || "").trim(), cat = SG_CAT.includes(g("categorie")) ? g("categorie") : "", Z = SGZ || { g: [], l: [] };
   const det = sgDetect([g("zone"), SGN.t].join(" ")); SGN.d = SGN.d || (cat && SG_EXT.some(x => x[0] == cat) ? "externe" : cat ? "interne" : "");
-  const V = { ob: g("objet"), zl: g("zone"), de: g("description") || SGN.t, co: g("consequences"), me: g("mesures"), iv: g("intervention"), cl: /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(g("constat")) ? g("constat").slice(0, 16) : nowL(), ca2: g("constat_par") || ME.nom, so: g("source"), pr: ["basse", "normale", "haute", "urgente"].includes(g("priorite")) ? g("priorite") : "normale" };
+  const V = { ob: g("objet"), zl: g("zone"), de: g("description") || SGN.t, co: sgSansVol(g("consequences"), sgVolLie(det.zone, [SGN.t, g("description"), g("zone")].join(" "))), me: g("mesures"), iv: g("intervention"), cl: /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(g("constat")) ? g("constat").slice(0, 16) : nowL(), ca2: g("constat_par") || ME.nom, so: g("source"), pr: ["basse", "normale", "haute", "urgente"].includes(g("priorite")) ? g("priorite") : "normale" };
   const opt = (L, v) => L.map(([k, l]) => `<option value="${E(k)}" ${k == v ? "selected" : ""}>${E(l)}</option>`).join("");
   const lieuxDe = z => Z.l.filter(l => !z || l.zones.includes(z));
   $("#mf").innerHTML = `<div class="row"><h2>📣 Nouveau signalement</h2><span class="bd info">2 / 2</span></div>
@@ -1479,7 +1485,7 @@ function sgEtape2(c) {
 <label>Catégorie</label><select id="s2c"><option value="">— Catégorie —</option>${opt(SG_CATL.map(x => [x[0], x[1]]), cat)}</select>
 <div id="s2eqw" style="display:${cat == "Technique" ? "" : "none"}"><label>Équipement concerné</label><select id="s2eq"><option value="">—</option>${opt(EQC.map(e => [e.id, e.code + " — " + e.designation]), "")}</select></div>
 <div id="s2prw" style="display:${SGN.d == "externe" ? "none" : ""}"><label>Urgence</label><select id="s2pr">${opt([["urgente", "Très haute — intervention sous 5 min"], ["haute", "Haute — sous 15 min"], ["normale", "Moyenne"], ["basse", "Basse"]], sgVolProche() && !["haute", "urgente"].includes(V.pr) ? "haute" : V.pr)}</select></div></div>
-<label>Urgence en quelques mots (ajoutée au message Help Desk ; vide si non urgent)</label><input id="s2u" value="${E(sgUrgence(c))}" placeholder="Ex. : Urgent : passagers présents · Urgent : toilettes inutilisables">
+<label>Urgence en quelques mots (ajoutée au message Help Desk ; vide si non urgent)</label><input id="s2u" value="${E(sgUrgence(c, det.zone))}" placeholder="Ex. : Urgent : passagers présents · Urgent : toilettes inutilisables">
 <label>Objet</label><input id="s2o" value="${E(V.ob)}" placeholder="Titre court">
 <label>Problème constaté</label><textarea id="s2d" data-vx="1" rows="4">${E(V.de)}</textarea>
 <details ${V.me || V.iv || V.co ? "open" : ""}><summary class="lk" style="padding:6px 0">Autres informations (facultatives)</summary>
@@ -1492,7 +1498,8 @@ ${ASG.includes(ME.role) ? `<label>Assigner à</label><select id="s2as"><option v
 <div class="m">📎 ${SGN.ph.length} photo(s) / document(s) seront joints.</div>
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="s2b">← Retour</button><button type="button" class="btn p" id="s2ok">✓ Enregistrer le signalement</button></div>`;
   loadEQC().then(() => { const e = $("#s2eq"); if (e && e.options.length < 2) e.innerHTML = `<option value="">—</option>` + EQC.map(x => `<option value="${x.id}">${E(x.code + " — " + x.designation)}</option>`).join(""); }).catch(() => {});
-  $("#s2z").onchange = () => { const z = $("#s2z").value; $("#s2l").innerHTML = `<option value="">— Lieu précis —</option>` + lieuxDe(z).map(x => `<option value="${E(x.code)}">${E(x.libelle)}</option>`).join(""); };
+  const urg = () => { const u = $("#s2u"); if (u && !u.dataset.m) u.value = sgUrgence(c, $("#s2z").value); }; $("#s2u").oninput = () => { $("#s2u").dataset.m = 1; };
+  $("#s2z").onchange = () => { const z = $("#s2z").value; urg(); $("#s2l").innerHTML = `<option value="">— Lieu précis —</option>` + lieuxDe(z).map(x => `<option value="${E(x.code)}">${E(x.libelle)}</option>`).join(""); };
   $("#s2l").onchange = () => { const l = Z.l.find(x => x.code == $("#s2l").value); if (l && !$("#s2z").value) $("#s2z").value = l.zones[0]; };
   $("#mf").querySelectorAll("[data-sd]").forEach(b => b.onclick = () => { SGN.d = b.dataset.sd; $("#mf").querySelectorAll("[data-sd]").forEach(x => x.classList.toggle("p", x === b)); $("#s2prw").style.display = SGN.d == "externe" ? "none" : ""; });
   $("#s2c").onchange = () => { const v = $("#s2c").value; $("#s2eqw").style.display = v == "Technique" ? "" : "none"; if (v) { SGN.d = SG_EXT.some(x => x[0] == v) ? "externe" : "interne"; $("#mf").querySelectorAll("[data-sd]").forEach(x => x.classList.toggle("p", x.dataset.sd == SGN.d)); $("#s2prw").style.display = SGN.d == "externe" ? "none" : ""; } };
