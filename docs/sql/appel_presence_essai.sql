@@ -525,3 +525,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v55b : notifications vol — ids_vol(), msg_vol_notif (PSM / LDM reçus, trigger messages_vol), rappels_approche (cron */5, 40 min avant l arrivée).
 
 -- v57 : signalement en 2 étapes (description + enregistrement IA + photos ; lieu repéré automatiquement, champs facultatifs), message Help Desk réduit, rapport d incident depuis des signalements (incident_reports.signalements).
+
+-- v58 : signalements.urgence (ligne d urgence brève, ajoutée au message Help Desk).

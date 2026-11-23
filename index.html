@@ -1456,6 +1456,12 @@ ${sgVolsCard()}
     let c = null; try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "signalement", maintenant: nowL(), categories: SG_CATL.map(x => x[0]), destinataire: "", vols: vt } }); if (!error && data && !data.erreur) c = data.champs; } catch (x) { }
     if (!c) toast("L’IA n’a pas pu analyser : complétez à la main");
     sgEtape2(c || {}); }; }
+/* urgence en quelques mots : vol proche, conséquences ou priorité élevée */
+function sgUrgence(c) { const v = (SGN.vols || []).find(v => { const m = (Date.parse(v.heure_estimee || v.heure_prevue) - Date.now()) / 60000; return m <= 60 && m > -30; }), co = String(c.consequences || "").trim(), pr = String(c.priorite || "");
+  if (v) return `Urgent : passagers attendus (${v.sens == "A" ? "arrivée" : "départ"} ${v.numero} à ${hm(new Date(v.heure_estimee || v.heure_prevue))})`;
+  if (!co && !["haute", "urgente"].includes(pr)) return "";
+  const t = (co.split(/[.;:,\n]/)[0] || "").replace(/^(risque de|risques? :?|cela (peut|pourrait) (entraîner|provoquer|causer))\s*/i, "").trim(); const k = t.length > 60 ? t.slice(0, 60).replace(/\s+\S*$/, "") + "…" : t;
+  return k ? "Urgent : " + k.charAt(0).toLowerCase() + k.slice(1) : "Urgent"; }
 function sgEtape2(c) {
   const g = k => String(c[k] || "").trim(), cat = SG_CAT.includes(g("categorie")) ? g("categorie") : "", Z = SGZ || { g: [], l: [] };
   const det = sgDetect([g("zone"), SGN.t].join(" ")); SGN.d = SGN.d || (cat && SG_EXT.some(x => x[0] == cat) ? "externe" : cat ? "interne" : "");
@@ -1473,6 +1479,7 @@ function sgEtape2(c) {
 <label>Catégorie</label><select id="s2c"><option value="">— Catégorie —</option>${opt(SG_CATL.map(x => [x[0], x[1]]), cat)}</select>
 <div id="s2eqw" style="display:${cat == "Technique" ? "" : "none"}"><label>Équipement concerné</label><select id="s2eq"><option value="">—</option>${opt(EQC.map(e => [e.id, e.code + " — " + e.designation]), "")}</select></div>
 <div id="s2prw" style="display:${SGN.d == "externe" ? "none" : ""}"><label>Urgence</label><select id="s2pr">${opt([["urgente", "Très haute — intervention sous 5 min"], ["haute", "Haute — sous 15 min"], ["normale", "Moyenne"], ["basse", "Basse"]], sgVolProche() && !["haute", "urgente"].includes(V.pr) ? "haute" : V.pr)}</select></div></div>
+<label>Urgence en quelques mots (ajoutée au message Help Desk ; vide si non urgent)</label><input id="s2u" value="${E(sgUrgence(c))}" placeholder="Ex. : Urgent : passagers présents · Urgent : toilettes inutilisables">
 <label>Objet</label><input id="s2o" value="${E(V.ob)}" placeholder="Titre court">
 <label>Problème constaté</label><textarea id="s2d" data-vx="1" rows="4">${E(V.de)}</textarea>
 <details ${V.me || V.iv || V.co ? "open" : ""}><summary class="lk" style="padding:6px 0">Autres informations (facultatives)</summary>
@@ -1495,7 +1502,7 @@ ${ASG.includes(ME.role) ? `<label>Assigner à</label><select id="s2as"><option v
     const ca = $("#s2c").value || (SGN.d == "externe" ? "Autre (externe)" : "Problème / anomalie"), dest = SGN.d || (SG_EXT.some(x => x[0] == ca) ? "externe" : "interne"), cl = $("#s2cl").value, as = $("#s2as") ? $("#s2as").value : "", eq = $("#s2eq") ? $("#s2eq").value : "";
     const pr = dest == "externe" ? (sgVolProche() ? "haute" : "normale") : $("#s2pr").value;
     const b = $("#s2ok"); b.disabled = true; b.textContent = "Enregistrement…";
-    const { data, error } = await sb.from("signalements").insert({ objet: ($("#s2o").value.trim() || de.slice(0, 80)), zone: zone || null, categorie: ca, sous_categorie: null, priorite: pr, description: de, consequences: $("#s2co").value.trim() || null, mesures: $("#s2m").value.trim() || null, intervention_demandee: $("#s2i").value.trim() || null, constat_le: cl ? fromL(cl) : null, constat_auteur: $("#s2ca").value.trim() || null, constat_source: $("#s2so").value.trim() || null, equipement_id: eq ? +eq : null,
+    const { data, error } = await sb.from("signalements").insert({ objet: ($("#s2o").value.trim() || de.slice(0, 80)), zone: zone || null, categorie: ca, sous_categorie: null, priorite: pr, urgence: $("#s2u").value.trim() || null, description: de, consequences: $("#s2co").value.trim() || null, mesures: $("#s2m").value.trim() || null, intervention_demandee: $("#s2i").value.trim() || null, constat_le: cl ? fromL(cl) : null, constat_auteur: $("#s2ca").value.trim() || null, constat_source: $("#s2so").value.trim() || null, equipement_id: eq ? +eq : null,
       ...(ca == "Technique" ? { assigne_role: "responsable_technique" } : ME.role == "responsable_technique" ? { assigne_role: "direction" } : {}), ...(SG_EQ.includes(ca) ? { assigne_role: "equipe_service", equipe_garde: garde(shiftStart(cl ? new Date(fromL(cl)) : new Date())) } : {}), ...(as ? (as == "compta" ? { assigne_role: "responsable_comptabilite" } : as == "rh" ? { assigne_role: "assistante_rh" } : { assigne_matricule: as, assigne_role: "personne" }) : {}) }).select("id,ref").single();
     if (error) { b.disabled = false; b.textContent = "✓ Enregistrer le signalement"; return toast("Refusé : " + error.message); }
     if (SGN.ph.length) { SO = data.id; b.textContent = "Envoi des photos…"; try { await pjUpload(SGN.ph); } catch (x) { toast("Photos non envoyées : " + (x.message || x)); } }
@@ -1545,7 +1552,7 @@ function sigF(id) {
 <div class="m">${E(s.ref)} · BDM : <b>${s.bdm ? E(s.bdm) : "—"}</b> · ${E(s.categorie)}${s.sous_categorie ? " / " + E(s.sous_categorie) : ""} · ${E(s.zone) || "zone ?"} · priorité <b style="color:${SG_PR[s.priorite]}">${s.priorite}</b></div>
 ${s.assigne_role ? `<div class="m"><b>Responsable :</b> ${s.assigne_role == "equipe_service" ? "équipe en service (garde " + (s.equipe_garde || "?") + ") — superviseur et chef d’équipe" : s.assigne_role == "assistante_rh" ? "Assistante RH" : s.assigne_role == "responsable_comptabilite" ? "Responsable Comptabilité" : s.assigne_role == "responsable_technique" ? "Responsable Technique" : s.assigne_role == "direction" ? "Direction (proposition / signalement du Responsable Technique)" : E((AG.find(x => x.matricule == s.assigne_matricule) || {}).nom || s.assigne_matricule)}</div>
 <div class="m"><b>Justification :</b> ${s.justification ? E(JU(s.justification)) + " — " + E(s.justifie_par || "") : "aucune"} <button type="button" class="btn" data-a="sigjust" data-i="${s.id}">Justifier</button></div>` : ""}
-${row("Problème :", s.description)}${row("Conséquences :", s.consequences)}${row("Mesures conservatoires :", s.mesures)}${row("Intervention demandée :", s.intervention_demandee)}
+${row("Urgence :", s.urgence)}${row("Problème :", s.description)}${row("Conséquences :", s.consequences)}${row("Mesures conservatoires :", s.mesures)}${row("Intervention demandée :", s.intervention_demandee)}
 <h2 style="margin-top:6px">Chronologie</h2>${tl.map(e => `<div class="li" style="align-items:flex-start"><div><b>${SG_EV[e.type]}</b>${e.type == "envoi" && !e.confirme_manuel ? "" : ""}<div class="m">${e.contenu ? E(e.contenu) + " · " : ""}${e.canal ? E(e.canal) + " · " : ""}${e.destinataire ? "à " + E(e.destinataire) + " · " : ""}${e.type == "envoi" ? "envoi déclaré manuellement · " : ""}${e.source ? "source : " + E(e.source) + " · " : ""}${E(e.auteur_nom) || ""}</div></div><div class="m" style="white-space:nowrap">${dt(e.quand)}</div></div>`).join("") || '<div class="m">Aucun événement.</div>'}
 <h2 style="margin-top:6px">Délais</h2><div class="m">Constat → envoi : <b>${dur(s.constat_le, env)}</b><br>Envoi → 1re réponse : <b>${dur(env, t("reponse"))}</b><br>Envoi → BDM : <b>${dur(env, t("bdm"))}</b><br>Envoi → début d’intervention : <b>${dur(env, t("intervention_commencee"))}</b><br>Envoi → résolution : <b>${dur(env, t("intervention_terminee"))}</b><br>Constat → clôture : <b>${dur(s.constat_le, t("cloture"))}</b><br><i>Un délai n’est calculé que si les deux heures sont renseignées.</i></div>
 ${pjBlock(id)}
@@ -1554,7 +1561,7 @@ ${pjBlock(id)}
   $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = e => e.preventDefault(); $("#md").classList.add("on"); pjDraw(id);
 }
 /* message Help Desk : uniquement localisation, problème, demande d'intervention et demande du n° de complainte (le reste reste dans la fiche) */
-function sigMsg(s) { return `HELP DESK — Signalement ${s.ref}\nLocalisation : ${s.zone || "à préciser"}\nProblème : ${s.description || s.objet || "—"}\nMerci de bien vouloir intervenir${s.intervention_demandee ? " (" + s.intervention_demandee.replace(/[.\s]+$/, "") + ")" : ""} et de nous communiquer le numéro de complainte (BDM).\nEPS — ${ME.nom}`; }
+function sigMsg(s) { return `HELP DESK — Signalement ${s.ref}\n${s.urgence ? "⚠️ " + s.urgence + "\n" : ""}Localisation : ${s.zone || "à préciser"}\nProblème : ${s.description || s.objet || "—"}\nMerci de bien vouloir intervenir${s.intervention_demandee ? " (" + s.intervention_demandee.replace(/[.\s]+$/, "") + ")" : ""} et de nous communiquer le numéro de complainte (BDM).\nEPS — ${ME.nom}`; }
 async function sigEvent(id, type, quand, contenu, source, canal, dest, conf) { const { error } = await sb.rpc("sig_event", { p_id: id, p_type: type, p_quand: quand || new Date().toISOString(), p_contenu: contenu || null, p_source: source || null, p_canal: canal || null, p_dest: dest || null, p_confirme: !!conf }); toast(error ? "Refusé : " + error.message : "Enregistré"); await draw(); if (!error || SG.find(x => x.id == id)) sigF(id); }
 
 /* ---------- Rapports d'incident ---------- */
