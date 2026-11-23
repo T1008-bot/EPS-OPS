@@ -554,3 +554,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- articles.categorie, dotation_quotas, dotations (lignes jsonb dem/acc/rec, signatures remis/validé/reçu),
 -- dotation_enregistrer / dotation_valider / dotation_expedier (sortie Ville) / dotation_recevoir (entrée site).
 -- Réception ouverte provisoirement à approvisionnement (Ndey) et responsable_comptabilite (Abderahmane).
+
+-- v72 (23/11/2026) : magasins — central (Ville), aéroport extérieur (réserve) / intérieur (côté piste), sites.
+-- Catalogue repris du formulaire Jotform 263073141001035 (23 articles) ; article_ajouter (articles absents : machines, outils…).
+-- mouvement_saisir : entrées (réception fournisseur, retours) et sorties avec destination (Terminal, Bât. admin et annexe, Fret,
+-- Mosquée, Pavillon présidentiel, ASECNA comptée à part via site_conso) ; ravitaillement extérieur → intérieur automatique.
+-- bilan_enregistrer (inventaire signé, ajustements) ; conso_analyse (moyenne dès 3 jours, dépassement grave / hausse / chute) ;
+-- crons bilan-magasin-interieur 09:00 (tâche Abderahmane, clôturée par le bilan) et conso-magasin-alertes 21:07.
