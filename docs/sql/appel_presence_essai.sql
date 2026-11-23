@@ -535,3 +535,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v62 : approvisionnement (Ndey Ba) = mêmes droits RH que l assistante RH : 40 politiques RLS, 28 fonctions, listes de rôles de l app, fonction drive.
 
 -- v63 : approvisionnement = mêmes droits que la responsable comptabilité (politiques, fonctions, listes de rôles, onglet Comptabilité).
+
+-- v65 : discipline — DE pour RH/approvisionnement/comptabilité ; délégation Direction (générale ou nominative), son superviseur, son chef d équipe, autre ; AVT/MAP et refus confiés à la direction (discipline.delegue_dir).
