@@ -170,9 +170,9 @@ const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsab
 const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "zon", "sig", "tech", "disc", "mag"];
 const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "disc", "mag"];
 /* direction, responsable et coordinateur des opérations : tout ; superviseurs principaux : tout sauf la comptabilité */
-const ACC = { direction: [...ALL, "cmd", "compta"], responsable_ops: [...ALL, "cmd", "compta"], coordinateur_ops: [...ALL, "cmd", "compta"], superviseur_principal: [...ALL, "cmd"], superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["compta", "tach", "cmd", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "sig", "tech", "mag", "cmd", "prof"], approvisionnement: ["shift", "tach", "sig", "mag", "tech", "cmd", "prof"] };
+const ACC = { direction: [...ALL, "cmd", "compta"], responsable_ops: [...ALL, "cmd", "compta"], coordinateur_ops: [...ALL, "cmd", "compta"], superviseur_principal: [...ALL, "cmd"], superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["compta", "tach", "cmd", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "sig", "tech", "mag", "cmd", "prof"], approvisionnement: ["shift", "tach", "sig", "mag", "tech", "cmd", "prof", "eff", "pres", "disc"] };
 Object.values(ACC).forEach(L => { if (["pres", "disc", "eff"].some(k => L.includes(k)) && !L.includes("rh")) L.push("rh"); });
-const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
 const IC = { rh: '<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20v-1.5A4.5 4.5 0 0 1 7 14h2a4.5 4.5 0 0 1 4.5 4.5V20M14 14.5h3a4 4 0 0 1 4 4V20"/>', compta: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4h8v2M3 12h18M12 11v3"/>', cmd: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
@@ -237,7 +237,7 @@ async function start() {
 }
 
 /* ---------- Données ---------- */
-const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh"];
+const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 let NNI = {};
 async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
 const BC = { alertes: 0, pres: 0 };
@@ -247,7 +247,7 @@ async function loadST() { const { data } = await sb.from("statuts_jour").select(
 let RA = [], PSV = [], MYPS = null;
 /* prise / fin de service (chefs d'équipe et superviseurs) avec position au moment du clic */
 const PSR = ["chef_nettoyage", "chef_bagages", "superviseur_nettoyage", "superviseur_bagages", "superviseur_principal", "responsable_ops", "coordinateur_ops"];
-const PSVW = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "responsable_rh", "assistante_rh"];
+const PSVW = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "responsable_rh", "assistante_rh", "approvisionnement"];
 function psvCard() {
   /* dernier pointage de la personne, tous shifts confondus (cas d’un shift qui continue) */
   const last = MYPS, on = last && last.type == "prise", jsNow = ymd(shiftStart()), suite = on && last.jour_shift < jsNow, lieu = p => p.sur_site == null ? "position indisponible" : p.sur_site ? `sur le site (${Math.round(p.distance_m)} m)` : `hors site (${(p.distance_m / 1000).toFixed(1)} km)`;
@@ -1016,7 +1016,7 @@ let PF = null;
 const PFC = { situation: "Situation du staff", bagages: "Situation du staff (Manutention)", nettoyage: "Situation du staff (Nettoyage)", flight_ops: "Rapports de vol (Flight Ops)", wheelchairs: "Rapports Wheelchair (PMR)", cargo: "Rapports Cargo", pmr_shift: "PMR Shift", cabin: "Nettoyage cabine", shift_ops: "Rapports de shift", shift_nettoyage: "Rapports de shift (nettoyage)", dispatching: "Staff Dispatching" };
 V.prof = async () => {
   PF = PF || { d: dstr(-7), f: dstr(6), m: "" };
-  const full = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "responsable_comptabilite"].includes(ME.role), priv = full || ME.role == "superviseur_principal";
+  const full = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite"].includes(ME.role), priv = full || ME.role == "superviseur_principal";
   const { data: r, error } = await sb.rpc("mon_profil", { p_debut: PF.d, p_fin: PF.f, p_matricule: PF.m || null });
   if (error) throw error;
   const now = Date.now(), td = today(), ag = r.agent, T0 = r.taches || [], ST0 = r.statuts || [];
@@ -1742,7 +1742,7 @@ async function irDepuisSig() {
 async function irCreate(vals) { const { data, error } = await sb.from("incident_reports").insert({ prepare_nom: ME.nom, prepare_fonction: RLE[ME.role] || "EPS", ...vals }).select("id").single(); if (error) { toast("Refusé : " + error.message); return null; } toast("Brouillon créé"); if (NAV == "ir") await draw(); irEdit(data.id); return data.id; }
 
 /* ---------- Fiche agent (carte RH) ---------- */
-const AGW = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh"];
+const AGW = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 const SE = { a_suivre: ["À suivre", "bad"], contacte: ["Contacté", "info"], en_attente: ["En attente", "warn"], regularise: ["Régularisé", "ok"] };
 const grpOf = a => { const e = a.equipe || ""; if (supN(a)) return { dp: "Nettoyage", g: "Superviseurs nettoyage", c: "Sup. N" }; if (e.startsWith("Manutention")) return { dp: "Manutention", g: "Groupe " + e.slice(-1), c: "M" + e.slice(-1) }; if (e == "Chauffeurs") return { dp: "Chauffeurs", g: "Chauffeurs", c: "Ch" }; if (e == "Équipe 4") return { dp: "Nettoyage", g: "Journée (N4)", c: "N4" }; return { dp: "Nettoyage", g: "Groupe " + e.slice(-1), c: "N" + e.slice(-1) }; };
 const anc = d => { if (!d) return ""; const m = Math.floor((Date.now() - new Date(d)) / (30.44 * 864e5)); if (m < 0) return ""; return m < 12 ? m + " mois" : Math.floor(m / 12) + " an" + (m >= 24 ? "s" : "") + (m % 12 ? " " + (m % 12) + " mois" : ""); };
@@ -1789,13 +1789,13 @@ ${FC.dm ? ch("dem", "🌴 Permissions et demandes", (() => { const t = today(), 
   $("#mf").onsubmit = e => e.preventDefault();
   $("#md").classList.add("on");
 }
-const EVR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh"];
-const DOCW = ["direction", "responsable_ops", "responsable_rh", "assistante_rh"];
+const EVR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "approvisionnement"];
+const DOCW = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 const DOCF = [["piece_identite", "Pièce d’identité"], ["photo", "Photo (visible sur la fiche)"], ["casier_judiciaire", "Casier judiciaire"], ["badge", "Badge"]];
 const PART = { affectation: "Affectation", changement_poste: "Changement de poste", promotion: "Promotion", regression: "Régression", embauche: "Embauche", depart: "Départ", autre: "Parcours" }, PARI = { affectation: "🔀", changement_poste: "🔁", promotion: "⬆️", regression: "⬇️", embauche: "🟢", depart: "🚪", autre: "•" };
 const dosManq = () => FC && FC.vis ? DOCF.filter(([c]) => !(FC.docs || []).some(x => x.categorie == c)).map(([, l]) => l.replace(" (visible sur la fiche)", "").toLowerCase()) : [];
 const perTxt = () => FC.per.k == "p" ? `du ${fd(FC.per.d0)} au ${fd(FC.per.d1)}` : FC.per.k == "365" ? "12 derniers mois" : FC.per.k + " derniers jours";
-function dosVis(a) { const r = ME.role, me = ME.matricule; if (["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "responsable_comptabilite"].includes(r)) return true;
+function dosVis(a) { const r = ME.role, me = ME.matricule; if (["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite"].includes(r)) return true;
   if (r == "superviseur_nettoyage" || r == "superviseur_bagages") return a.matricule == me || (!/^superviseur/i.test(a.fonction || "") && /^Manutention/.test(a.equipe || "") == (r == "superviseur_bagages"));
   if (r == "chef_nettoyage" || r == "chef_bagages") return a.matricule == me; return false; }
 function ficheHist() {
@@ -2350,7 +2350,7 @@ Object.assign(ACT, {
   async eesigner(b) { const id = +b.dataset.i; ask("Signer mon évaluation", [{ k: "o", l: "Observation (facultative) — la signature atteste la prise de connaissance, pas nécessairement l’accord sur la note", t: "ta" }], async v => { let sig = null; try { sig = await eeSig(id, "evalue"); } catch (x) { } if (!sig) { toast("Enregistrez d’abord votre signature"); return msigOpen(); } const { error } = await sb.rpc("eval_enc_signer", { p_eval: id, p_sig: sig, p_obs: v.o || null }); toast(error ? "Refusé : " + error.message : "Évaluation signée"); draw(); }); }
 });
 /* ===== Évaluations mensuelles (équipes, chefs, superviseurs) : calcul le 26 → revue SP → validation resp. ops → RH ===== */
-const EV_LIRE = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const EV_LIRE = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const EV_SP = ["superviseur_principal", "direction"], EV_RO = ["responsable_ops", "direction"];
 const EVST = { calcule: ["Calculée — à revoir", "warn"], revu_sp: ["Revue — à valider", "info"], valide_ro: ["Validée", "ok"], transmis_rh: ["Transmise aux RH", "ok"] };
 const EVN = { equipe: "Équipes", chef: "Chefs d’équipe", superviseur: "Superviseurs" };
@@ -2743,7 +2743,7 @@ V.rh = async () => {
 };
 Object.assign(ACT, { rhsv(b) { RHF.sv = b.dataset.v; rhSave(); draw(); }, rhgo(b) { const k = b.dataset.k; if (k == "pres") { SF.dp = RHF.sv == "M" ? "Manutention" : RHF.sv == "N" ? "Nettoyage" : ""; SF.g = ""; SF.sv = ""; } NAV = k; draw(); } });
 document.addEventListener("change", e => { if (e.target.id == "rhsite") { RHF.site = e.target.value; if (RHF.site != "aino") RHF.sv = ""; rhSave(); draw(); } });
-const PL = p => p == "shift" && ["responsable_rh", "assistante_rh", "direction", "responsable_ops", "coordinateur_ops"].includes(ME.role) ? "Shift actuel" : P[p][1];
+const PL = p => p == "shift" && ["responsable_rh", "assistante_rh", "approvisionnement", "direction", "responsable_ops", "coordinateur_ops"].includes(ME.role) ? "Shift actuel" : P[p][1];
 /* ---------- Demande d'explication électronique ---------- */
 const DE_ETAB = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
 const DE_DELEG = ["superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
@@ -2971,7 +2971,7 @@ Object.assign(ACT, {
 
 /* ---------- Suite d'une demande d'explication : avis, décision ou transmission ---------- */
 const DE_AV = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"], DE_DEC = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh"];
-const DE_TR = ["responsable_ops", "direction", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal"];
+const DE_TR = ["responsable_ops", "direction", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_principal"];
 const MESL = { classement: "Classement sans suite", avertissement: "Avertissement écrit", map: "Mise à pied disciplinaire", convocation: "Convocation à l’administration (ne pas prendre service)", licenciement: "Proposition de licenciement" };
 const addD = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return ymd(x); };
 const nbJ = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5) + 1;
@@ -3065,7 +3065,7 @@ async function deDecider(id, type) {
 /* convocations : agents à ne pas laisser prendre service */
 function interditsCard() {
   const L = AG.filter(a => a.interdit_service); if (!L.length) return "";
-  const lev = DE_DEC.concat(["assistante_rh"]).includes(ME.role);
+  const lev = DE_DEC.concat(["assistante_rh", "approvisionnement"]).includes(ME.role);
   return `<div class="card" style="border-left:4px solid var(--red)"><b>⛔ À ne pas laisser prendre service avant confirmation de l’administration</b>${L.map(a => `<div class="li" style="flex-wrap:wrap"><div><span class="lk" data-a="fiche" data-m="${E(a.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(a.matricule)} · ${E(a.equipe)}</span><div class="m">${E(a.interdit_motif || "")}${a.interdit_ref ? " · " + E(a.interdit_ref) : ""}${a.interdit_par ? " · par " + E(a.interdit_par) : ""}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-a="inpres" data-m="${E(a.matricule)}">S’est présenté(e)…</button>${lev ? `<button class="btn p" data-a="inlev" data-m="${E(a.matricule)}">Lever l’interdiction</button>` : ""}</div></div>`).join("")}</div>`;
 }
 
@@ -3085,7 +3085,7 @@ Object.assign(ACT, {
 });
 
 /* ---------- « Voir comme » : compte du responsable des opérations uniquement, en lecture seule ---------- */
-const VUE_UID = "ecb07109-40c1-48d8-bf91-50166dea6212", VUE_ROLES = ["direction", "coordinateur_ops", "responsable_ops", "responsable_rh", "assistante_rh", "responsable_technique", "responsable_comptabilite", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const VUE_UID = "ecb07109-40c1-48d8-bf91-50166dea6212", VUE_ROLES = ["direction", "coordinateur_ops", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_technique", "responsable_comptabilite", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VUE_RPC_LECTURE = ["collaborateurs", "mon_profil", "matricules_inconnus", "analyser_chevauchements", "vapid_public"];
 let VUE = null, ME0 = null, UID0 = null;
 const vueMsg = () => "Lecture seule : vous consultez le compte de " + (VUE ? VUE.nom : "");
@@ -3517,7 +3517,7 @@ Object.assign(ACT, {
 });
 /* ===== Demandes et documents de l’agent (fiche agent · annuaire) ===== */
 const DML = ["superviseur_nettoyage", "superviseur_bagages", "superviseur_principal", "direction", "responsable_ops", "coordinateur_ops"]; /* lancent les demandes */
-const DMRH = ["responsable_rh", "assistante_rh"], DMV = ["responsable_ops"]; /* approbation RH · validation finale */
+const DMRH = ["responsable_rh", "assistante_rh", "approvisionnement"], DMV = ["responsable_ops"]; /* approbation RH · validation finale */
 const DMR = [...DML, ...DMRH, "responsable_comptabilite"]; /* consultation */
 const DMT = { permission_depart: "Permission de départ", permission_jours: "Permission de quelques jours", pret: "Demande de prêt", anticipation_conge: "Demande d’anticipation de congé", justificatif: "Justificatif d’absence", autre: "Autre document" };
 const DMS = { en_attente: ["En attente", "warn"], validee: ["Validée · transmise aux RH", "ok"], refusee: ["Refusée", "bad"], annulee: ["Annulée", "info"], depose: ["Déposé", "info"] };
@@ -3736,8 +3736,8 @@ Object.assign(ACT, {
 });
 
 /* ===== Classeurs du personnel (Google Drive archiveseps, dossier PERSONNEL) : ouvrir, modifier, enregistrer, mettre à jour l’annuaire ===== */
-const CLL = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const CLE = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "superviseur_nettoyage", "superviseur_bagages"];
+const CLL = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
+const CLE = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_nettoyage", "superviseur_bagages"];
 let XL = null, XLF = [], XJP = null;
 const xjLoad = () => window.ExcelJS ? Promise.resolve() : XJP || (XJP = new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"; s.onload = ok; s.onerror = () => { XJP = null; ko(new Error("Module Excel indisponible (connexion)")); }; document.head.appendChild(s); }));
 const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
@@ -4012,7 +4012,7 @@ Object.assign(ACT, {
     async x => { const { error } = await sb.from("factures").update({ statut: "payee", paye_le: x.d, mode_paiement: x.mo }).eq("id", b.dataset.i); if (error) return toast("Refusé : " + error.message); toast("Facture payée"); draw(); }); }
 });
 /* ===== Congés planifiés (Suivi présence → Congés) ===== */
-const CGW = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh"], CGT = { annuel: "Congé annuel", exceptionnel: "Congé exceptionnel", maladie: "Maladie", maternite: "Maternité", sans_solde: "Sans solde", autre: "Autre" };
+const CGW = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement"], CGT = { annuel: "Congé annuel", exceptionnel: "Congé exceptionnel", maladie: "Maladie", maternite: "Maternité", sans_solde: "Sans solde", autre: "Autre" };
 let CGM = null;
 async function presConges() {
   if (!CGM) { const d = new Date(), n = d.getUTCDate() >= 20 ? 1 : 0, x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)); CGM = { a: x.getUTCFullYear(), m: x.getUTCMonth() + 1 }; }
