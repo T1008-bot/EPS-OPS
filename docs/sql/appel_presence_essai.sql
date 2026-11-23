@@ -543,3 +543,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v67 : agent_ajouter (matricule auto 1330-1399 N, 1490-1600 M), agent_modifier, agent_depart (arrêt paie, compta + équipe notifiées), ids_equipe, agent_matricule_suivant ; agents + civilite/date_naissance/contact_urgence/motif_depart ; paie_site exclut les partis avant la période ; UI : Consulter / Mettre à jour (recrue, départ), fiche modifiable, anciens employés, départs à confirmer Valider / Modifier la date, classeur Drive (ajout, modification, départ → ex-employés).
 
 -- v67b : fonction jf-form (listes de matricules des formulaires Situation du staff, mises à jour via l API Jotform) + jf_sync() appelée par agent_ajouter / agent_modifier / agent_depart.
+
+-- v70 (23/11/2026) : site aino_cabine désactivé (nettoyage cabine = équipes Nettoyage 24 h) ;
+-- badges vides des agents de l'aéroport = 'Sans Badge' ; badge masqué pour les sites ville (sauf ASECNA) ;
+-- matricules ville : 1130 Ramatoulaye (ENAJM), 1131 Salyata Gueye (DGSN), DGSN 1601-1650, ENAJM 1651-1680,
+-- MIF 1681-1690, Pétrole 1691-1700 (agent_matricule_suivant accepte surete/enajm/mif/petrole).
