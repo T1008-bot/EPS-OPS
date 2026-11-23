@@ -548,3 +548,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- badges vides des agents de l'aéroport = 'Sans Badge' ; badge masqué pour les sites ville (sauf ASECNA) ;
 -- matricules ville : 1130 Ramatoulaye (ENAJM), 1131 Salyata Gueye (DGSN), DGSN 1601-1650, ENAJM 1651-1680,
 -- MIF 1681-1690, Pétrole 1691-1700 (agent_matricule_suivant accepte surete/enajm/mif/petrole).
+
+-- v71 (23/11/2026) : bons de dotation Magasin Ville → magasins des sites.
+-- magasins.site/central/actif (Ville = central ; magasins créés pour ASECNA, DGSN, ENAJM, CHN, MIF, Pétrole, UNPM),
+-- articles.categorie, dotation_quotas, dotations (lignes jsonb dem/acc/rec, signatures remis/validé/reçu),
+-- dotation_enregistrer / dotation_valider / dotation_expedier (sortie Ville) / dotation_recevoir (entrée site).
+-- Réception ouverte provisoirement à approvisionnement (Ndey) et responsable_comptabilite (Abderahmane).
