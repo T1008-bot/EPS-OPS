@@ -533,3 +533,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v61 : volet Ressources humaines (cartes Suivi présence / Discipline / Effectifs, filtre site et service, À traiter) ; appel : encadrement tiré de l annuaire ; conges_sans_decision_liste / _alerte (cron 09h17, RH notifiées).
 
 -- v62 : approvisionnement (Ndey Ba) = mêmes droits RH que l assistante RH : 40 politiques RLS, 28 fonctions, listes de rôles de l app, fonction drive.
+
+-- v63 : approvisionnement = mêmes droits que la responsable comptabilité (politiques, fonctions, listes de rôles, onglet Comptabilité).

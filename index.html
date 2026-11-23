@@ -170,7 +170,7 @@ const RL = { direction: "Directeur des Opérations", responsable_ops: "Responsab
 const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "zon", "sig", "tech", "disc", "mag"];
 const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "disc", "mag"];
 /* direction, responsable et coordinateur des opérations : tout ; superviseurs principaux : tout sauf la comptabilité */
-const ACC = { direction: [...ALL, "cmd", "compta"], responsable_ops: [...ALL, "cmd", "compta"], coordinateur_ops: [...ALL, "cmd", "compta"], superviseur_principal: [...ALL, "cmd"], superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["compta", "tach", "cmd", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "sig", "tech", "mag", "cmd", "prof"], approvisionnement: ["shift", "tach", "sig", "mag", "tech", "cmd", "prof", "eff", "pres", "disc"] };
+const ACC = { direction: [...ALL, "cmd", "compta"], responsable_ops: [...ALL, "cmd", "compta"], coordinateur_ops: [...ALL, "cmd", "compta"], superviseur_principal: [...ALL, "cmd"], superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["compta", "tach", "cmd", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "sig", "tech", "mag", "cmd", "prof"], approvisionnement: ["shift", "tach", "sig", "mag", "tech", "cmd", "prof", "eff", "pres", "disc", "compta"] };
 Object.values(ACC).forEach(L => { if (["pres", "disc", "eff"].some(k => L.includes(k)) && !L.includes("rh")) L.push("rh"); });
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
@@ -968,7 +968,7 @@ ${grp("nj", "Absences non justifiées", "bad")}${grp("j", "Absences justifiées"
 }
 document.addEventListener("keydown", ev => { if ((ev.key == "Enter" || ev.key == " ") && ev.target.classList?.contains("tcd")) { ev.preventDefault(); ev.target.click(); } });
 /* ---------- Situation de paie (période du 26 au 25) : salaire de base selon les notes de service n° 0016 et 0017, période d’essai ---------- */
-const PAIER = ["direction", "responsable_ops", "coordinateur_ops", "responsable_comptabilite"];
+const PAIER = ["direction", "responsable_ops", "coordinateur_ops", "responsable_comptabilite", "approvisionnement"];
 const PROFL = { essai: "Période d’essai", confirme: "Recrue confirmée (4e mois)", ancien_agent: "Ancien agent", ancien_chef: "Ancien chef d’équipe", inconnu: "Date d’embauche manquante", a_preciser: "Montant à préciser" };
 const CATL = { manutention: "Manutention", nett24: "Nettoyage 24 h", nett8: "Nettoyage 8 h" };
 let PAIE = null, PAIED = null;
@@ -976,7 +976,7 @@ async function presPaie() {
   if (!PAIE) { const d = new Date(), m = d.getUTCDate() > 25 ? d.getUTCMonth() + 2 : d.getUTCMonth() + 1; PAIE = m > 12 ? { a: d.getUTCFullYear() + 1, m: 1 } : { a: d.getUTCFullYear(), m }; }
   const [r, ce] = await Promise.all([sb.rpc("situation_paie", { p_annee: PAIE.a, p_mois: PAIE.m }), sb.from("confirmations_essai").select("*").order("fin_essai")]);
   if (r.error) throw r.error; PAIED = r.data || [];
-  const L = PAIED, t = k => L.reduce((s, x) => s + (+x[k] || 0), 0), deb = L[0]?.periode_debut, fin = L[0]?.periode_fin, dec = ["responsable_comptabilite", "direction"].includes(ME.role);
+  const L = PAIED, t = k => L.reduce((s, x) => s + (+x[k] || 0), 0), deb = L[0]?.periode_debut, fin = L[0]?.periode_fin, dec = ["responsable_comptabilite", "approvisionnement", "direction"].includes(ME.role);
   const nm = Object.fromEntries(AG.map(a => [a.matricule, a])), CE = (ce.data || []), att = CE.filter(x => x.statut == "a_confirmer"), fait = CE.filter(x => x.statut != "a_confirmer").slice(-5);
   const mo = []; for (let i = -6; i <= 1; i++) { const d = new Date(Date.UTC(PAIE.a, PAIE.m - 1 + i, 1)); mo.push([d.getUTCFullYear(), d.getUTCMonth() + 1]); }
   const sansDate = L.filter(x => x.profil == "inconnu").length, masse = t("salaire_base");
@@ -1016,7 +1016,7 @@ let PF = null;
 const PFC = { situation: "Situation du staff", bagages: "Situation du staff (Manutention)", nettoyage: "Situation du staff (Nettoyage)", flight_ops: "Rapports de vol (Flight Ops)", wheelchairs: "Rapports Wheelchair (PMR)", cargo: "Rapports Cargo", pmr_shift: "PMR Shift", cabin: "Nettoyage cabine", shift_ops: "Rapports de shift", shift_nettoyage: "Rapports de shift (nettoyage)", dispatching: "Staff Dispatching" };
 V.prof = async () => {
   PF = PF || { d: dstr(-7), f: dstr(6), m: "" };
-  const full = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite"].includes(ME.role), priv = full || ME.role == "superviseur_principal";
+  const full = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite", "approvisionnement"].includes(ME.role), priv = full || ME.role == "superviseur_principal";
   const { data: r, error } = await sb.rpc("mon_profil", { p_debut: PF.d, p_fin: PF.f, p_matricule: PF.m || null });
   if (error) throw error;
   const now = Date.now(), td = today(), ag = r.agent, T0 = r.taches || [], ST0 = r.statuts || [];
@@ -1795,7 +1795,7 @@ const DOCF = [["piece_identite", "Pièce d’identité"], ["photo", "Photo (visi
 const PART = { affectation: "Affectation", changement_poste: "Changement de poste", promotion: "Promotion", regression: "Régression", embauche: "Embauche", depart: "Départ", autre: "Parcours" }, PARI = { affectation: "🔀", changement_poste: "🔁", promotion: "⬆️", regression: "⬇️", embauche: "🟢", depart: "🚪", autre: "•" };
 const dosManq = () => FC && FC.vis ? DOCF.filter(([c]) => !(FC.docs || []).some(x => x.categorie == c)).map(([, l]) => l.replace(" (visible sur la fiche)", "").toLowerCase()) : [];
 const perTxt = () => FC.per.k == "p" ? `du ${fd(FC.per.d0)} au ${fd(FC.per.d1)}` : FC.per.k == "365" ? "12 derniers mois" : FC.per.k + " derniers jours";
-function dosVis(a) { const r = ME.role, me = ME.matricule; if (["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite"].includes(r)) return true;
+function dosVis(a) { const r = ME.role, me = ME.matricule; if (["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "responsable_rh", "assistante_rh", "approvisionnement", "responsable_comptabilite", "approvisionnement"].includes(r)) return true;
   if (r == "superviseur_nettoyage" || r == "superviseur_bagages") return a.matricule == me || (!/^superviseur/i.test(a.fonction || "") && /^Manutention/.test(a.equipe || "") == (r == "superviseur_bagages"));
   if (r == "chef_nettoyage" || r == "chef_bagages") return a.matricule == me; return false; }
 function ficheHist() {
@@ -2635,7 +2635,7 @@ Object.assign(ACT, {
   cmf(b) { CMF = b.dataset.k; draw(); },
   async cmnew() {
     await loadEQC().catch(() => { });
-    const tech = ME.role == "responsable_technique", cat0 = tech ? "Technique" : "Approvisionnement / magasin", dest0 = ["responsable_comptabilite"].includes(ME.role) ? "approvisionnement" : "direction";
+    const tech = ME.role == "responsable_technique", cat0 = tech ? "Technique" : "Approvisionnement / magasin", dest0 = ["responsable_comptabilite", "approvisionnement"].includes(ME.role) ? "approvisionnement" : "direction";
     const sel = (id, o, v) => `<select id="${id}">${o.map(x => `<option value="${E(x[0])}" ${x[0] == v ? "selected" : ""}>${E(x[1])}</option>`).join("")}</select>`;
     $("#mf").innerHTML = `<h2>🛒 Nouvelle demande d’achat</h2>
 <div><label>Motif</label>${sel("cmm", Object.entries(CM_MOT), "manquant")}</div>
@@ -3518,7 +3518,7 @@ Object.assign(ACT, {
 /* ===== Demandes et documents de l’agent (fiche agent · annuaire) ===== */
 const DML = ["superviseur_nettoyage", "superviseur_bagages", "superviseur_principal", "direction", "responsable_ops", "coordinateur_ops"]; /* lancent les demandes */
 const DMRH = ["responsable_rh", "assistante_rh", "approvisionnement"], DMV = ["responsable_ops"]; /* approbation RH · validation finale */
-const DMR = [...DML, ...DMRH, "responsable_comptabilite"]; /* consultation */
+const DMR = [...DML, ...DMRH, "responsable_comptabilite", "approvisionnement"]; /* consultation */
 const DMT = { permission_depart: "Permission de départ", permission_jours: "Permission de quelques jours", pret: "Demande de prêt", anticipation_conge: "Demande d’anticipation de congé", justificatif: "Justificatif d’absence", autre: "Autre document" };
 const DMS = { en_attente: ["En attente", "warn"], validee: ["Validée · transmise aux RH", "ok"], refusee: ["Refusée", "bad"], annulee: ["Annulée", "info"], depose: ["Déposé", "info"] };
 const DST2 = () => sb.storage.from("dossiers-agents");
@@ -3892,7 +3892,7 @@ async function cptPaieData() {
 async function cptPaie() {
   const [D, ce] = await Promise.all([cptPaieData(), CSITE == "global" || CPY ? { data: [] } : sb.from("confirmations_essai").select("*").eq("statut", "a_confirmer").order("fin_essai")]);
   const L = D.filter(x => CSITE == "global" || x.site == CSITE); CPD = L;
-  const t = (k, A = L) => A.reduce((s, x) => s + (+x[k] || 0), 0), nm = Object.fromEntries(AG.map(a => [a.matricule, a])), dec = ["responsable_comptabilite", "direction"].includes(ME.role), ed = !CPY;
+  const t = (k, A = L) => A.reduce((s, x) => s + (+x[k] || 0), 0), nm = Object.fromEntries(AG.map(a => [a.matricule, a])), dec = ["responsable_comptabilite", "approvisionnement", "direction"].includes(ME.role), ed = !CPY;
   const att = (ce.data || []).filter(x => inSite(nm[x.matricule])), G = {}; L.forEach(x => (G[x.groupe || "—"] = G[x.groupe || "—"] || []).push(x));
   const deb = L[0]?.periode_debut, fin = L[0]?.periode_fin, mo = Array.from({ length: 12 }, (_, i) => i + 1);
   const kp = (k, titre, v, s, cl) => `<button type="button" class="card" data-a="cptk" data-k="${k}" style="text-align:left;cursor:pointer;font:inherit;color:inherit"><div class="m">${titre} ↗</div><div class="k" ${cl ? `style="color:${cl}"` : ""}>${v}</div><div class="m">${s || ""}</div></button>`;
