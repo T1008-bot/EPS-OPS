@@ -598,3 +598,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v80 (24/11/2026) : agent 1128 Mamadou Amadou Sy, chef d’équipe manutention en rotation (équipe « Manutention (rotatif) », matricule à confirmer) ; jf-form : détail des erreurs d’écriture Jotform ; personnel_admin Ndey Ba = Responsable des relations extérieures.
 
 -- v81 (24/11/2026) : paie v3 (sélection Tout / Aéroport global / Nettoyage / Manutention / ASECNA / Opérations aéroport / Direction & administration / Sites ville / chaque site ; blocs avec cartes d’équipe dépliables ; total général) ; RH : carte « Encadrement » (superviseurs / chefs d’équipe).
+
+-- v82 (24/11/2026) : trigger agents_dossier (agent_dossier_controle) : nouvelle fiche incomplète → tâche RH « Dossier à compléter » + notification RH, clôture auto quand date d’embauche, téléphone et NNI sont renseignés ; tâche créée pour 1128 ; tableau de bord RH : « Dossier à compléter » pour les fiches de moins de 60 jours ; effectif prévu équipe 4 = 34.

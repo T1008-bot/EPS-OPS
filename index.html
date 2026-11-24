@@ -2862,6 +2862,7 @@ V.rh = async () => {
   const row = (ico, t, d, act) => `<div class="li"><div style="min-width:0"><span style="margin-right:6px">${ico}</span>${t}${d ? `<div class="m">${d}</div>` : ""}</div>${act || ""}</div>`;
   const fiche = (m, n) => `<span class="lk" data-a="fiche" data-m="${E(m)}">${E(n)}</span>`;
   const items = [
+    ...A.filter(a => a.created_at && Date.now() - new Date(a.created_at).getTime() < 60 * 864e5 && (!a.date_embauche || !a.tel || (NNIR.includes(ME.role) && !NNI[a.matricule]))).map(a => row("🗂", `Dossier à compléter : ${fiche(a.matricule, a.nom)}`, `${E(a.matricule)} · ${E(a.equipe || "")}${a.fonction ? " · " + E(a.fonction) : ""} · manque : ${[!a.date_embauche && "date d’embauche", !a.tel && "téléphone", NNIR.includes(ME.role) && !NNI[a.matricule] && "NNI"].filter(Boolean).join(", ")}`, `<button class="btn w" data-a="fiche" data-m="${E(a.matricule)}">Compléter</button>`)),
     ...Cs.map(x => row("🌴", `Congé sans décision : ${fiche(x.matricule, x.nom)}`, `${E(x.equipe || "")} · déclaré en congé depuis le ${fd(x.depuis)} (${x.jours} j) — confirmer les dates de départ et de retour`)),
     ...nj.map(a => row("⛔", `Absence non justifiée : ${fiche(a.matricule, a.nom)}`, `${E(a.equipe || "")} · shift du ${fd(sj)}`)),
     ...Dm.slice(0, 15).map(x => row("📝", `Demande en cours : ${fiche(x.matricule, x.agent_nom || x.matricule)}`, `${E(x.ref || "")} · ${E(String(x.type || "").replace(/_/g, " "))}${x.date_debut ? " · du " + fd(x.date_debut) + (x.date_fin ? " au " + fd(x.date_fin) : "") : ""} · ${E(x.statut || "")}`)),
