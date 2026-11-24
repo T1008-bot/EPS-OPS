@@ -568,3 +568,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- magasin_seuils + seuil_alertes + trigger mv_seuil (seuil_controle) : alerte urgente ; aéroport → superviseurs principaux,
 -- Ismail Niass, approvisionnement + tâche « Expression de besoin » (besoin_seuil:m:a) ; central/sites → approvisionnement,
 -- comptabilité. Trigger bs_seuil : l'expression de besoin clôt les tâches d'alerte.
+
+-- v74 (24/11/2026) : maquettes validées — tâches « Situation du staff » (une à la fois, faite = retirée, 17 h affichée à 17 h,
+-- cron situation-17h-notif → chefs de garde), titre « Planning du jour : tâches & missions », cartes Observations / Instances /
+-- Retards + journal du shift (table shift_observations), statistiques de vol Manutention et Nettoyage (stats_vols, rs_ans,
+-- rs_heure, apres ; retard = off block − départ prévu allocation/programme, cause du rapport ou vol_retard_justif),
+-- alerte rouge Help Desk « sans N° de ticket », colonne « Lancé par », bouton « Saisir le ticket ».
+-- Retour arrière : git revert de ce commit ; select cron.unschedule('situation-17h-notif').
