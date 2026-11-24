@@ -587,3 +587,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v77 (24/11/2026) : paie — retenue par jour d’absence non justifiée / mise à pied = salaire mensuel / 30 (au lieu de 500 MRU) ;
 -- prorata arrivée / départ en cours de période = salaire / 30 × jours de présence (date d’embauche et date de départ incluses), observation « Prorata ».
+
+-- 24/11/2026 : salaire_base — date d’embauche manquante = tarif ancien agent / ancien chef (plus de salaire à 0) ; tâche EPS/OPS/TCH/2026/450 à la comptabilité (44 saisies manuelles ≠ grille).
