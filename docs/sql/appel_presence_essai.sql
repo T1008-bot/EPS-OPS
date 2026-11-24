@@ -577,3 +577,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Retour arrière : git revert de ce commit ; select cron.unschedule('situation-17h-notif').
 
 -- v75 (24/11/2026) : profiles.poste (intitulé affiché, indépendant du rôle) ; Ndey Ba = Responsable des relations extérieures (rôle approvisionnement inchangé).
+
+-- v76 (24/11/2026) : messagerie — conversations / conv_membres (retire au lieu de suppression) / messages (temps réel),
+-- msg_cat + msg_peut_ecrire (chef↔chef, chef↔sup, sup↔sup, chef/sup↔SP, SP↔SP, tous↔responsable des opérations,
+-- consultant↔SP/sup/direction/coordinateur, direction↔coordinateur/SP), groupes Ops Nettoyage / Ops Manutention / Ops Superviseurs
+-- tenus à jour par trigger sur profiles (msg_groupes_sync), msg_direct, msg_envoyer (notification catégorie « messages »),
+-- msg_liste, msg_lu, msg_lu_par, stockage messages-pj. Client : bulle flottante permanente, panneau, onglet Messages,
+-- demande d'autorisation des notifications à l'ouverture tant qu'elle n'est pas accordée.

@@ -148,6 +148,22 @@ input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-hei
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation-duration:.01s!important}}
 .fa{display:flex;gap:8px}.fa .btn{flex:1;text-align:center;font-size:15px;padding:12px}.btn.wa{background:#16a34a;border-color:#16a34a;color:#fff}.fc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fch{text-align:left;border:1px solid var(--b);background:var(--pl);border-radius:12px;padding:8px 10px;cursor:pointer;color:var(--t);font:inherit;transition:transform .2s var(--sp)}.fch:active{transform:scale(.97)}.fch small{display:block;color:var(--m);font-size:11px;font-weight:600}.fch b{font-size:14px}.fch b small{display:inline;margin-left:4px}.fch.on{outline:2px solid var(--p);background:var(--s)}#fx{border-top:1px solid var(--b);padding-top:8px}
+#mbub{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--p);color:#fff;font-size:26px;box-shadow:0 8px 22px #2f6fd066;z-index:60;cursor:pointer;display:grid;place-items:center}
+#mbub i{position:absolute;top:-3px;right:-3px;background:#e11d48;color:#fff;border:2px solid #fff;border-radius:999px;font:800 12px/1 system-ui;font-style:normal;padding:3px 6px;min-width:20px}
+#mpan{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));width:370px;height:min(560px,calc(100vh - 120px));background:var(--s);border:1px solid var(--b);border-radius:16px;box-shadow:0 14px 40px #0b1f4a40;z-index:61;display:none;flex-direction:column;overflow:hidden}
+#mpan.on{display:flex}@media(max-width:640px){#mpan{inset:0;width:auto;height:auto;border-radius:0;bottom:0;right:0}#mpan.on~#mbub,#mpan.on+#mbub{display:none}}
+.mph{background:var(--n);color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0}.mph b{flex:1;font-size:15px}.mbk{background:none;border:0;color:inherit;font-size:18px;cursor:pointer;padding:2px 6px}
+.mtabs{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--b)}.mtabs button{flex:1;border:0;border-radius:8px;background:var(--pl);color:var(--t);font:700 12.5px system-ui;padding:6px;cursor:pointer}.mtabs button.on{background:var(--p);color:#fff}
+.mlist{flex:1;overflow:auto}.mcv{display:flex;gap:10px;align-items:center;padding:9px 12px;border:0;border-bottom:1px solid var(--b);background:none;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}.mcv:hover,.mcv.sel{background:var(--pl)}
+.mav{border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;flex-shrink:0;font-size:13px}.mx{flex:1;min-width:0}.mx b{display:block;font-size:13.5px}.mx span{display:block;font-size:12.5px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcv.unr .mx b{color:var(--p)}.mcv.unr .mx span{color:var(--t);font-weight:600}.mr{text-align:right;font-size:11px;color:var(--m);display:flex;flex-direction:column;align-items:flex-end;gap:3px}.mr i{background:#e11d48;color:#fff;border-radius:999px;font:800 11px system-ui;padding:1px 6px;font-style:normal}
+.mpc{flex:1;display:flex;flex-direction:column;min-height:0}.mmsgs{flex:1;overflow:auto;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.mb{max-width:80%;padding:7px 10px;border-radius:14px;font-size:13.5px;background:var(--s);border:1px solid var(--b);align-self:flex-start;word-wrap:break-word}.mb.me{align-self:flex-end;background:var(--p);color:#fff;border-color:var(--p)}.mb small{display:block;font-size:10.5px;opacity:.75;margin-top:2px}.mb.me .lk{color:#fff}
+.mw{font-size:11px;font-weight:800;color:var(--n)}.mday{align-self:center;font-size:11px;color:var(--m);background:var(--s);border-radius:999px;padding:2px 10px;margin:4px 0}.mimg{max-width:220px;max-height:220px;border-radius:10px;display:block;margin-bottom:3px}
+.mcmp{display:flex;gap:6px;padding:8px;border-top:1px solid var(--b);align-items:flex-end;background:var(--s)}.mcmp textarea{flex:1;min-width:0;border:1px solid var(--b);border-radius:18px;padding:8px 12px;font:inherit;resize:none;max-height:120px}
+.mic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--pl);font-size:16px;border:0;cursor:pointer;flex-shrink:0}.mic.p{background:var(--p);color:#fff}.mic.rec{background:#e11d48;color:#fff;animation:mpul 1s infinite}@keyframes mpul{50%{opacity:.6}}
+.mpage{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 190px);min-height:420px}.mpl{border-right:1px solid var(--b);display:flex;flex-direction:column;min-height:0}.mpage>.mpc{min-height:0}
+@media(max-width:760px){.mpage{grid-template-columns:1fr;height:auto}.mpage .mpc:empty{display:none}}
 </style>
 </head>
 <body>
@@ -171,15 +187,15 @@ const ALL = ["shift", "tach", "vols", "alertes", "eff", "ir", "prof", "pres", "z
 const OPS = ["shift", "tach", "vols", "alertes", "eff", "prof", "zon", "sig", "disc", "mag"];
 /* direction, responsable et coordinateur des opérations : tout ; superviseurs principaux : tout sauf la comptabilité */
 const ACC = { direction: [...ALL, "cmd", "compta"], responsable_ops: [...ALL, "cmd", "compta"], coordinateur_ops: [...ALL, "cmd", "compta"], superviseur_principal: [...ALL, "cmd"], superviseur_nettoyage: ALL, superviseur_bagages: ALL, chef_nettoyage: OPS, chef_bagages: OPS, responsable_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], assistante_rh: ["tach", "shift", "eff", "pres", "disc", "prof"], responsable_comptabilite: ["compta", "tach", "cmd", "mag", "eff", "pres", "disc", "prof"], responsable_technique: ["shift", "tach", "sig", "tech", "mag", "cmd", "prof"], approvisionnement: ["shift", "tach", "sig", "mag", "tech", "cmd", "prof", "eff", "pres", "disc", "compta"] };
-Object.values(ACC).forEach(L => { if (["pres", "disc", "eff"].some(k => L.includes(k)) && !L.includes("rh")) L.push("rh"); });
+Object.values(ACC).forEach(L => { if (!L.includes("msg")) L.splice(Math.min(1, L.length), 0, "msg"); }); Object.values(ACC).forEach(L => { if (["pres", "disc", "eff"].some(k => L.includes(k)) && !L.includes("rh")) L.push("rh"); });
 const WR = ["direction", "responsable_ops", "coordinateur_ops", "responsable_rh", "assistante_rh", "approvisionnement", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
 const VR = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages"];
-const IC = { rh: '<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20v-1.5A4.5 4.5 0 0 1 7 14h2a4.5 4.5 0 0 1 4.5 4.5V20M14 14.5h3a4 4 0 0 1 4 4V20"/>', compta: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4h8v2M3 12h18M12 11v3"/>', cmd: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
+const IC = { msg: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8 8.5h8M8 11.5h5"/>', rh: '<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20v-1.5A4.5 4.5 0 0 1 7 14h2a4.5 4.5 0 0 1 4.5 4.5V20M14 14.5h3a4 4 0 0 1 4 4V20"/>', compta: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4h8v2M3 12h18M12 11v3"/>', cmd: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', zon: '<path d="M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>', tech: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>', shift: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alertes: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', vols: '<path d="M2 16l20-6-2-3-9 1-4-4-2 1 2 5-6 2z"/><path d="M12 17l1 4 2-1-1-5"/>', eff: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>', pres: '<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>', disc: '<path d="M12 3v18M5 7h14M8 21h8"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', mag: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', tach: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/>', sig: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3v5H4a1 1 0 0 1-1-1zM21 14h-3v5h2a1 1 0 0 0 1-1z"/><path d="M18 19a3 3 0 0 1-3 3h-2"/>', ir: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>', prof: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>', theme: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' };
 const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ""}</svg>`;
 const TH = { get() { try { return localStorage.getItem("th") || "bleu"; } catch (e) { return "bleu"; } }, set(v) { try { localStorage.setItem("th", v); } catch (e) { } document.documentElement.dataset.theme = v; } };
 document.documentElement.dataset.theme = TH.get();
 const navClose = () => document.body.classList.remove("nvo"), navOpen = () => document.body.classList.contains("nvo");
-const P = { shift: ["⏱", "Mon shift"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasins"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"], cmd: ["🛒", "Demandes d’achat"], compta: ["💼", "Comptabilité"], rh: ["👥", "Ressources humaines"] };
+const P = { shift: ["⏱", "Mon shift"], msg: ["💬", "Messages"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasins"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"], cmd: ["🛒", "Demandes d’achat"], compta: ["💼", "Comptabilité"], rh: ["👥", "Ressources humaines"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
 let UID = null, ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
@@ -240,7 +256,7 @@ async function start() {
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 let NNI = {};
 async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
-const BC = { alertes: 0, pres: 0 };
+const BC = { alertes: 0, pres: 0, msg: 0 };
 function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
 /* rapports de situation attendus ~9h30 et ~17h (relance à 10h30 / 17h30 si absents) */
@@ -2624,7 +2640,7 @@ ${s.description ? `<div class="card">${E(s.description)}</div>` : ""}
 });
 
 /* ---------- Réglages et notifications ---------- */
-const NT_CAT = [["alertes", "Alertes vols & effectifs"], ["signalements", "Signalements de zones"], ["helpdesk", "Help Desk (signalements externes)"], ["taches", "Tâches qui me sont assignées"], ["magasin", "Magasin (expressions de besoin)"], ["commandes", "Demandes d’achat"], ["systeme", "Messages de l’application"]];
+const NT_CAT = [["messages", "Messages"], ["alertes", "Alertes vols & effectifs"], ["signalements", "Signalements de zones"], ["helpdesk", "Help Desk (signalements externes)"], ["taches", "Tâches qui me sont assignées"], ["magasin", "Magasin (expressions de besoin)"], ["commandes", "Demandes d’achat"], ["systeme", "Messages de l’application"]];
 const NT_IC = { alertes: "🔔", signalements: "📍", helpdesk: "📣", taches: "✅", magasin: "📦", commandes: "🛒", systeme: "⚙️" };
 let NTU = 0, NTL = [];
 const ZM = { get() { try { return +localStorage.getItem("zm") || 1; } catch (e) { return 1; } }, set(v) { try { localStorage.setItem("zm", v); } catch (e) { } document.documentElement.style.setProperty("zoom", v); } };
@@ -3113,6 +3129,105 @@ Object.assign(ACT, {
   stvdet(b) { stvDetail(b.dataset.s); },
   vjust(b) { const s = b.dataset.s, sv = STV.find(x => x.submission_id == s)?.service; ask("Cause du retard", [{ k: "c", l: "Cause (aucune explication dans le rapport de vol)", t: "ta", r: 1 }], async v => { const { error } = await sb.rpc("vol_retard_justifier", { p_sub: s, p_cause: v.c }); if (error) return toast("Refusé : " + error.message); const x = STV.find(y => y.submission_id == s); if (x) { x.justif = v.c.trim(); x.justif_nom = ME.nom; } toast("Cause enregistrée"); stvDetail(sv); }); }
 });
+/* ---------- Messagerie : bulle flottante permanente + onglet Messages ---------- */
+let MSGL = [], MSGC = 0, MSGM = [], MSGU = 0, MSGO = false, MSGV = "liste", MSGF = "tous", MSGCT = null, MSGREC = null;
+const MSGCOL = ["#2F6FD0", "#15803d", "#7c3aed", "#d97706", "#0891b2", "#be185d", "#64748b"], msgIni = n => String(n || "?").replace(/^Ops\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+const msgAv = (n, s = 36) => `<span class="mav" style="width:${s}px;height:${s}px;background:${MSGCOL[[...String(n || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % MSGCOL.length]}">${E(msgIni(n))}</span>`;
+const msgH = d => { const t = new Date(d), j = ymd(t) == today(); return j ? hm(t) : dmy(t); };
+async function msgLoad() { const { data } = await sb.rpc("msg_liste"); MSGL = data || []; MSGU = MSGL.reduce((s, c) => s + (c.non_lus || 0), 0); BC.msg = MSGU; setB(); msgBulle(); }
+function msgBulle() {
+  let b = $("#mbub"); if (!b) { b = document.createElement("button"); b.id = "mbub"; b.type = "button"; b.setAttribute("aria-label", "Messages"); b.onclick = () => msgOuvrir(); document.body.append(b); }
+  b.style.display = !ME || NAV == "msg" ? "none" : ""; b.innerHTML = `💬${MSGU ? `<i>${MSGU > 99 ? "99+" : MSGU}</i>` : ""}`;
+}
+function msgOuvrir(conv) { if (NAV == "msg") { if (conv) msgConv(conv); return; } MSGO = true; let p = $("#mpan"); if (!p) { p = document.createElement("div"); p.id = "mpan"; document.body.append(p); } p.classList.add("on"); if (conv) msgConv(conv); else { MSGV = "liste"; msgRender(); } }
+function msgFermer() { MSGO = false; MSGC = 0; $("#mpan")?.classList.remove("on"); }
+const msgCible = () => NAV == "msg" ? $("#mpage") : $("#mpan");
+function msgListeHTML() {
+  const L = MSGL.filter(c => MSGF == "tous" || (MSGF == "groupes" ? c.type == "groupe" : c.non_lus > 0));
+  return `<div class="mtabs">${[["tous", "Tous"], ["groupes", "Groupes"], ["nonlus", `Non lus${MSGU ? " (" + MSGU + ")" : ""}`]].map(([k, l]) => `<button type="button" class="${MSGF == k ? "on" : ""}" data-mf="${k}">${l}</button>`).join("")}</div>
+<div class="mlist">${L.map(c => `<button type="button" class="mcv ${c.non_lus ? "unr" : ""} ${MSGC == c.id ? "sel" : ""}" data-mc="${c.id}">${msgAv(c.nom)}<span class="mx"><b>${E(c.nom || "")}${c.notif ? "" : " 🔕"}</b><span>${c.dernier_texte ? (c.type == "groupe" && c.dernier_auteur ? E(c.dernier_auteur.split(" ")[0]) + " : " : "") + E(c.dernier_texte) : '<i class="m">Aucun message</i>'}</span></span><span class="mr">${msgH(c.dernier_le)}${c.non_lus ? `<i>${c.non_lus}</i>` : ""}</span></button>`).join("") || `<div class="m" style="padding:14px">Aucune conversation.</div>`}</div>
+<button type="button" class="btn p" style="margin:8px;width:calc(100% - 16px)" data-mnew="1">✏️ Nouveau message</button>`;
+}
+async function msgRender() {
+  const t = msgCible(); if (!t) return; const pg = NAV == "msg";
+  if (pg) { t.innerHTML = `<div class="mpl">${msgListeHTML()}</div><div class="mpc" id="mpc">${MSGC ? "" : '<div class="m" style="margin:auto;text-align:center">Choisissez une conversation<br>ou « Nouveau message ».</div>'}</div>`; if (MSGC) await msgChat($("#mpc")); }
+  else if (MSGV == "chat" && MSGC) { t.innerHTML = `<div class="mph"><button type="button" class="mbk" data-mback="1">←</button><b id="mtit"></b><span><button type="button" class="mbk" data-mexp="1" title="Ouvrir en grand">⤢</button><button type="button" class="mbk" data-mx="1">✕</button></span></div><div class="mpc" id="mpc"></div>`; await msgChat($("#mpc")); }
+  else if (MSGV == "new") t.innerHTML = `<div class="mph"><button type="button" class="mbk" data-mback="1">←</button><b>Nouveau message</b><span><button type="button" class="mbk" data-mx="1">✕</button></span></div>${await msgContactsHTML()}`;
+  else t.innerHTML = `<div class="mph"><b>💬 Messages</b><span><button type="button" class="mbk" data-mexp="1" title="Ouvrir en grand">⤢</button><button type="button" class="mbk" data-mx="1">✕</button></span></div>${msgListeHTML()}`;
+  msgBind(t);
+}
+async function msgContactsHTML() {
+  if (!MSGCT) { const { data } = await sb.rpc("msg_contacts"); MSGCT = data || []; }
+  return `<input id="mcq" placeholder="🔎 Rechercher une personne…" style="margin:8px;width:calc(100% - 16px)"><div class="mlist" id="mcl">${MSGCT.map(p => `<button type="button" class="mcv" data-mu="${p.id}" data-n="${E(N(p.nom))}">${msgAv(p.nom)}<span class="mx"><b>${E(p.nom)}</b><span>${E(p.poste || RL[p.role] || "")}</span></span></button>`).join("") || '<div class="m" style="padding:14px">Aucun contact autorisé.</div>'}</div>`;
+}
+async function msgChat(box) {
+  const c = MSGL.find(x => x.id == MSGC) || {};
+  const [{ data: m }, { data: lp }] = await Promise.all([sb.from("messages").select("*").eq("conv_id", MSGC).order("id", { ascending: false }).limit(80), sb.rpc("msg_lu_par", { p_conv: MSGC })]);
+  MSGM = (m || []).reverse(); const pj = MSGM.filter(x => x.pj_chemin).map(x => x.pj_chemin), U = {};
+  if (pj.length) { const { data } = await sb.storage.from("messages-pj").createSignedUrls(pj, 3600); (data || []).forEach(x => U[x.path] = x.signedUrl); }
+  const autres = (lp || []).filter(x => x.user_id != UID), lu = d => autres.filter(x => new Date(x.dernier_lu) >= new Date(d)).length;
+  const tit = $("#mtit"); if (tit) tit.textContent = c.nom || "";
+  let jr = "";
+  const bul = x => { const me = x.auteur == UID, j = dmy(x.created_at), sep = j != jr ? `<div class="mday">${ymd(new Date(x.created_at)) == today() ? "Aujourd’hui" : j}</div>` : ""; jr = j; const u = U[x.pj_chemin];
+    const p = x.pj_chemin ? (/^image/.test(x.pj_type || "") ? `<a href="${u || "#"}" target="_blank" rel="noopener"><img src="${u || ""}" alt="photo" class="mimg"></a>` : /^audio/.test(x.pj_type || "") ? `<audio controls src="${u || ""}" style="max-width:220px"></audio>` : `<a class="lk" href="${u || "#"}" target="_blank" rel="noopener">📎 ${E(x.pj_nom || "Pièce jointe")}</a>`) : "";
+    return sep + `<div class="mb ${me ? "me" : ""}">${!me && c.type == "groupe" ? `<div class="mw">${E(x.auteur_nom || "")}</div>` : ""}${p}${x.texte ? `<div>${E(x.texte).replace(/\n/g, "<br>")}</div>` : ""}<small>${hm(new Date(x.created_at))}${me ? ` · ${c.type == "groupe" ? "lu par " + lu(x.created_at) : lu(x.created_at) ? "lu" : "envoyé"}` : ""}</small></div>`; };
+  box.innerHTML = `${NAV == "msg" ? `<div class="mph" style="background:var(--s);color:var(--t);border-bottom:1px solid var(--b)"><span style="display:flex;gap:8px;align-items:center">${msgAv(c.nom, 32)}<span><b>${E(c.nom || "")}</b><div class="m">${c.type == "groupe" ? c.membres + " membres · groupe automatique" : "Conversation individuelle"}</div></span></span><button type="button" class="mbk" data-mnotif="1" title="Notifications de cette conversation" style="color:var(--t)">${c.notif === false ? "🔕" : "🔔"}</button></div>` : ""}
+<div class="mmsgs" id="mmsgs">${MSGM.map(bul).join("") || '<div class="m" style="margin:auto">Aucun message. Écrivez le premier.</div>'}</div>
+<div class="mcmp"><label class="mic" title="Photo">📷<input type="file" accept="image/*" hidden data-mpj="1"></label><label class="mic" title="Document">📎<input type="file" hidden data-mpj="1"></label><textarea id="mtx" rows="1" placeholder="Écrire un message…"></textarea><button type="button" class="mic" id="mrec" title="Note vocale">🎤</button><button type="button" class="mic p" id="msend" title="Envoyer">➤</button></div>`;
+  const z = $("#mmsgs"); z.scrollTop = z.scrollHeight;
+  if (c.non_lus) { sb.rpc("msg_lu", { p_conv: MSGC }).then(() => msgLoad().then(() => { if (NAV == "msg") document.querySelectorAll(".mpl").forEach(el => { el.innerHTML = msgListeHTML(); msgBind(el); }); })); ntCount(); }
+  const tx = $("#mtx"), env = async (pj) => { const t = tx.value.trim(); if (!t && !pj) return; $("#msend").disabled = true;
+    const { error } = await sb.rpc("msg_envoyer", { p_conv: MSGC, p_texte: t, p_pj_chemin: pj?.chemin || null, p_pj_type: pj?.type || null, p_pj_nom: pj?.nom || null }); $("#msend").disabled = false;
+    if (error) return toast("Envoi impossible : " + error.message); tx.value = ""; await msgLoad(); msgChat(box); };
+  tx.oninput = () => { tx.style.height = "auto"; tx.style.height = Math.min(120, tx.scrollHeight) + "px"; };
+  tx.onkeydown = e => { if (e.key == "Enter" && !e.shiftKey && !/Mobi/i.test(navigator.userAgent)) { e.preventDefault(); env(); } };
+  $("#msend").onclick = () => env();
+  const up = async (f, nom) => { const ext = (nom.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, ""), ch = `${MSGC}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    toast("Envoi de la pièce jointe…"); const r = await sb.storage.from("messages-pj").upload(ch, f, { contentType: f.type || undefined }); if (r.error) return toast("Envoi impossible : " + r.error.message); env({ chemin: ch, type: f.type || "", nom }); };
+  box.querySelectorAll("[data-mpj]").forEach(i => i.onchange = async e => { let f = e.target.files[0]; e.target.value = ""; if (!f) return; if (/^image/.test(f.type)) { try { f = await irShrink(f); } catch (x) { } } up(f, f.name || "photo.jpg"); });
+  $("#mrec").onclick = async () => { const b = $("#mrec");
+    if (MSGREC) { MSGREC.stop(); return; }
+    try { const stm = await navigator.mediaDevices.getUserMedia({ audio: true }), mt = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find(x => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x)) || "";
+      const rec = new MediaRecorder(stm, mt ? { mimeType: mt } : {}), ch = []; MSGREC = rec; b.classList.add("rec"); b.textContent = "⏹";
+      rec.ondataavailable = e => e.data.size && ch.push(e.data);
+      rec.onstop = () => { stm.getTracks().forEach(t => t.stop()); MSGREC = null; b.classList.remove("rec"); b.textContent = "🎤"; const bl = new Blob(ch, { type: (rec.mimeType || "audio/webm").split(";")[0] }); if (bl.size > 800) up(bl, "note-vocale." + (/mp4/.test(bl.type) ? "m4a" : /ogg/.test(bl.type) ? "ogg" : "webm")); };
+      rec.start(); toast("Enregistrement… appuyez sur ⏹ pour envoyer"); } catch (e) { toast("Micro indisponible : " + (e.message || e)); } };
+}
+function msgBind(t) {
+  t.querySelectorAll("[data-mf]").forEach(b => b.onclick = () => { MSGF = b.dataset.mf; msgRender(); });
+  t.querySelectorAll("[data-mc]").forEach(b => b.onclick = () => msgConv(+b.dataset.mc));
+  t.querySelectorAll("[data-mnew]").forEach(b => b.onclick = async () => { if (NAV == "msg") { const c = $("#mpc"); c.innerHTML = await msgContactsHTML(); msgBind(c); } else { MSGV = "new"; msgRender(); } });
+  t.querySelectorAll("[data-mback]").forEach(b => b.onclick = () => { MSGV = "liste"; MSGC = 0; msgRender(); });
+  t.querySelectorAll("[data-mx]").forEach(b => b.onclick = msgFermer);
+  t.querySelectorAll("[data-mexp]").forEach(b => b.onclick = () => { const c = MSGC; msgFermer(); MSGC = c; NAV = "msg"; draw(); });
+  t.querySelectorAll("[data-mu]").forEach(b => b.onclick = async () => { const { data, error } = await sb.rpc("msg_direct", { p_user: b.dataset.mu }); if (error) return toast(error.message); await msgLoad(); if (!MSGL.some(c => c.id == data)) MSGL.unshift({ id: data, type: "direct", nom: MSGCT.find(p => p.id == b.dataset.mu)?.nom, dernier_le: new Date().toISOString(), non_lus: 0, notif: true }); msgConv(data); });
+  t.querySelectorAll("[data-mnotif]").forEach(b => b.onclick = async () => { const c = MSGL.find(x => x.id == MSGC); const v = c.notif === false; await sb.from("conv_membres").update({ notif: v }).eq("conv_id", MSGC).eq("user_id", UID); c.notif = v; toast(v ? "Notifications activées pour cette conversation" : "Notifications coupées pour cette conversation"); msgRender(); });
+  const q = t.querySelector("#mcq"); if (q) q.oninput = () => { const v = N(q.value); t.querySelectorAll("#mcl [data-mu]").forEach(b => b.style.display = !v || b.dataset.n.includes(v) ? "" : "none"); };
+}
+function msgConv(id) { MSGC = id; MSGV = "chat"; msgRender(); }
+async function msgInit() {
+  await msgLoad();
+  sb.channel("msgs").on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async p => {
+    const m = p.new; await msgLoad();
+    if (m.conv_id == MSGC && (MSGO || NAV == "msg") && document.visibilityState == "visible") { const box = $("#mpc"); if (box) msgChat(box); }
+    else if (m.auteur != UID) { toast(`💬 ${m.auteur_nom || ""} : ${(m.texte || "pièce jointe").slice(0, 60)}`); }
+    if (NAV == "msg" && m.conv_id != MSGC) document.querySelectorAll(".mpl").forEach(el => { el.innerHTML = msgListeHTML(); msgBind(el); });
+    else if (MSGO && MSGV == "liste") msgRender();
+  }).subscribe();
+  setInterval(() => { if (document.visibilityState == "visible") msgLoad(); }, 60000);
+}
+V.msg = async () => { await msgLoad(); let k = 0; const go = () => $("#mpage") ? (msgBulle(), msgRender()) : ++k < 100 && setTimeout(go, 50); setTimeout(go, 0); return head("Messages", "Conversations individuelles et de groupe") + `<div class="card" style="padding:0;overflow:hidden"><div id="mpage" class="mpage"></div></div>`; };
+/* autorisation des notifications : demandée dès l'ouverture tant qu'elle n'est pas accordée */
+function ntDemande() {
+  if (!ME) return; let deja = false; try { deja = sessionStorage.getItem("ntd") == "1"; } catch (e) { }
+  if (deja) return; try { sessionStorage.setItem("ntd", "1"); } catch (e) { }
+  const st = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+  if (!pushOK()) { if (isIOS && !st) mdOpen(`<h2>🔔 Activez les notifications</h2><div>Pour recevoir les messages et les alertes sur votre iPhone : touchez <b>Partager</b> puis <b>« Sur l’écran d’accueil »</b>, et ouvrez EPS OPS depuis son icône. L’autorisation vous sera alors demandée.</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn p" id="no">Compris</button></div>`), $("#no").onclick = mdClose; return; }
+  if (Notification.permission == "granted") return;
+  if (Notification.permission == "denied") { mdOpen(`<h2>🔕 Notifications bloquées</h2><div>Les messages et alertes ne peuvent pas vous parvenir. Autorisez les notifications pour ce site dans les réglages du navigateur ou du téléphone (icône 🔒 à gauche de l’adresse → Notifications → Autoriser), puis rouvrez l’application.</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn p" id="no">Compris</button></div>`); $("#no").onclick = mdClose; return; }
+  mdOpen(`<h2>🔔 Activez les notifications</h2><div>EPS OPS vous prévient des <b>messages</b>, alertes de vols, tâches et signalements, même application fermée. Touchez <b>« Activer »</b> puis <b>« Autoriser »</b> dans la fenêtre qui s’affiche.</div><div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button type="button" class="btn" id="no">Plus tard</button><button type="button" class="btn p" id="ntok">Activer</button></div>`);
+  $("#no").onclick = mdClose; $("#ntok").onclick = async () => { mdClose(); await ACT.nton(); mdClose(); };
+}
 Object.assign(ACT, { rhsv(b) { RHF.sv = b.dataset.v; rhSave(); draw(); }, rhgo(b) { const k = b.dataset.k; if (k == "pres") { SF.dp = RHF.sv == "M" ? "Manutention" : RHF.sv == "N" ? "Nettoyage" : ""; SF.g = ""; SF.sv = ""; } NAV = k; draw(); } });
 document.addEventListener("change", e => { if (e.target.id == "rhsite") { RHF.site = e.target.value; if (RHF.site != "aino") RHF.sv = ""; rhSave(); draw(); } });
 const PL = p => p == "shift" && ["responsable_rh", "assistante_rh", "approvisionnement", "direction", "responsable_ops", "coordinateur_ops"].includes(ME.role) ? "Shift actuel" : P[p][1];
@@ -3547,6 +3662,7 @@ Object.assign(ACT, {
 });
 /* m : rien = page entière ou seulement la carte concernée par la dernière action ; 1 = tout recharger ; 2 = page hôte seule (cartes depuis le cache) */
 async function draw(m) {
+  try { if (ME) { if (NAV == "msg" && MSGO) { MSGO = false; $("#mpan")?.classList.remove("on"); } msgBulle(); } } catch (e) { }
   const ok = ACC[ME.role] || ["shift"];
   if (sxHost(NAV)) { const k = NAV; NAV = SXH[k]; SXA = k; SXS = k; if (!SXOPEN.has(k)) { SXOPEN.add(k); sxSave(); } }
   if (!ok.includes(NAV)) NAV = ok[0];
@@ -3580,7 +3696,7 @@ async function shell() {
   SHOWN = ""; BOOT = Promise.all([loadAG(), loadST(), loadAL(), loadCFG().catch(() => { })]); BOOT.catch(() => { }); setInterval(() => { loadST(); loadAL(); }, 60000);
   sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(2); })
     .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(2); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
-  draw(); ntInit();
+  draw(); ntInit(); msgInit().catch(() => { }); setTimeout(ntDemande, 1500);
 }
 Object.assign(ACT, {
   async psv(b) {
