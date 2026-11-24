@@ -584,3 +584,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- tenus à jour par trigger sur profiles (msg_groupes_sync), msg_direct, msg_envoyer (notification catégorie « messages »),
 -- msg_liste, msg_lu, msg_lu_par, stockage messages-pj. Client : bulle flottante permanente, panneau, onglet Messages,
 -- demande d'autorisation des notifications à l'ouverture tant qu'elle n'est pas accordée.
+
+-- v77 (24/11/2026) : paie — retenue par jour d’absence non justifiée / mise à pied = salaire mensuel / 30 (au lieu de 500 MRU) ;
+-- prorata arrivée / départ en cours de période = salaire / 30 × jours de présence (date d’embauche et date de départ incluses), observation « Prorata ».
