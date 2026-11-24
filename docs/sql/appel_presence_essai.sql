@@ -596,3 +596,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- rapports_financiers + fin_donnees(annee, mois) + fonction rapport-financier (IA) + cron rapport-financier-mensuel le 26 à 09:41 → responsable et directeur des opérations ; affichage dans Mon profil.
 
 -- v80 (24/11/2026) : agent 1128 Mamadou Amadou Sy, chef d’équipe manutention en rotation (équipe « Manutention (rotatif) », matricule à confirmer) ; jf-form : détail des erreurs d’écriture Jotform ; personnel_admin Ndey Ba = Responsable des relations extérieures.
+
+-- v81 (24/11/2026) : paie v3 (sélection Tout / Aéroport global / Nettoyage / Manutention / ASECNA / Opérations aéroport / Direction & administration / Sites ville / chaque site ; blocs avec cartes d’équipe dépliables ; total général) ; RH : carte « Encadrement » (superviseurs / chefs d’équipe).
