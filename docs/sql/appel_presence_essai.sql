@@ -600,3 +600,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v81 (24/11/2026) : paie v3 (sélection Tout / Aéroport global / Nettoyage / Manutention / ASECNA / Opérations aéroport / Direction & administration / Sites ville / chaque site ; blocs avec cartes d’équipe dépliables ; total général) ; RH : carte « Encadrement » (superviseurs / chefs d’équipe).
 
 -- v82 (24/11/2026) : trigger agents_dossier (agent_dossier_controle) : nouvelle fiche incomplète → tâche RH « Dossier à compléter » + notification RH, clôture auto quand date d’embauche, téléphone et NNI sont renseignés ; tâche créée pour 1128 ; tableau de bord RH : « Dossier à compléter » pour les fiches de moins de 60 jours ; effectif prévu équipe 4 = 34.
+
+-- v83 (24/11/2026) : superviseurs nettoyage comptés dans l’effectif de l’équipe 4 ; trigger agents_jf_sync (insert / changement d’équipe, statut, fonction, nom, matricule → jf_sync) + cron jotform-listes-sync 07:47.
