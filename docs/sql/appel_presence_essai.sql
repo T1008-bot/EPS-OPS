@@ -575,3 +575,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- rs_heure, apres ; retard = off block − départ prévu allocation/programme, cause du rapport ou vol_retard_justif),
 -- alerte rouge Help Desk « sans N° de ticket », colonne « Lancé par », bouton « Saisir le ticket ».
 -- Retour arrière : git revert de ce commit ; select cron.unschedule('situation-17h-notif').
+
+-- v75 (24/11/2026) : profiles.poste (intitulé affiché, indépendant du rôle) ; Ndey Ba = Responsable des relations extérieures (rôle approvisionnement inchangé).
