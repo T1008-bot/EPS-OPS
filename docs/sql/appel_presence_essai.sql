@@ -591,3 +591,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 24/11/2026 : salaire_base — date d’embauche manquante = tarif ancien agent / ancien chef (plus de salaire à 0) ; tâche EPS/OPS/TCH/2026/450 à la comptabilité (44 saisies manuelles ≠ grille).
 
 -- v78 (24/11/2026) : messages.supprime_le + msg_supprimer (auteur seulement, effacement du contenu, « Message supprimé ») ; depenses_diverses (onglet Comptabilité « Dépenses diverses », justificatif dans commandes-pj/depenses, annulation sans suppression).
+
+-- v79 (24/11/2026) : bulle de messagerie masquée pendant les fenêtres et les confirmations, onglet latéral sur téléphone ; ia-texte « corriger » → reformulation claire, simple et professionnelle (bouton « Améliorer le texte ») ;
+-- rapports_financiers + fin_donnees(annee, mois) + fonction rapport-financier (IA) + cron rapport-financier-mensuel le 26 à 09:41 → responsable et directeur des opérations ; affichage dans Mon profil.
