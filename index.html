@@ -882,7 +882,7 @@ async function clsMajAgent(a, ch) {
 }
 /* ===== Nouvelle recrue, modification de fiche, départ — dossier + classeur Drive du service ===== */
 const AG_FN = ["Agent de nettoyage", "Agent de manutention", "Agent nettoyage cabine", "Agent PMR / Wheelchair", "Chauffeur", "Chef d’équipe", "Superviseur Nettoyage", "Superviseur Manutention", "Autre"];
-const AG_EQ = { N: ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4", "Chauffeurs"], M: ["Manutention 1", "Manutention 2", "Manutention 3"], ASECNA: ["ASECNA Nettoyage", "ASECNA Manutention"] };
+const AG_EQ = { N: ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4", "Chauffeurs"], M: ["Manutention 1", "Manutention 2", "Manutention 3", "Manutention (rotatif)"], ASECNA: ["ASECNA Nettoyage", "ASECNA Manutention"] };
 let AGSITES = null;
 /* opération sur le dernier classeur du service : nouvelle version datée du jour, mise en page conservée */
 async function clsAppliquer(kind, apply) {

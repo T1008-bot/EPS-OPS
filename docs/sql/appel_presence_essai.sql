@@ -594,3 +594,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v79 (24/11/2026) : bulle de messagerie masquée pendant les fenêtres et les confirmations, onglet latéral sur téléphone ; ia-texte « corriger » → reformulation claire, simple et professionnelle (bouton « Améliorer le texte ») ;
 -- rapports_financiers + fin_donnees(annee, mois) + fonction rapport-financier (IA) + cron rapport-financier-mensuel le 26 à 09:41 → responsable et directeur des opérations ; affichage dans Mon profil.
+
+-- v80 (24/11/2026) : agent 1128 Mamadou Amadou Sy, chef d’équipe manutention en rotation (équipe « Manutention (rotatif) », matricule à confirmer) ; jf-form : détail des erreurs d’écriture Jotform ; personnel_admin Ndey Ba = Responsable des relations extérieures.
