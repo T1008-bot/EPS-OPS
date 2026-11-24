@@ -159,7 +159,7 @@ input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-hei
 .mcv.unr .mx b{color:var(--p)}.mcv.unr .mx span{color:var(--t);font-weight:600}.mr{text-align:right;font-size:11px;color:var(--m);display:flex;flex-direction:column;align-items:flex-end;gap:3px}.mr i{background:#e11d48;color:#fff;border-radius:999px;font:800 11px system-ui;padding:1px 6px;font-style:normal}
 .mpc{flex:1;display:flex;flex-direction:column;min-height:0}.mmsgs{flex:1;overflow:auto;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
 .mb{max-width:80%;padding:7px 10px;border-radius:14px;font-size:13.5px;background:var(--s);border:1px solid var(--b);align-self:flex-start;word-wrap:break-word}.mb.me{align-self:flex-end;background:var(--p);color:#fff;border-color:var(--p)}.mb small{display:block;font-size:10.5px;opacity:.75;margin-top:2px}.mb.me .lk{color:#fff}
-.mw{font-size:11px;font-weight:800;color:var(--n)}.mday{align-self:center;font-size:11px;color:var(--m);background:var(--s);border-radius:999px;padding:2px 10px;margin:4px 0}.mimg{max-width:220px;max-height:220px;border-radius:10px;display:block;margin-bottom:3px}
+.mdel{background:none;border:0;color:inherit;opacity:.7;cursor:pointer;font-size:11px;padding:0 6px 0 0}.mdel:hover{opacity:1}.mw{font-size:11px;font-weight:800;color:var(--n)}.mday{align-self:center;font-size:11px;color:var(--m);background:var(--s);border-radius:999px;padding:2px 10px;margin:4px 0}.mimg{max-width:220px;max-height:220px;border-radius:10px;display:block;margin-bottom:3px}
 .mcmp{display:flex;gap:6px;padding:8px;border-top:1px solid var(--b);align-items:flex-end;background:var(--s)}.mcmp textarea{flex:1;min-width:0;border:1px solid var(--b);border-radius:18px;padding:8px 12px;font:inherit;resize:none;max-height:120px}
 .mic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--pl);font-size:16px;border:0;cursor:pointer;flex-shrink:0}.mic.p{background:var(--p);color:#fff}.mic.rec{background:#e11d48;color:#fff;animation:mpul 1s infinite}@keyframes mpul{50%{opacity:.6}}
 .mpage{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 190px);min-height:420px}.mpl{border-right:1px solid var(--b);display:flex;flex-direction:column;min-height:0}.mpage>.mpc{min-height:0}
@@ -3170,11 +3170,13 @@ async function msgChat(box) {
   let jr = "";
   const bul = x => { const me = x.auteur == UID, j = dmy(x.created_at), sep = j != jr ? `<div class="mday">${ymd(new Date(x.created_at)) == today() ? "Aujourd’hui" : j}</div>` : ""; jr = j; const u = U[x.pj_chemin];
     const p = x.pj_chemin ? (/^image/.test(x.pj_type || "") ? `<a href="${u || "#"}" target="_blank" rel="noopener"><img src="${u || ""}" alt="photo" class="mimg"></a>` : /^audio/.test(x.pj_type || "") ? `<audio controls src="${u || ""}" style="max-width:220px"></audio>` : `<a class="lk" href="${u || "#"}" target="_blank" rel="noopener">📎 ${E(x.pj_nom || "Pièce jointe")}</a>`) : "";
-    return sep + `<div class="mb ${me ? "me" : ""}">${!me && c.type == "groupe" ? `<div class="mw">${E(x.auteur_nom || "")}</div>` : ""}${p}${x.texte ? `<div>${E(x.texte).replace(/\n/g, "<br>")}</div>` : ""}<small>${hm(new Date(x.created_at))}${me ? ` · ${c.type == "groupe" ? "lu par " + lu(x.created_at) : lu(x.created_at) ? "lu" : "envoyé"}` : ""}</small></div>`; };
+    if (x.supprime_le) return sep + `<div class="mb ${me ? "me" : ""}" style="opacity:.6;font-style:italic">${!me && c.type == "groupe" ? `<div class="mw">${E(x.auteur_nom || "")}</div>` : ""}🚫 Message supprimé<small>${hm(new Date(x.created_at))}</small></div>`;
+    return sep + `<div class="mb ${me ? "me" : ""}">${!me && c.type == "groupe" ? `<div class="mw">${E(x.auteur_nom || "")}</div>` : ""}${p}${x.texte ? `<div>${E(x.texte).replace(/\n/g, "<br>")}</div>` : ""}<small>${me ? `<button type="button" class="mdel" data-mdel="${x.id}" title="Supprimer ce message">🗑</button>` : ""}${hm(new Date(x.created_at))}${me ? ` · ${c.type == "groupe" ? "lu par " + lu(x.created_at) : lu(x.created_at) ? "lu" : "envoyé"}` : ""}</small></div>`; };
   box.innerHTML = `${NAV == "msg" ? `<div class="mph" style="background:var(--s);color:var(--t);border-bottom:1px solid var(--b)"><span style="display:flex;gap:8px;align-items:center">${msgAv(c.nom, 32)}<span><b>${E(c.nom || "")}</b><div class="m">${c.type == "groupe" ? c.membres + " membres · groupe automatique" : "Conversation individuelle"}</div></span></span><button type="button" class="mbk" data-mnotif="1" title="Notifications de cette conversation" style="color:var(--t)">${c.notif === false ? "🔕" : "🔔"}</button></div>` : ""}
 <div class="mmsgs" id="mmsgs">${MSGM.map(bul).join("") || '<div class="m" style="margin:auto">Aucun message. Écrivez le premier.</div>'}</div>
 <div class="mcmp"><label class="mic" title="Photo">📷<input type="file" accept="image/*" hidden data-mpj="1"></label><label class="mic" title="Document">📎<input type="file" hidden data-mpj="1"></label><textarea id="mtx" rows="1" placeholder="Écrire un message…"></textarea><button type="button" class="mic" id="mrec" title="Note vocale">🎤</button><button type="button" class="mic p" id="msend" title="Envoyer">➤</button></div>`;
   const z = $("#mmsgs"); z.scrollTop = z.scrollHeight;
+  box.querySelectorAll("[data-mdel]").forEach(b => b.onclick = async () => { if (!confirm("Supprimer ce message pour tout le monde ?")) return; const { error } = await sb.rpc("msg_supprimer", { p_id: +b.dataset.mdel }); if (error) return toast(error.message); await msgLoad(); msgChat(box); });
   if (c.non_lus) { sb.rpc("msg_lu", { p_conv: MSGC }).then(() => msgLoad().then(() => { if (NAV == "msg") document.querySelectorAll(".mpl").forEach(el => { el.innerHTML = msgListeHTML(); msgBind(el); }); })); ntCount(); }
   const tx = $("#mtx"), env = async (pj) => { const t = tx.value.trim(); if (!t && !pj) return; $("#msend").disabled = true;
     const { error } = await sb.rpc("msg_envoyer", { p_conv: MSGC, p_texte: t, p_pj_chemin: pj?.chemin || null, p_pj_type: pj?.type || null, p_pj_nom: pj?.nom || null }); $("#msend").disabled = false;
@@ -3213,7 +3215,7 @@ async function msgInit() {
     else if (m.auteur != UID) { toast(`💬 ${m.auteur_nom || ""} : ${(m.texte || "pièce jointe").slice(0, 60)}`); }
     if (NAV == "msg" && m.conv_id != MSGC) document.querySelectorAll(".mpl").forEach(el => { el.innerHTML = msgListeHTML(); msgBind(el); });
     else if (MSGO && MSGV == "liste") msgRender();
-  }).subscribe();
+  }).on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, async p => { if (p.new.conv_id == MSGC && (MSGO || NAV == "msg")) { const box = $("#mpc"); if (box) msgChat(box); } msgLoad(); }).subscribe();
   setInterval(() => { if (document.visibilityState == "visible") msgLoad(); }, 60000);
 }
 V.msg = async () => { await msgLoad(); let k = 0; const go = () => $("#mpage") ? (msgBulle(), msgRender()) : ++k < 100 && setTimeout(go, 50); setTimeout(go, 0); return head("Messages", "Conversations individuelles et de groupe") + `<div class="card" style="padding:0;overflow:hidden"><div id="mpage" class="mpage"></div></div>`; };
@@ -4375,9 +4377,9 @@ const STAT = { essai: "Période d’essai", confirme: "Confirmé (dès le 4e moi
 V.compta = async () => {
   if (!CSITES) { const { data } = await sb.from("sites").select("code,nom").eq("actif", true).order("ordre"); CSITES = data || []; }
   if (!PAIE) { const d = new Date(), m = d.getUTCDate() > 25 ? d.getUTCMonth() + 2 : d.getUTCMonth() + 1; PAIE = m > 12 ? { a: d.getUTCFullYear() + 1, m: 1 } : { a: d.getUTCFullYear(), m }; }
-  const tb = [["paie", "💰 Situation de paie"], ["prets", "🤝 Prêts et avances"], ["primes", "🏅 Primes du mois"], ["achats", "🛒 Achats"], ["factures", "🧾 Fournisseurs et factures"]];
+  const tb = [["paie", "💰 Situation de paie"], ["prets", "🤝 Prêts et avances"], ["primes", "🏅 Primes du mois"], ["achats", "🛒 Achats"], ["factures", "🧾 Fournisseurs et factures"], ["depenses", "💸 Dépenses diverses"]];
   const nav = `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><select id="csite" style="width:auto;min-width:220px;font-weight:700">${[["global", "Global (tous les sites)"], ...CSITES.map(x => [x.code, x.nom])].map(([k, l]) => `<option value="${k}" ${CSITE == k ? "selected" : ""}>${E(l)}</option>`).join("")}</select></div><div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${tb.map(([k, l]) => `<button class="btn ${CPT == k ? "p" : ""}" data-a="cpt" data-k="${k}">${l}</button>`).join("")}</div>`;
-  const body = CPT == "prets" ? await cptPrets() : CPT == "primes" ? await cptPrimes() : CPT == "achats" ? await cptAchats() : CPT == "factures" ? await cptFactures() : await cptPaie();
+  const body = CPT == "prets" ? await cptPrets() : CPT == "primes" ? await cptPrimes() : CPT == "achats" ? await cptAchats() : CPT == "factures" ? await cptFactures() : CPT == "depenses" ? await cptDepenses() : await cptPaie();
   return nav + body;
 };
 document.addEventListener("change", e => { if (e.target.id == "csite") { CSITE = e.target.value; draw(); } });
@@ -4473,6 +4475,39 @@ async function cptFactures() {
    + `<div class="card sc"><h2>Factures</h2><table><tr><th>Fournisseur</th><th>N°</th><th>Site</th><th>Date</th><th>Échéance</th><th>Montant</th><th>Demande</th><th>Statut</th><th></th></tr>${L.map(x => `<tr><td>${E(FO[x.fournisseur_id] || "—")}</td><td>${E(x.numero || "")}</td><td>${x.site ? E(siteNom(x.site)) : '<span class="m">—</span>'}</td><td>${x.date_facture ? fd(x.date_facture) : ""}</td><td>${x.echeance ? fd(x.echeance) + (x.statut == "a_payer" && x.echeance < today() ? ' <span class="bd bad">dépassée</span>' : "") : ""}</td><td>${mru(x.montant)}</td><td>${E(x.commande_ref || "")}</td><td><span class="bd ${x.statut == "payee" ? "ok" : x.statut == "annulee" ? "info" : "warn"}">${{ a_payer: "À payer", payee: "Payée", annulee: "Annulée" }[x.statut]}</span>${x.paye_le ? `<div class="m">${fd(x.paye_le)} · ${E(x.mode_paiement || "")}</div>` : ""}</td><td>${x.statut == "a_payer" ? `<button class="btn w" data-a="cptpaye" data-i="${x.id}">Payée</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="9" class="m">Aucune facture pour ce site.</td></tr>`}</table></div>`
    + `<div class="card sc"><h2>Fournisseurs (${(f.data || []).length})</h2><table><tr><th>Nom</th><th>Contact</th><th>Téléphone</th><th>E-mail</th><th>NIF</th></tr>${(f.data || []).map(x => `<tr><td><b>${E(x.nom)}</b></td><td>${E(x.contact || "")}</td><td>${E(x.tel || "")}</td><td>${E(x.email || "")}</td><td>${E(x.nif || "")}</td></tr>`).join("") || `<tr><td colspan="5" class="m">Aucun fournisseur.</td></tr>`}</table></div>`;
 }
+/* ---- Dépenses diverses ---- */
+const DEP_CAT = ["Transport / déplacements", "Carburant", "Restauration", "Fournitures de bureau", "Entretien / réparation", "Communication (crédit, internet)", "Frais administratifs", "Frais bancaires", "Divers"], DEP_MODE = ["Espèces", "Virement", "Chèque", "Bankily / Masrvi / Sedad"];
+let DEPM = null;
+async function cptDepenses() {
+  if (!DEPM) DEPM = today().slice(0, 7);
+  const d0 = DEPM + "-01", d1 = ymd(new Date(Date.UTC(+DEPM.slice(0, 4), +DEPM.slice(5, 7), 0)));
+  const { data, error } = await sb.from("depenses_diverses").select("*").gte("jour", d0).lte("jour", d1).order("jour", { ascending: false }).order("id", { ascending: false }); if (error) throw error;
+  const L = (data || []).filter(x => CSITE == "global" || x.site == CSITE), A = L.filter(x => !x.annule), tot = A.reduce((s, x) => s + +x.montant, 0), C = {};
+  A.forEach(x => C[x.categorie || "Divers"] = (C[x.categorie || "Divers"] || 0) + +x.montant);
+  const mois = []; for (let i = 0; i < 12; i++) { const d = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - i, 1)); const k = ymd(d).slice(0, 7); mois.push(`<option value="${k}" ${k == DEPM ? "selected" : ""}>${d.toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" })}</option>`); }
+  return head(`Dépenses diverses · ${E(siteNom(CSITE))}`, `${A.length} dépense(s) · total ${mru(tot)}`, `<div class="row" style="gap:6px"><select id="depm" style="width:auto">${mois.join("")}</select><button class="btn p" data-a="depnew">+ Dépense</button></div>`)
+    + (Object.keys(C).length ? `<div class="card"><h2>Par catégorie</h2>${Object.entries(C).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="li"><span>${E(k)}</span><b>${mru(v)}</b></div>`).join("")}<div class="li"><b>Total</b><b>${mru(tot)}</b></div></div>` : "")
+    + `<div class="card sc"><h2>Dépenses</h2><table><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th>Site</th><th>Bénéficiaire</th><th>Paiement</th><th>Montant</th><th></th></tr>${L.map(x => `<tr style="${x.annule ? "opacity:.5;text-decoration:line-through" : ""}"><td>${fd(x.jour)}</td><td><b>${E(x.libelle)}</b>${x.note ? `<div class="m">${E(x.note)}</div>` : ""}<div class="m">saisi par ${E(x.saisi_nom || "")}</div></td><td>${E(x.categorie || "")}</td><td>${x.site ? E(siteNom(x.site)) : "—"}</td><td>${E(x.beneficiaire || "")}</td><td>${E(x.mode_paiement || "")}</td><td><b>${mru(x.montant)}</b></td><td>${x.justificatif ? `<button class="btn" data-a="depjust" data-c="${E(x.justificatif)}">📎</button>` : ""}${x.annule ? "" : ` <button class="btn" data-a="depann" data-i="${x.id}">Annuler</button>`}</td></tr>`).join("") || `<tr><td colspan="8" class="m">Aucune dépense ce mois-ci.</td></tr>`}</table></div>`;
+}
+document.addEventListener("change", e => { if (e.target.id == "depm") { DEPM = e.target.value; draw(); } });
+Object.assign(ACT, {
+  depnew() {
+    mdOpen(`<div class="row"><h2>+ Dépense diverse</h2><button type="button" class="btn" id="no">✕</button></div>
+<div class="fc"><div><label>Date</label><input id="dpj" type="date" value="${today()}"></div><div><label>Montant (MRU)</label><input id="dpm" type="number" min="1" step="any"></div></div>
+<label>Libellé</label><input id="dpl" placeholder="Ex. taxi pour livraison au site DGSN">
+<div class="fc"><div><label>Catégorie</label><select id="dpc">${DEP_CAT.map(x => `<option>${E(x)}</option>`).join("")}</select></div><div><label>Site</label><select id="dps"><option value="">— Général —</option>${siteOpts(CSITE == "global" ? "" : CSITE)}</select></div></div>
+<div class="fc"><div><label>Mode de paiement</label><select id="dpp">${DEP_MODE.map(x => `<option>${E(x)}</option>`).join("")}</select></div><div><label>Bénéficiaire</label><input id="dpb"></div></div>
+<label>Justificatif (photo du reçu, facultatif)</label><input id="dpf" type="file" accept="image/*,application/pdf"><label>Note</label><input id="dpn">
+<div class="row" style="justify-content:flex-end;gap:6px;margin-top:8px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="dpok">Enregistrer</button></div>`);
+    $("#no").onclick = $("#no2").onclick = mdClose;
+    $("#dpok").onclick = async () => { const m = +$("#dpm").value, l = $("#dpl").value.trim(); if (!l || !(m > 0)) return toast("Libellé et montant obligatoires"); const b = $("#dpok"); b.disabled = true;
+      let ch = null; const f = $("#dpf").files[0]; if (f) { ch = `depenses/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${(f.name.split(".").pop() || "jpg").toLowerCase()}`; const up = await sb.storage.from("commandes-pj").upload(ch, f, { contentType: f.type || undefined }); if (up.error) { b.disabled = false; return toast("Envoi du justificatif impossible : " + up.error.message); } }
+      const { error } = await sb.from("depenses_diverses").insert({ jour: $("#dpj").value, montant: m, libelle: l, categorie: $("#dpc").value, site: $("#dps").value || null, mode_paiement: $("#dpp").value, beneficiaire: $("#dpb").value.trim() || null, note: $("#dpn").value.trim() || null, justificatif: ch, saisi_nom: ME.nom });
+      if (error) { b.disabled = false; return toast("Refusé : " + error.message); } mdClose(); DEPM = $("#dpj") ? DEPM : DEPM; toast("Dépense enregistrée"); draw(); };
+  },
+  async depjust(b) { const { data } = await sb.storage.from("commandes-pj").createSignedUrl(b.dataset.c, 3600); if (data) window.open(data.signedUrl, "_blank"); else toast("Justificatif inaccessible"); },
+  depann(b) { if (!confirm("Annuler cette dépense ? Elle restera visible, barrée, et ne comptera plus dans le total.")) return; sb.from("depenses_diverses").update({ annule: true }).eq("id", +b.dataset.i).then(({ error }) => { toast(error ? "Refusé : " + error.message : "Dépense annulée"); draw(); }); }
+});
 const siteOpts = (def) => (CSITES || []).map(x => [x.code, x.nom]).map(([k, l]) => `<option value="${k}" ${def == k ? "selected" : ""}>${E(l)}</option>`).join("");
 Object.assign(ACT, {
   cpt(b) { CPT = b.dataset.k; draw(); },
