@@ -561,3 +561,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Mosquée, Pavillon présidentiel, ASECNA comptée à part via site_conso) ; ravitaillement extérieur → intérieur automatique.
 -- bilan_enregistrer (inventaire signé, ajustements) ; conso_analyse (moyenne dès 3 jours, dépassement grave / hausse / chute) ;
 -- crons bilan-magasin-interieur 09:00 (tâche Abderahmane, clôturée par le bilan) et conso-magasin-alertes 21:07.
+
+-- v73 (24/11/2026) : plus de bilan quotidien (stock calculé par les entrées/sorties) ; cron bilan-magasins-aeroport
+-- vendredi 08:13, semaines ISO paires (1er le 27/11) : tâches à Ismail Niass, notification aux superviseurs principaux,
+-- Ismail Niass et responsable des opérations. Abderahmane : magasin central uniquement (mouvement_saisir / bilan_enregistrer).
+-- magasin_seuils + seuil_alertes + trigger mv_seuil (seuil_controle) : alerte urgente ; aéroport → superviseurs principaux,
+-- Ismail Niass, approvisionnement + tâche « Expression de besoin » (besoin_seuil:m:a) ; central/sites → approvisionnement,
+-- comptabilité. Trigger bs_seuil : l'expression de besoin clôt les tâches d'alerte.
