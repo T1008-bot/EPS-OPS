@@ -644,3 +644,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   (affiché dans la décision ; MAP manuelle avec référence de DE → objet de la DE).
 -- ia-texte v12 : mode « corriger » enrichit selon le type de document, nouveau mode « objet », objet fixé dans les décisions,
 --   vocabulaire métier pour la transcription (source : docs/functions/ia-texte/index.ts).
+
+-- v93 (2026-11-25) : expression de besoin multi-articles
+-- besoins.unite, besoins.observation, besoins.groupe (EB-AAMMJJ-HHMMSS-xxx) ; RPC besoin_creer(p_magasin, p_urgence, p_motif, p_lignes jsonb)
+-- (une seule notification par demande) ; nt_besoin ignore les lignes groupées à l'insertion ; liste regroupée par demande
+-- avec « Tout approuver / Tout refuser / Tout marquer servi ».
