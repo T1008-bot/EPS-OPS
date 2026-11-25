@@ -8,3 +8,5 @@
 - Migrations : éviter DROP/DELETE/cascade (préférer des indicateurs : retire, annule, supprime_le).
 - Maquette à faire valider avant tout changement de mise en page.
 - Déploiement : vérifier la syntaxe, incrémenter `eps-ops-vN` dans sw.js, ajouter une note dans docs/sql/appel_presence_essai.sql, pousser la branche puis main.
+- Comptes : identifiant = n° de téléphone (`<tel>@eps-ops.mr`) et mot de passe initial = même numéro (changement forcé à la 1re connexion).
+  Si on corrige le numéro d'une personne qui ne s'est jamais connectée, mettre à jour l'identifiant ET le mot de passe initial.
