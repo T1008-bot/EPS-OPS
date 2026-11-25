@@ -610,3 +610,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v86 (25/11/2026) : 1330 doublon retiré (départ au 25/10) ; consultant : rapports financiers ; salaire_base : tarif confirmé après validation de la comptabilité et après la fin du mois d’échéance de l’essai ; essais_verifier crée une tâche à la comptabilité, close par la décision (trigger confirmations_essai_tache) ; départ « transfert » : choix changement d’affectation (fiche) ou départ définitif.
 
 -- v87 (25/11/2026) : profiles.email (7 comptes ITGHANE rapprochés) + login_par_email (connexion par e-mail ou téléphone) ; ITGHANE → EPS OPS : fonction itghane-entrant + table itghane_entrees (comptes, documents, signatures) ; côté ITGHANE (projet Progiciel EPS) : pg_net, eps_ops_envoyer et intégration de tous les jeux reçus ; formulaire Jotform 263073141001035 désactivé.
+
+-- v88 (2026-11-25) : correction du N° BDM (signalements externes)
+-- RPC sig_bdm_modifier(p_id, p_bdm, p_motif) + sig_bdm_auteur(p_id) : autorisé à l'auteur de la saisie BDM
+-- (ou au créateur du signalement si aucune saisie tracée), aux superviseurs principaux, responsables des opérations
+-- et superviseurs. Trace l'ancien/nouveau numéro et le motif dans un événement 'commentaire'. Aucune suppression.
