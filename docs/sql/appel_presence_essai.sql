@@ -655,3 +655,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- besoin_vu(ids) (appelé à l'ouverture de Magasins par direction / resp. ops / approvisionnement → « vue » notifiée une fois par demande),
 -- besoin_suivi(id, servir|rupture|achat, qte, délai, réf. DA, note) → notifications au demandeur (partiel + reste + délai, rupture, DA).
 -- Rupture : lier une demande d'achat existante ou la créer (préremplie) ; liste : avancement « x/y servis », états par article.
+
+-- v95 (2026-11-25) : maquettes validées + besoins
+-- Barre de dictée unique (« 🎤 Dicter » / « Arrêter · m:ss » / « Continuer la dictée », langue en pastille, mise au propre IA automatique,
+--   liens « Revenir au texte dicté » et « Ré-améliorer », zones de texte auto-extensibles, objet « ✨ déduit par l'IA »).
+-- Expressions de besoin : fiche détaillée ouvrable (clic sur la demande ou sur la notification), besoin_modifier (quantité, unité,
+--   observation ; motif obligatoire si approuvé ; notification au demandeur ; trace modifie_nom/modifie_le/modif_note).
