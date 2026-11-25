@@ -615,3 +615,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- RPC sig_bdm_modifier(p_id, p_bdm, p_motif) + sig_bdm_auteur(p_id) : autorisé à l'auteur de la saisie BDM
 -- (ou au créateur du signalement si aucune saisie tracée), aux superviseurs principaux, responsables des opérations
 -- et superviseurs. Trace l'ancien/nouveau numéro et le motif dans un événement 'commentaire'. Aucune suppression.
+
+-- v89 (2026-11-25) : historique des corrections BDM confidentiel
+-- Table sig_bdm_corrections (ancien, nouveau, motif, par_nom, date), RLS : equipe_ops() ou auteur de la correction.
+-- equipe_ops() = responsable_ops, coordinateur_ops (dont consultant RH & opérations), superviseur_principal,
+-- direction avec poste 'Directeur des opérations' (Sidahmed Labeid). sig_bdm_modifier n'écrit plus dans la chronologie publique.
