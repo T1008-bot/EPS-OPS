@@ -625,3 +625,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- equipe_ops_ids() + trigger nt_sig_bdm (after update of bdm on signalements) : quand un signalement reçoit son 1er N° BDM,
 -- notifier(null, equipe_ops_ids(), 'helpdesk', '🎫 BDM … — réf.', objet · zone · saisi par …, 'sig', id, sauf = auteur).
 -- Les corrections ultérieures du numéro ne déclenchent pas de notification.
+
+-- v90 (2026-11-25) : profil « Ndey Ba » renommé « Ndeye Diaty Ba » (+ libellé CM_DEST).
