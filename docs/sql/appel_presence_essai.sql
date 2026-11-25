@@ -627,3 +627,11 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Les corrections ultérieures du numéro ne déclenchent pas de notification.
 
 -- v90 (2026-11-25) : profil « Ndey Ba » renommé « Ndeye Diaty Ba » (+ libellé CM_DEST).
+
+-- v91 (2026-11-25) : rapprochement badges / matricules
+-- Fiche 1330 (doublon de 1317 Cheikh Dahane M'Bareck, même NNI) supprimée avec son parcours (demande explicite).
+-- agents.tel_a_verifier (1203, 1450, 1482 ; 1319 numéro retiré, à renseigner) + tâches RH modele 'tel:<matricule>'
+--   (triggers agents_tel_verif / agents_tel_verif_tache : clôture quand le numéro est corrigé ou confirmé).
+-- agents.masque_listes (1250D, 1460D) : exclus de paie_site, visibles dans « Anciens employés ».
+-- statuts_jour 1250 avant 10/11 → 1250D (absences de Kawa Hemetth Seck) ; absence 1460 du 18/11 supprimée (réaffecté au 19).
+-- Badge 188 = 1429 Foussou Mamadou Niakhaté ; 1465 Bilal Mohamed → Sans Badge en attente (2431 déjà porté par 1463).
