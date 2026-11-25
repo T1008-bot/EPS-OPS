@@ -206,7 +206,7 @@ const toast = m => { const t = $("#ts"); t.textContent = m; t.classList.add("on"
 const head = (t, s, b) => `<div class="row"><div><h2 style="font-size:17px">${t}</h2><div class="m">${s || ""}</div></div>${b || ""}</div>`;
 function ask(title, fs, ok) {
   const f = $("#mf");
-  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}"${x.v == o[0] ? " selected" : ""}>${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="4" ${x.r ? "required" : ""}>${E(x.v || "")}</textarea>` : `<input name="${x.k}" type="${x.t || "text"}" value="${E(x.v || "")}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
+  f.innerHTML = `<h2>${E(title)}</h2>` + fs.map(x => `<div><label>${E(x.l)}</label>${x.o ? `<select name="${x.k}">${x.o.map(o => { o = Array.isArray(o) ? o : [o, o]; return `<option value="${E(o[0])}"${x.v == o[0] ? " selected" : ""}>${E(o[1])}</option>`; }).join("")}</select>` : x.t == "ta" ? `<textarea name="${x.k}" rows="4" ${x.r ? "required" : ""}${x.obj ? ` data-objet="[name=${x.obj}]" data-doc="${E(title)}"` : ""}>${E(x.v || "")}</textarea>` : `<input name="${x.k}" type="${x.t || "text"}" value="${E(x.v || "")}" ${x.r ? "required" : ""}>`}</div>`).join("") + `<div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Annuler</button><button class="btn p">Valider</button></div>`;
   $("#md").classList.add("on"); $("#no").onclick = () => $("#md").classList.remove("on");
   f.onsubmit = e => { e.preventDefault(); const v = Object.fromEntries(new FormData(f)); $("#md").classList.remove("on"); ok(v); };
 }
@@ -1569,7 +1569,7 @@ function sgEtape1(zone) { SGN.zone = !!zone;
   $("#mf").innerHTML = `<div class="row"><h2>${SGN.zone ? "📍 Nouveau signalement de zone" : "📣 Nouveau signalement"}</h2><span class="bd info">1 / 2</span></div>
 <div class="m">Décrivez le problème en parlant ou en écrivant : <b>quoi</b>, <b>où</b> (zone, porte, niveau, salle), ce qui a été fait et ce que vous demandez. Le lieu et les autres informations seront repérés automatiquement.</div>
 ${rec ? `<button type="button" class="btn p" id="sgRec" style="width:100%;justify-content:center;font-size:16px;padding:14px">🎙 Enregistrer (IA)</button><div class="m" id="sgRs" style="min-height:18px"></div>` : ""}
-<textarea id="svt" data-vx="1" rows="6" placeholder="Ex. : De l’eau coule de la climatisation sur l’escalier de l’arrivée, côté porte 9, 1er étage. Panneaux « sol glissant » posés. Merci d’envoyer la maintenance.">${E(SGN.t || "")}</textarea>
+<textarea id="svt" data-novx="1" rows="6" placeholder="Ex. : De l’eau coule de la climatisation sur l’escalier de l’arrivée, côté porte 9, 1er étage. Panneaux « sol glissant » posés. Merci d’envoyer la maintenance.">${E(SGN.t || "")}</textarea>
 <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:6px"><label class="btn">📷 Photo<input type="file" id="sgcam" accept="image/*" capture="environment" hidden></label><label class="btn">⬆ Téléverser photos / documents<input type="file" id="sgfi" accept="image/*,application/pdf" multiple hidden></label></div><div id="sgph" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
 ${SGN.zone ? "" : sgVolsCard()}
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no">Annuler</button><button type="button" class="btn p" id="sgNx">Suivant →</button></div>`;
@@ -1615,12 +1615,12 @@ function sgEtape2(c) {
 <div id="s2eqw" style="display:${cat == "Technique" ? "" : "none"}"><label>Équipement concerné</label><select id="s2eq"><option value="">—</option>${opt(EQC.map(e => [e.id, e.code + " — " + e.designation]), "")}</select></div>
 <div id="s2prw" style="display:${SGN.d == "externe" ? "none" : ""}"><label>Urgence</label><select id="s2pr">${opt([["urgente", "Très haute — intervention sous 5 min"], ["haute", "Haute — sous 15 min"], ["normale", "Moyenne"], ["basse", "Basse"]], sgVolProche() && !["haute", "urgente"].includes(V.pr) ? "haute" : V.pr)}</select></div></div>
 <label>Urgence en quelques mots (ajoutée au message Help Desk ; vide si non urgent)</label><input id="s2u" value="${E(sgUrgence(c, det.zone))}" placeholder="Ex. : Urgent : passagers présents · Urgent : toilettes inutilisables">
-<label>Objet</label><input id="s2o" value="${E(V.ob)}" placeholder="Titre court">
-<label>Problème constaté</label><textarea id="s2d" data-vx="1" rows="4">${E(V.de)}</textarea>
+<label>Objet</label><input id="s2o" value="${E(V.ob)}" ${V.ob ? 'data-auto="1"' : ""} placeholder="Titre court (déduit de la description)">
+<label>Problème constaté</label><textarea id="s2d" data-novx="1" data-objet="#s2o" data-doc="signalement" rows="4">${E(V.de)}</textarea>
 <details ${V.me || V.iv || V.co ? "open" : ""}><summary class="lk" style="padding:6px 0">Autres informations (facultatives)</summary>
-<label>Actions immédiates EPS (balisage, panneaux, agent placé…)</label><textarea id="s2m" data-vx="1" rows="2">${E(V.me)}</textarea>
-<label>Intervention demandée</label><textarea id="s2i" data-vx="1" rows="2">${E(V.iv)}</textarea>
-<label>Conséquences / risques</label><textarea id="s2co" data-vx="1" rows="2">${E(V.co)}</textarea>
+<label>Actions immédiates EPS (balisage, panneaux, agent placé…)</label><textarea id="s2m" data-novx="1" rows="2">${E(V.me)}</textarea>
+<label>Intervention demandée</label><textarea id="s2i" data-novx="1" rows="2">${E(V.iv)}</textarea>
+<label>Conséquences / risques</label><textarea id="s2co" data-novx="1" rows="2">${E(V.co)}</textarea>
 <label>Date et heure du constat</label><input id="s2cl" type="datetime-local" value="${E(V.cl)}">
 <label>Constat fait par</label><input id="s2ca" value="${E(V.ca2)}"><label>Source de l’information</label><input id="s2so" value="${E(V.so)}">
 ${ASG.includes(ME.role) ? `<label>Assigner à</label><select id="s2as"><option value="">—</option><option value="rh">Assistante RH</option><option value="compta">Responsable Comptabilité</option>${opt(AG.filter(a => /hef|uperviseur/.test(a.fonction || "")).map(a => [a.matricule, a.nom + " (" + a.equipe + ")"]), "")}</select>` : ""}</details>
@@ -2122,7 +2122,7 @@ const ACT = {
     const co = priv ? ((await sb.rpc("collaborateurs")).data || []) : [];
     ask("Nouvelle tâche", [
       { k: "ca", l: "1. Catégorie", o: [["", "— Choisir —"]].concat(SG_CATL.filter(x => !/^Externe/.test(x[1])).map(x => [x[0], x[1].replace("Interne — ", "")]).concat([["Réunion / administration", "Réunion / administration"], ["Évaluation", "Évaluation"], ["Planification / information", "Planification / information"], ["Intervention technique", "Intervention technique"]])) },
-      { k: "ti", l: "Tâche", r: 1 }, { k: "de", l: "Détails (facultatif)", t: "ta" },
+      { k: "ti", l: "Tâche (déduite des détails si vous dictez)", r: 1 }, { k: "de", l: "Détails (dictez ou écrivez)", t: "ta", obj: "ti" },
       { k: "as", l: "Assigner à", o: [["", priv ? "— Personne (équipe / général) —" : "— Moi-même —"], ["me", "Moi-même"]].concat(co.filter(c => c.id != UID).map(c => [c.id, c.nom + " — " + (RL[c.role] || c.role)])) },
       { k: "j", l: "Date", t: "date", v: dstr(TD), r: 1 }, { k: "e", l: "Délai : date et heure limite (facultatif)", t: "datetime-local" }, { k: "h", l: "Heure (ex. 14h30)" },
       { k: "ci", l: "Équipe concernée", o: [["", "— Toutes / non précisée —"], ...eqs] },
@@ -2261,7 +2261,7 @@ ${fcard}${acard}${mcard}
       { k: "cv", l: "Civilité", o: ["M.", "Mme"] },
       { k: "df", l: "Date des faits", t: "date", r: 1 },
       { k: "ob", l: "Objet (ex. Retard de dix heures et absence injustifiée - Shift du 24/09/2026)", r: 1 },
-      { k: "fa", l: "Faits constatés", t: "ta", r: 1, v: "Il a été constaté que, " },
+      { k: "fa", l: "Faits constatés", t: "ta", r: 1, v: "Il a été constaté que, ", obj: "ob" },
       { k: "qu", l: "Qualification / explication demandée (DE) ou qualification (MAP)", t: "ta", v: "Vous êtes prié de fournir ci-dessous une explication écrite, précise et circonstanciée sur …, accompagnée de tout justificatif utile." },
       { k: "af", l: "Affectation (ex. Manutention bagages - AINO)" },
       { k: "dr", l: "MAP seulement : référence de la demande d’explication visée" },
@@ -2270,6 +2270,7 @@ ${fcard}${acard}${mcard}
     ], async v => {
       const r = findAg(v.q);
       if (r.length != 1) return toast(r.length ? "Plusieurs agents correspondent : précisez avec l’ID" : "Agent introuvable");
+      if (v.ty == "MAP" && v.dr.trim()) { const { data: de } = await sb.from("discipline").select("objet").eq("type", "DE").ilike("ref", "%" + v.dr.trim() + "%").limit(1).maybeSingle(); if (de && de.objet) v.ob = de.objet; }
       const { data, error } = await sb.from("discipline").insert({ type: v.ty, matricule: r[0].matricule, civilite: v.cv, date_faits: v.df, objet: v.ob.trim(), faits: v.fa.trim(), qualification: (v.qu || "").trim() || null, affectation: v.af || null, de_ref: v.ty == "MAP" ? (v.dr || null) : null, consignes: v.ty == "MAP" ? (v.co || null) : null, mp_jours_propose: v.ty == "MAP" && v.nj ? +v.nj : null }).select("ref").single();
       toast(error ? "Refusé : " + error.message : "Dossier créé : " + data.ref); draw();
     });
@@ -3395,14 +3396,14 @@ async function denewOpen(pre) {
   if (!(await maSig())) { toast("Enregistrez d’abord votre signature : elle sera apposée sur la demande."); return msigOpen(() => denewOpen(pre)); }
   DESEL = null; const coAll = ((await sb.rpc("collaborateurs")).data || []), co = coAll.filter(c => DE_DELEG.includes(c.role) && c.id != UID), dirn = coAll.filter(c => DE_DIRN.includes(c.role) && c.id != UID);
   mdOpen(`<div class="row"><h2>Nouvelle demande d’explication</h2><button type="button" class="btn" id="no">✕</button></div>
-<div><label>1. Dictez ou écrivez les faits</label><div class="m">L’agent (nom ou matricule), le poste où il était déployé, l’heure du constat, ce qui a été constaté et les circonstances. L’IA rédige ensuite la demande : agent, objet, poste d’affectation, date et faits.</div><textarea id="defx" rows="5" placeholder="Ex. : Cette nuit vers 3h20, l’agent Moussa Diallo (1215), affecté au vol AT510 pour la zone départ, a été trouvé endormi dans la salle de prière ; la zone départ n’était pas faite avant l’embarquement."></textarea>
+<div><label>1. Dictez ou écrivez les faits</label><div class="m">L’agent (nom ou matricule), le poste où il était déployé, l’heure du constat, ce qui a été constaté et les circonstances. L’IA rédige ensuite la demande : agent, objet, poste d’affectation, date et faits.</div><textarea id="defx" rows="5" data-objet="#deob" data-objet-btn="#deia" data-doc="demande d’explication (dictée des faits)" placeholder="Ex. : Cette nuit vers 3h20, l’agent Moussa Diallo (1215), affecté au vol AT510 pour la zone départ, a été trouvé endormi dans la salle de prière ; la zone départ n’était pas faite avant l’embarquement."></textarea>
 <div class="row" style="justify-content:flex-end;gap:6px"><span class="m" id="deias" style="flex:1"></span><button type="button" class="btn p" id="deia">✨ Rédiger la demande (IA)</button></div></div>
 <div class="svt" style="margin-top:6px">2. Vérifiez la demande rédigée</div>
 <div><label>Agent concerné</label><input id="deq" placeholder="Nom, matricule ou badge…" autocomplete="off"><div id="deql" class="dsl"></div><div id="dech"></div></div>
 <div class="fc"><div><label>Civilité</label><select id="decv"><option>M.</option><option>Mme</option></select></div><div><label>Date des faits</label><input id="dedf" type="date" value="${today()}" max="${today()}"></div></div>
 <div><label>Poste d’affectation (choisi par l’IA, modifiable)</label><select id="deaf"><option value="">— Choisir —</option>${DEPOSTES.map(x => `<option>${E(x)}</option>`).join("")}<option value="__autre">Autre (préciser)…</option></select><input id="deafx" placeholder="Préciser le poste" style="display:none;margin-top:6px"></div>
-<div><label>Objet</label><input id="deob" placeholder="Rempli par l’IA à partir des faits"></div>
-<div><label>Faits constatés</label><textarea id="defa" rows="6" placeholder="Rédigés par l’IA à partir de votre dictée"></textarea></div>
+<div><label>Objet (déduit des faits, modifiable)</label><input id="deob" placeholder="Déduit automatiquement des faits"></div>
+<div><label>Faits constatés</label><textarea id="defa" rows="6" data-objet="#deob" data-doc="demande d’explication" placeholder="Rédigés par l’IA à partir de votre dictée"></textarea></div>
 <div><label>Explication demandée (texte unifié)</label><div class="card" style="margin:0;padding:10px;font-size:13px" id="dequt"></div></div>
 <div><label>3. Remise à l’agent (lecture, réponse et signature)</label><select id="dedk"><option value="">Je m’en charge moi-même</option><optgroup label="Direction"><option value="dir">Direction (générale)</option>${dirn.map(c => `<option value="u:${c.id}">Direction — ${E(c.nom)} (${E(RL[c.role] || c.role)})</option>`).join("")}</optgroup><option value="sup">Son superviseur</option><option value="chef">Son chef d’équipe</option><option value="autre">Autre…</option></select>
 <select id="dedl" style="display:none;margin-top:6px"><option value="">— Choisir —</option>${co.map(c => `<option value="${c.id}">${E(c.nom)} — ${E(RL[c.role] || c.role)}</option>`).join("")}</select><div class="m" id="dedm"></div></div>
@@ -3421,7 +3422,7 @@ async function denewOpen(pre) {
   $("#dedk").onchange = deDel; $("#dedl").onchange = deDel;
   $("#deaf").onchange = e => { $("#deafx").style.display = e.target.value == "__autre" ? "" : "none"; if (e.target.value == "__autre") $("#deafx").focus(); };
   const qt = () => { $("#dequt").innerHTML = `${E(DEQ($("#decv").value))}<br>${E(DEFIN)}<br><b>${E(DEREFUS)}</b>`; }; qt(); $("#decv").onchange = qt;
-  $("#deia").onclick = async () => { const tx = $("#defx").value.trim(); vxStop(); if (tx.length < 15) return toast("Dictez ou écrivez d’abord les faits"); const b = $("#deia"); b.disabled = true; b.textContent = "Rédaction…"; $("#deias").textContent = "";
+  $("#deia").onclick = async () => { const tx = $("#defx").value.trim(); vxStop(1); if (tx.length < 15) return toast("Dictez ou écrivez d’abord les faits"); const b = $("#deia"); b.disabled = true; b.textContent = "Rédaction…"; $("#deias").textContent = "";
     try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { mode: "demande_explication", texte: tx, maintenant: nowL().replace("T", " "), postes: DEPOSTES, postes_detail: DEPDET, agent: DESEL ? DESEL.nom + " (" + DESEL.matricule + ")" : "" } }); if (error) throw error; if (data.erreur) throw new Error(data.erreur);
       const c = data.champs || {}, g = k => String(c[k] || "").trim();
       if (!DESEL && g("agent")) { const mt = g("agent").match(/\b(\d{3,4}D?)\b/), L = mt ? AG.filter(a => a.matricule == mt[1]) : agSug(g("agent").replace(/\(.*?\)|\d+/g, " ").trim()); if (L.length == 1) { DESEL = L[0]; deChip(DESEL); } else { $("#deq").value = g("agent"); $("#deq").dispatchEvent(new Event("input", { bubbles: true })); } }
@@ -3571,6 +3572,7 @@ async function deDecider(id, type) {
 <div id="dcmw" style="display:none;flex-direction:column;gap:8px"><div class="fc"><div><label>Durée (jours)</label><input id="dcj" type="number" min="1" max="30" value="${d.avis_jours || 3}"></div><div><label>Premier jour</label><input id="dcd" type="date" value="${dem}"></div></div>
 <div class="fc"><div><label>Dernier jour (inclus)</label><input id="dcf" type="date"></div><div><label>Reprise</label><input id="dcr" type="date" disabled></div></div><div id="dcck"></div>
 <div><label>Consignes à la reprise</label><textarea id="dcco" rows="2">Vous êtes tenu${d.civilite == "Mme" ? "e" : ""} de vous présenter à votre chef d’équipe le jour de votre reprise, à l’heure de début de votre service.</textarea></div></div>
+<div><label>Objet (repris de la demande d’explication ${E(d.ref)})</label><input value="${E(d.objet || "")}" disabled></div>
 <div class="m" id="dcia">✨ Rédaction par l’IA en cours…</div>
 <div><label>Rappel des faits</label><textarea id="dcfa" rows="5"></textarea></div>
 <div><label>Qualification</label><textarea id="dcqu" rows="4"></textarea></div>
@@ -4671,17 +4673,33 @@ let VX = null, VLANG = (() => { try { return localStorage.getItem("vlang") || "f
 const VL = { "fr-FR": "FR", "en-US": "EN", "ar-SA": "AR" };
 let VREC = null;
 function vxBar(ta) {
-  if (ta.dataset.vx || ta.closest("#mf") == null) return; ta.dataset.vx = 1;
+  if (ta.dataset.vxt || ta.closest("#mf") == null) return; ta.dataset.vxt = 1; if (ta.dataset.novx) return;
   const en = /^sec_/.test(ta.name), d = document.createElement("div"); d.className = "row vxb"; d.style.cssText = "justify-content:flex-start;gap:6px;margin:4px 0;flex-wrap:wrap";
   d.innerHTML = `<button type="button" class="btn" data-vx="mic">🎤 Dicter</button><button type="button" class="btn" data-vx="lang" title="Langue de la dictée">${VL[VLANG]}</button>${window.MediaRecorder && navigator.mediaDevices ? `<button type="button" class="btn" data-vx="rec">🎙 Enregistrer (IA)</button>` : ""}<button type="button" class="btn" data-vx="fix">✨ Améliorer le texte (IA)</button>${en ? `<button type="button" class="btn" data-vx="en">🌐 Traduire en anglais (IA)</button>` : ""}<span class="m vxs"></span>`;
   ta.parentNode.insertBefore(d, ta);
 }
-function vxStop() { if (VX) { try { VX.stop(); } catch (e) { } VX = null; } document.querySelectorAll('[data-vx="mic"]').forEach(b => b.textContent = "🎤 Dicter"); }
+function vxStop(sansIA) { if (VX) { const t = VX.ta, st = VX.st; try { VX.stop(); } catch (e) { } VX = null; if (t && st && !sansIA) vxEnrichir(t, st); } document.querySelectorAll('[data-vx="mic"]').forEach(b => b.textContent = "🎤 Dicter"); }
+/* type de document d'un champ (pour guider l'IA) */
+const vxDoc = ta => ta.dataset.doc || ($("#mf h2")?.textContent || "").replace(/[^\p{L}\s’'-]/gu, "").trim() || "texte";
+/* après une dictée : texte consolidé et enrichi par l'IA (avec retour possible au texte d'origine), puis objet déduit */
+async function vxEnrichir(ta, st) { const t = ta.value.trim(); if (t.length < 15) return vxObjet(ta);
+  st.textContent = "✨ L’IA consolide et enrichit le texte…";
+  try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "corriger", doc: vxDoc(ta) } }); if (error || !data || data.erreur || !data.texte) throw 0;
+    if (ta.value.trim() != t) return; ta.dataset.avant = t; ta.value = data.texte; ta.dispatchEvent(new Event("input", { bubbles: true }));
+    st.innerHTML = `✓ Texte consolidé par l’IA : relisez. <a href="#" data-vx="undo">Revenir au texte dicté</a>`; } catch (x) { st.textContent = "Texte ajouté (IA indisponible : relisez-le)."; }
+  vxObjet(ta); }
+/* objet / titre déduit du contenu, tant que l'utilisateur ne l'a pas écrit lui-même */
+async function vxObjet(ta) { const sel = ta.dataset.objet; if (!sel) return; const o = $(sel), t = ta.value.trim(); if (!o || t.length < 20 || (o.value.trim() && !o.dataset.auto)) return;
+  if (ta.dataset.objetBtn && $(ta.dataset.objetBtn)) return $(ta.dataset.objetBtn).click();
+  try { const { data } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: "objet", doc: vxDoc(ta), maintenant: nowL().replace("T", " ") } }); const ob = String(data?.texte || "").trim().replace(/^["«\s]+|["»\s.]+$/g, "");
+    if (ob && (!o.value.trim() || o.dataset.auto)) { o.value = ob.slice(0, 160); o.dataset.auto = 1; o.style.background = "#eef6ff"; o.title = "Déduit du texte par l’IA : modifiable"; } } catch (x) { } }
+document.addEventListener("input", e => { if (e.isTrusted && e.target.dataset && e.target.dataset.auto) { delete e.target.dataset.auto; e.target.style.background = ""; } });
+document.addEventListener("change", e => { const t = e.target; if (t.tagName == "TEXTAREA" && t.dataset.objet && !VX && !VREC) vxObjet(t); });
 new MutationObserver(() => document.querySelectorAll("#mf textarea").forEach(vxBar)).observe(document.body, { childList: true, subtree: true });
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-vx]"); if (!b || b.dataset.vx == "undo") return; e.preventDefault(); e.stopPropagation();
   const bar = b.closest(".vxb"), ta = bar.nextElementSibling, st = bar.querySelector(".vxs"), k = b.dataset.vx; if (k == "undo") return;
-  if (k == "lang") { const ks = Object.keys(VL); VLANG = ks[(ks.indexOf(VLANG) + 1) % ks.length]; try { localStorage.setItem("vlang", VLANG); } catch (x) { } b.textContent = VL[VLANG]; if (VX) { vxStop(); } return; }
+  if (k == "lang") { const ks = Object.keys(VL); VLANG = ks[(ks.indexOf(VLANG) + 1) % ks.length]; try { localStorage.setItem("vlang", VLANG); } catch (x) { } b.textContent = VL[VLANG]; if (VX) { vxStop(1); } return; }
   if (k == "rec") {
     if (VREC && VREC.b === b) { VREC.r.stop(); return; }
     if (VREC) return toast("Un enregistrement est déjà en cours");
@@ -4691,28 +4709,28 @@ document.addEventListener("click", async e => {
       r.onstop = async () => { stm.getTracks().forEach(x => x.stop()); VREC = null; b.textContent = "🎙 Enregistrer (IA)"; const bl = new Blob(ch, { type: r.mimeType || mt || "audio/webm" }); if (bl.size > 10e6) return st.textContent = "Enregistrement trop long (2–3 min au maximum)";
         st.textContent = "Transcription par l’IA…"; const b64 = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(bl); });
         try { const { data, error } = await sb.functions.invoke("ia-texte", { body: { mode: "transcrire", audio: b64, mime: bl.type, langue: String(VLANG || "fr").slice(0, 2) } }); if (error) throw error; if (data.erreur) { st.textContent = data.erreur == "transcription_indisponible" ? "Transcription indisponible (clé OpenAI requise)" : "Transcription impossible : " + data.erreur; return; }
-          const tx = String(data.texte || "").trim().replace(/^(sous-titr|merci d'avoir regard|subtitles by|thanks for watching).*$/i, "").replace(/.*amara\.org.*/i, "").trim(); if (!tx) { st.textContent = "Rien n’a été compris : réessayez plus près du téléphone"; return; } ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + tx; ta.dispatchEvent(new Event("input", { bubbles: true })); st.textContent = "Texte ajouté : relisez, puis « ✨ Corriger » si besoin"; } catch (x) { st.textContent = "Transcription impossible : " + (x.message || x); } };
+          const tx = String(data.texte || "").trim().replace(/^(sous-titr|merci d'avoir regard|subtitles by|thanks for watching).*$/i, "").replace(/.*amara\.org.*/i, "").trim(); if (!tx) { st.textContent = "Rien n’a été compris : réessayez plus près du téléphone"; return; } ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + tx; ta.dispatchEvent(new Event("input", { bubbles: true })); vxEnrichir(ta, st); } catch (x) { st.textContent = "Transcription impossible : " + (x.message || x); } };
       r.start(); } catch (x) { VREC = null; st.textContent = "Micro inaccessible : autorisez le micro pour l’application"; }
     return;
   }
   if (k == "mic") {
     if (VX) return vxStop();
     if (!SR) { st.textContent = "Dictée non prise en charge par ce navigateur : utilisez le micro du clavier du téléphone, ou écrivez."; return; }
-    const r = new SR(); r.lang = VLANG; r.continuous = true; r.interimResults = true; VX = r; let base = ta.value + (ta.value && !/\s$/.test(ta.value) ? " " : "");
+    const r = new SR(); r.lang = VLANG; r.continuous = true; r.interimResults = true; r.ta = ta; r.st = st; VX = r; let base = ta.value + (ta.value && !/\s$/.test(ta.value) ? " " : "");
     r.onresult = ev => { let fin = "", tmp = ""; for (let i = 0; i < ev.results.length; i++) { const t = ev.results[i][0].transcript; if (ev.results[i].isFinal) fin += t + " "; else tmp += t; } ta.value = base + fin + tmp; };
-    r.onerror = ev => { st.textContent = ev.error == "not-allowed" ? "Micro refusé : autorisez-le dans le navigateur." : "Dictée interrompue (" + ev.error + ")."; vxStop(); };
+    r.onerror = ev => { if (ev.error == "no-speech" || ev.error == "aborted") return; st.textContent = ev.error == "not-allowed" ? "Micro refusé : autorisez-le dans le navigateur." : "Dictée interrompue (" + ev.error + ")."; vxStop(); };
     r.onend = () => { if (VX == r) { base = ta.value; try { r.start(); } catch (x) { vxStop(); } } };
-    try { r.start(); b.textContent = "⏹ Arrêter"; st.textContent = "Je vous écoute… parlez, puis appuyez sur Arrêter."; } catch (x) { VX = null; st.textContent = "Impossible de démarrer le micro."; }
+    try { r.start(); b.textContent = "⏹ Arrêter"; st.textContent = "🔴 Je vous écoute… parlez naturellement, puis « Arrêter » : l’IA mettra le texte au propre."; } catch (x) { VX = null; st.textContent = "Impossible de démarrer le micro."; }
     return;
   }
-  vxStop(); const t = ta.value.trim(); if (!t) { st.textContent = "Rien à traiter."; return; }
+  vxStop(1); const t = ta.value.trim(); if (!t) { st.textContent = "Rien à traiter."; return; }
   b.disabled = true; st.textContent = k == "en" ? "Traduction en cours…" : "L’IA reformule le texte…";
   try {
-    const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: k == "en" ? "anglais" : "corriger" } });
+    const { data, error } = await sb.functions.invoke("ia-texte", { body: { texte: t, mode: k == "en" ? "anglais" : "corriger", doc: vxDoc(ta) } });
     if (error) throw error;
     if (data.erreur == "ia_non_configuree") st.textContent = "La correction IA n’est pas encore activée (clé à configurer par l’administrateur).";
     else if (data.erreur) st.textContent = "IA indisponible, réessayez (" + data.erreur + ").";
-    else { ta.dataset.avant = t; ta.value = data.texte; st.innerHTML = `${k == "en" ? "Texte traduit" : "Texte reformulé : plus clair et professionnel"}. <a href="#" data-vx="undo">Revenir au texte d’origine</a>`; }
+    else { ta.dataset.avant = t; ta.value = data.texte; st.innerHTML = `${k == "en" ? "Texte traduit" : "Texte consolidé et enrichi : relisez"}. <a href="#" data-vx="undo">Revenir au texte d’origine</a>`; if (k != "en") vxObjet(ta); }
   } catch (x) { st.textContent = "IA indisponible : " + (x.message || x); }
   b.disabled = false;
 }, true);

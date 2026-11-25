@@ -635,3 +635,12 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- agents.masque_listes (1250D, 1460D) : exclus de paie_site, visibles dans « Anciens employés ».
 -- statuts_jour 1250 avant 10/11 → 1250D (absences de Kawa Hemetth Seck) ; absence 1460 du 18/11 supprimée (réaffecté au 19).
 -- Badge 188 = 1429 Foussou Mamadou Niakhaté ; 1465 Bilal Mohamed → Sans Badge en attente (2431 déjà porté par 1463).
+
+-- v92 (2026-11-25) : saisie et dictée
+-- Bug : les zones de texte des fenêtres portaient data-vx (marqueur des cartes de vols) → Espace et Entrée bloqués
+--   (demandes d'explication, mises à pied, signalements, tâches…). Marqueur renommé data-vxt / data-novx.
+-- Après une dictée ou un enregistrement, le texte est consolidé et enrichi par l'IA (retour au texte dicté possible).
+-- Objet / titre déduit du texte (data-objet) : DE, MAP manuelle, signalement, tâche ; MAP/AVT reprennent l'objet de la DE
+--   (affiché dans la décision ; MAP manuelle avec référence de DE → objet de la DE).
+-- ia-texte v12 : mode « corriger » enrichit selon le type de document, nouveau mode « objet », objet fixé dans les décisions,
+--   vocabulaire métier pour la transcription (source : docs/functions/ia-texte/index.ts).
