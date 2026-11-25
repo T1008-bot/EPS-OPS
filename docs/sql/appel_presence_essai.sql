@@ -649,3 +649,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- besoins.unite, besoins.observation, besoins.groupe (EB-AAMMJJ-HHMMSS-xxx) ; RPC besoin_creer(p_magasin, p_urgence, p_motif, p_lignes jsonb)
 -- (une seule notification par demande) ; nt_besoin ignore les lignes groupées à l'insertion ; liste regroupée par demande
 -- avec « Tout approuver / Tout refuser / Tout marquer servi ».
+
+-- v94 (2026-11-25) : suivi des expressions de besoin pour le demandeur
+-- besoins : vu_le/vu_par, qte_servie, rupture, achat_ref, delai_prevu, suivi_note, servi_le.
+-- besoin_vu(ids) (appelé à l'ouverture de Magasins par direction / resp. ops / approvisionnement → « vue » notifiée une fois par demande),
+-- besoin_suivi(id, servir|rupture|achat, qte, délai, réf. DA, note) → notifications au demandeur (partiel + reste + délai, rupture, DA).
+-- Rupture : lier une demande d'achat existante ou la créer (préremplie) ; liste : avancement « x/y servis », états par article.
