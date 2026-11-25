@@ -219,11 +219,13 @@ const today = () => ymd(new Date());
 
 /* ---------- Authentification ---------- */
 function pageLogin(err) {
-  $("#app").innerHTML = `<div class="lg"><form id="lf" class="card"><img src="${LG_EPS}" alt="EPS"><div style="width:50px;height:3px;background:#c8372d;margin:0 auto"></div><h1 style="text-align:center;color:#1f3a8a;font-size:20px;letter-spacing:7px;font-weight:700;margin:4px 0">OPÉRATIONS</h1><p class="m" style="margin:0 0 6px">Opérations aéroport de Nouakchott</p>${err ? `<div class="al">${E(err)}</div>` : ""}<label>Numéro de téléphone</label><input id="t" inputmode="numeric" autocomplete="username" required><label>Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required><button class="btn p" style="width:100%;margin-top:8px">Se connecter</button><button type="button" class="btn" id="ins" style="width:100%;margin-top:8px;display:none">⬇️ Télécharger l’app</button></form></div>`;
+  $("#app").innerHTML = `<div class="lg"><form id="lf" class="card"><img src="${LG_EPS}" alt="EPS"><div style="width:50px;height:3px;background:#c8372d;margin:0 auto"></div><h1 style="text-align:center;color:#1f3a8a;font-size:20px;letter-spacing:7px;font-weight:700;margin:4px 0">OPÉRATIONS</h1><p class="m" style="margin:0 0 6px">Opérations aéroport de Nouakchott</p>${err ? `<div class="al">${E(err)}</div>` : ""}<label>Numéro de téléphone ou adresse e-mail</label><input id="t" inputmode="email" autocomplete="username" required><label>Mot de passe</label><input id="pw" type="password" autocomplete="current-password" required><button class="btn p" style="width:100%;margin-top:8px">Se connecter</button><button type="button" class="btn" id="ins" style="width:100%;margin-top:8px;display:none">⬇️ Télécharger l’app</button></form></div>`;
   $("#lf").onsubmit = async e => {
     e.preventDefault();
-    const { error } = await sb.auth.signInWithPassword({ email: dg($("#t").value) + "@eps-ops.mr", password: $("#pw").value });
-    if (error) return pageLogin("Numéro ou mot de passe incorrect.");
+    const id = $("#t").value.trim(); let em = dg(id) + "@eps-ops.mr";
+    if (/@/.test(id)) { if (/@eps-ops\.mr$/i.test(id)) em = id.toLowerCase(); else { const { data } = await sb.rpc("login_par_email", { p_email: id }); if (!data) return pageLogin("Adresse e-mail inconnue : utilisez votre numéro de téléphone ou demandez à l’administrateur d’enregistrer votre e-mail."); em = data; } }
+    const { error } = await sb.auth.signInWithPassword({ email: em, password: $("#pw").value });
+    if (error) return pageLogin("Identifiant ou mot de passe incorrect.");
     start();
   };
 }
