@@ -604,3 +604,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v83 (24/11/2026) : superviseurs nettoyage comptés dans l’effectif de l’équipe 4 ; trigger agents_jf_sync (insert / changement d’équipe, statut, fonction, nom, matricule → jf_sync) + cron jotform-listes-sync 07:47.
 
 -- v84 (24/11/2026) : table vehicules (VEH-01..03, BAL-01..02, BUS-01..05, NAC-01 ; immatriculations et chauffeurs de la facture carburant) ; depenses_diverses.vehicule ; catégories carburant, maintenance véhicule, badges et macarons, nourriture / cuisine.
+
+-- v85 (25/11/2026) : msg_gestionnaire (responsable, directeur, coordinateur des opérations hors consultant) ; msg_groupe_creer / msg_groupe_modifier / msg_membres / msg_annuaire (groupes libres, membres ajoutés / retirés, groupes Ops automatiques non modifiables) ; rapports financiers aussi pour le coordinateur des opérations (RLS + notification) ; flotte : BUS-02 Cheikh Dahane, BUS-04 Souleymane Kalilou Ndiaye, NAC-01 ciseaux / NAC-02 bras articulé (Moussa Demba Traoré).
