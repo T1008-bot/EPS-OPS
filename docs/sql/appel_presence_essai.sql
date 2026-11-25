@@ -620,3 +620,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Table sig_bdm_corrections (ancien, nouveau, motif, par_nom, date), RLS : equipe_ops() ou auteur de la correction.
 -- equipe_ops() = responsable_ops, coordinateur_ops (dont consultant RH & opérations), superviseur_principal,
 -- direction avec poste 'Directeur des opérations' (Sidahmed Labeid). sig_bdm_modifier n'écrit plus dans la chronologie publique.
+
+-- 2026-11-25 : notification « N° BDM saisi » → équipe opération uniquement
+-- equipe_ops_ids() + trigger nt_sig_bdm (after update of bdm on signalements) : quand un signalement reçoit son 1er N° BDM,
+-- notifier(null, equipe_ops_ids(), 'helpdesk', '🎫 BDM … — réf.', objet · zone · saisi par …, 'sig', id, sauf = auteur).
+-- Les corrections ultérieures du numéro ne déclenchent pas de notification.
