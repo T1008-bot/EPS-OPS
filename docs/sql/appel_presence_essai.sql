@@ -680,3 +680,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v99 (2026-11-26) : encadré superviseurs — « ⏳ En attente » pour Manutention et Nettoyage tant que leur rapport n’est pas reçu.
 
 -- v100 (2026-11-26) : cartes d’effectif — plus de source répétée après chaque nom (seuls les vrais motifs restent) ; une ligne discrète « Source : rapport Jotform hh:mm · appel de présence hh:mm ».
+
+-- v101 (2026-11-26) : présence affichée telle que déclarée
+-- Cartes d'effectif : présents / effectif repris du dernier rapport Jotform ou de l'appel (le plus récent), jamais recalculés
+--   depuis l'annuaire ; chefs d'équipe = ceux du rapport ; « — / effectif prévu » tant que rien n'est déclaré.
+-- sync_presences : le dernier rapport de chaque équipe (rapports_detail.groupe) pour un shift fait foi ; un agent cité absent dans
+--   un rapport précédent mais plus dans le dernier repasse présent (statut 'p') ; numéros lus d'abord comme matricules, puis badges.
