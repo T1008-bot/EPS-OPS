@@ -686,3 +686,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   depuis l'annuaire ; chefs d'équipe = ceux du rapport ; « — / effectif prévu » tant que rien n'est déclaré.
 -- sync_presences : le dernier rapport de chaque équipe (rapports_detail.groupe) pour un shift fait foi ; un agent cité absent dans
 --   un rapport précédent mais plus dans le dernier repasse présent (statut 'p') ; numéros lus d'abord comme matricules, puis badges.
+
+-- v102 (2026-11-26) : éléments de test et suppression
+-- Colonne test sur signalements, discipline, incident_reports, taches ; case/choix « 🧪 Test » à la création (signalement,
+-- demande d'explication, mise à pied, tâche ; la décision AVT/MAP hérite du test de la DE) ; badge « 🧪 TEST » dans les listes.
+-- element_supprimer(type, id) : suppression définitive réservée à El Moustapha Ahmed Dedda (signalement + événements/PJ/corrections BDM,
+--   rapport d'incident, document disciplinaire + décisions liées + jours de MAP, tâche). element_test(type, id, val).
+-- SIG/2026/003 « Fiite deau » marqué test.
