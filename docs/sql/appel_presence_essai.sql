@@ -740,3 +740,11 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v117 (2026-11-26) : superviseurs principaux et superviseurs — RH limité à l’AINO : sélecteur de site réduit à « AINO (aéroport) », agents des autres sites retirés de leurs listes (annuaire, présence, discipline, anciens employés).
 
 -- v118 (2026-11-26) : cloisonnement par site des équipes terrain (superviseurs principaux, superviseurs, chefs d’équipe) — profiles.site (vide = AINO), mon_site(), magasin_visible() par site (AINO = magasins aéroport + ASECNA ; autre site = son magasin) ; à l’écran : agents, magasins et RH de leur site uniquement ; équipes d’un autre site : onglets Tâches, Magasins, RH, Profil, Messages seulement.
+
+-- v119 (2026-11-26) : droits terrain et complaintes Help Desk reçues
+-- Chefs d'équipe : plus d'onglet Magasins ; bouton « 📦 Demander un approvisionnement » sur l'accueil (expression de besoin).
+-- Superviseurs Manutention : articles limités à ceux de la manutention (articles.pour_manutention : chaussures de sécurité,
+--   gants manutention, protections auditives, gilet haute visibilité, café petit déjeuner) — politiques ar_r et mv_r.
+-- Complaintes BDM reçues par e-mail (rama@eps.mr) : table bdm_recus, fonction bdm-ingest (IA : n° BDM, objet, lieu, concerne EPS),
+--   bdm_recu_tache() → tâche « 🎫 Complainte BDM » pour l'équipe nettoyage en service (échéance 1 h) + notifications ;
+--   relais Gmail (Apps Script) à installer depuis Profil → « 📧 Relais Gmail » (relais_etat, relais_jeton réservé à El Moustapha).
