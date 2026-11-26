@@ -738,3 +738,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v116 (2026-11-26) : superviseurs principaux et superviseurs — magasins de l’aéroport uniquement (extérieur, intérieur, ASECNA) : fonction magasin_visible() dans les politiques magasins, mouvements_stock, bilans_magasin, dotations, magasin_seuils, seuil_alertes (stock_actuel suit, security_invoker) ; filtre aussi à l’écran. Veille AO : superviseur principal retiré de la politique veille_ao_sel (onglet déjà absent pour eux).
 
 -- v117 (2026-11-26) : superviseurs principaux et superviseurs — RH limité à l’AINO : sélecteur de site réduit à « AINO (aéroport) », agents des autres sites retirés de leurs listes (annuaire, présence, discipline, anciens employés).
+
+-- v118 (2026-11-26) : cloisonnement par site des équipes terrain (superviseurs principaux, superviseurs, chefs d’équipe) — profiles.site (vide = AINO), mon_site(), magasin_visible() par site (AINO = magasins aéroport + ASECNA ; autre site = son magasin) ; à l’écran : agents, magasins et RH de leur site uniquement ; équipes d’un autre site : onglets Tâches, Magasins, RH, Profil, Messages seulement.

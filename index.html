@@ -257,8 +257,14 @@ async function start() {
 /* ---------- Données ---------- */
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 let NNI = {};
-const SUPAINO = () => /^superviseur_/.test(ME?.role || "");
-async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = (data || []).filter(a => !SUPAINO() || !a.site || /^aino/.test(a.site)); NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
+/* site de rattachement des équipes terrain (superviseurs principaux, superviseurs, chefs d'équipe) : « aino » par défaut, sinon code du site */
+const TERR = ["superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
+const MSITE = () => TERR.includes(ME?.role) ? (ME.site || "aino") : null, SUPAINO = () => !!MSITE();
+const siteOk = a => { const m = MSITE(); return !m || (m == "aino" ? !a.site || /^aino/.test(a.site) : a.site == m); };
+const magOk = x => { const m = MSITE(); return !m || (m == "aino" ? ["aino_nett", "aino_manut", "asecna"].includes(x.site) : x.site == m); };
+/* onglets d'une équipe d'un autre site : uniquement ce qui concerne son site */
+const accSite = L => { const m = MSITE(); return !m || m == "aino" ? L : L.filter(p => ["tach", "mag", "rh", "eff", "pres", "disc", "prof", "msg"].includes(p)); };
+async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = (data || []).filter(siteOk); NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
 const BC = { alertes: 0, pres: 0, msg: 0 };
 function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
@@ -1002,7 +1008,7 @@ ${rest ? `<div class="al" style="margin-top:6px">💰 Prêt / avance en cours : 
     const { error } = await sb.rpc("agent_depart", { p_matricule: m, p_date: d, p_motif: mo }); if (error) { b.disabled = false; b.textContent = "Enregistrer le départ"; return toast("Refusé : " + error.message); }
     let msg = "Départ enregistré"; if (ag && !/^ASECNA/.test(ag.equipe || "") && !ag.site) { try { const r = await clsAppliquer(/^Manut/.test(ag.equipe || "") ? "M" : "N", wb => clsDepart(wb, ag, d, mo)); msg += r.nom ? ` · classeur enregistré : ${r.nom}` : " · agent absent du classeur"; } catch (x) { msg += " · classeur NON mis à jour : " + x.message; } }
     mdClose(); await loadAG(); toast(msg); draw(1); }; }
-async function exEmployes() { let { data } = await sb.from("agents").select("matricule,nom,equipe,date_depart,motif_depart,tel,site").eq("actif", false).order("date_depart", { ascending: false, nullsFirst: false }); if (SUPAINO()) data = (data || []).filter(a => !a.site || /^aino/.test(a.site));
+async function exEmployes() { let { data } = await sb.from("agents").select("matricule,nom,equipe,date_depart,motif_depart,tel,site").eq("actif", false).order("date_depart", { ascending: false, nullsFirst: false }); if (SUPAINO()) data = (data || []).filter(siteOk);
   mdOpen(`<div class="row"><h2>🗄 Anciens employés (${(data || []).length})</h2><button type="button" class="btn" id="no">✕</button></div>${(data || []).map(x => `<div class="li"><div><span class="lk" data-a="fiche" data-m="${E(x.matricule)}">${E(x.nom)}</span><div class="m">${E(x.matricule)} · ${E(x.equipe || "")}${x.tel ? " · " + E(x.tel) : ""}</div></div><div class="m" style="text-align:right">${x.date_depart ? "parti le " + fd(x.date_depart) : ""}${x.motif_depart ? "<br>" + E(x.motif_depart) : ""}</div></div>`).join("") || '<div class="m">Aucun.</div>'}`); $("#no").onclick = mdClose; }
 async function infComp(m) { const a = AG.find(x => x.matricule == m); if (!a) return; const nni = NNIR.includes(ME.role);
   mdOpen(`<div class="row"><h2>✏️ Compléter — ${E(a.nom)}</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Matricule ${E(a.matricule)} · ${E(a.equipe || "")}. L’enregistrement met à jour le dossier de l’agent et le classeur ${/^Manut/.test(a.equipe || "") ? "Manutention" : "Nettoyage"} sur Drive (nouvelle version datée du jour ; l’ancienne reste dans le dossier).</div>
@@ -1290,7 +1296,7 @@ let MG = [], AR = [], BL = [], MF = 0;
 V.mag = async () => {
   const seeStock = DOT_REC.includes(ME.role), cen = MG.length ? MG.find(x => x.central) : null;
   const [m, a, bs] = await Promise.all([sb.from("magasins").select("*").order("central", { ascending: false }).order("id"), sb.from("articles").select("*").eq("actif", true).order("nom"), sb.from("besoins").select("*, articles(nom,unite), magasins(nom)").order("created_at", { ascending: false }).limit(400)]);
-  MG = (m.data || []).filter(x => x.actif !== false && (!/^superviseur_/.test(ME.role) || /^Aéroport|ASECNA/i.test(x.nom))); AR = a.data || []; BL = bs.data || []; if (MGR.includes(ME.role)) { const nv = BL.filter(x => x.statut == "demande" && !x.vu_le && x.demandeur != UID).map(x => x.id); if (nv.length) sb.rpc("besoin_vu", { p_ids: nv }).then(() => { }, () => { }); } await dotLoad();
+  MG = (m.data || []).filter(x => x.actif !== false && magOk(x)); AR = a.data || []; BL = bs.data || []; if (MGR.includes(ME.role)) { const nv = BL.filter(x => x.statut == "demande" && !x.vu_le && x.demandeur != UID).map(x => x.id); if (nv.length) sb.rpc("besoin_vu", { p_ids: nv }).then(() => { }, () => { }); } await dotLoad();
   if (!MF || !MG.some(x => x.id == MF)) MF = ["approvisionnement", "responsable_comptabilite", "direction"].includes(ME.role) ? (MG.find(x => x.central)?.id || 0) : 2;
   const M = MG.find(x => x.id == MF) || {}, [st, mv, bi, co, se, al] = await Promise.all([seeStock ? sb.from("stock_actuel").select("*").eq("magasin_id", MF) : { data: [] }, seeStock ? sb.from("mouvements_stock").select("*, articles(nom,unite)").eq("magasin_id", MF).order("created_at", { ascending: false }).limit(40) : { data: [] },
     seeStock ? sb.from("bilans_magasin").select("id,jour,fait_nom,lignes,observations,created_at").eq("magasin_id", MF).order("created_at", { ascending: false }).limit(5) : { data: [] }, seeStock && !M.central ? sb.rpc("conso_analyse", { p_magasin: MF, p_jours: 30 }) : { data: [] }, sb.from("magasin_seuils").select("article_id,seuil").eq("magasin_id", MF), sb.from("seuil_alertes").select("*").eq("magasin_id", MF).eq("ouverte", true)]);
@@ -2934,13 +2940,13 @@ V.rh = async () => {
   await BOOT; if (!AG.length) await loadAG(); if (!Object.keys(ST).length) await loadST().catch(() => {});
   const ok = ACC[ME.role] || [], A = AG.filter(rhAg), M = new Set(A.map(a => a.matricule)), sj = ymd(shiftStart());
   const [sites, csd, dis, dem] = await Promise.all([sb.from("sites").select("code,nom").eq("actif", true).order("ordre"), sb.rpc("conges_sans_decision_liste"), ok.includes("disc") ? sb.from("discipline").select("id,ref,type,matricule,statut,de_etape,avis_mesure,mp_debut,mp_fin,created_at,etabli_par") .order("created_at", { ascending: false }).limit(300) : { data: [] }, sb.from("demandes_agent").select("id,ref,matricule,agent_nom,type,statut,date_debut,date_fin,created_at").not("statut", "in", "(validee,refusee,annulee)").order("created_at", { ascending: false }).limit(100)]);
-  if (SUPAINO()) RHF.site = "aino";
-  const S = SUPAINO() ? [] : (sites.data || []).filter(x => !/^aino_/.test(x.code)), st = k => A.filter(a => ST[a.matricule]?.statut == k);
+  if (SUPAINO()) RHF.site = MSITE();
+  const S = SUPAINO() ? (sites.data || []).filter(x => x.code == MSITE()) : (sites.data || []).filter(x => !/^aino_/.test(x.code)), st = k => A.filter(a => ST[a.matricule]?.statut == k);
   const nj = st("nj"), cj = st("j"), cg = st("c"), mp = st("mp"), Dd = (dis.data || []).filter(d => M.has(d.matricule)), Cs = (csd.data || []).filter(x => M.has(x.matricule)), Dm = (dem.data || []).filter(x => M.has(x.matricule));
   const deRem = Dd.filter(d => d.de_etape == "redigee"), deAv = Dd.filter(d => d.type == "DE" && ["signee", "refus"].includes(d.de_etape) && !d.avis_mesure), mpC = Dd.filter(d => d.mp_debut && d.mp_debut <= sj && d.mp_fin >= sj), mois = Dd.filter(d => String(d.created_at).slice(0, 7) == sj.slice(0, 7));
   const manq = A.filter(a => !a.date_embauche || !a.tel || (!a.badge && !a.zone && !/^Chauff/.test(a.equipe || "") && (!a.site || a.site == "asecna"))), dep = A.filter(a => a.depart_a_confirmer), chefs = A.filter(a => /chef|superviseur/i.test(a.fonction || ""));
   const seg = (v, l) => `<button class="btn ${RHF.sv == v ? "p" : ""}" data-a="rhsv" data-v="${v}">${l}</button>`;
-  const bar = `<div class="card rhbar"><select id="rhsite" aria-label="Site"><option value="aino" ${RHF.site == "aino" ? "selected" : ""}>Site : AINO (aéroport)</option>${S.map(x => `<option value="${E(x.code)}" ${RHF.site == x.code ? "selected" : ""}>Site : ${E(x.nom)}</option>`).join("")}</select><span class="rhsep"></span>${RHF.site == "aino" ? seg("", "Tous services") + seg("N", "🧹 Nettoyage") + seg("M", "🧳 Manutention") : `<span class="m">Toutes les équipes</span>`}</div>`;
+  const bar = `<div class="card rhbar"><select id="rhsite" aria-label="Site">${MSITE() && MSITE() != "aino" ? "" : `<option value="aino" ${RHF.site == "aino" ? "selected" : ""}>Site : AINO (aéroport)</option>`}${S.map(x => `<option value="${E(x.code)}" ${RHF.site == x.code ? "selected" : ""}>Site : ${E(x.nom)}</option>`).join("")}</select><span class="rhsep"></span>${RHF.site == "aino" ? seg("", "Tous services") + seg("N", "🧹 Nettoyage") + seg("M", "🧳 Manutention") : `<span class="m">Toutes les équipes</span>`}</div>`;
   const kv = (l, v, cl) => `<div class="rhkv"><span>${l}</span><b ${cl ? `style="color:${cl}"` : ""}>${v}</b></div>`;
   const card = (k, ico, t, sub, body, alerte) => ok.includes(k) ? `<button type="button" class="card rhc ${alerte ? "rha" : ""}" data-a="rhgo" data-k="${k}"><div class="rhh"><span class="rhi">${ico}</span><div><b>${t}</b><div class="m">${sub}</div></div><span class="rho">Ouvrir ›</span></div>${body}</button>` : "";
   const cards = card("pres", "📊", "Suivi présence", "Shift du " + fd(sj), kv("Absences non justifiées", nj.length, nj.length ? "#dc2626" : "") + kv("Absences justifiées", cj.length) + kv("Congés", cg.length) + kv("Mises à pied", mp.length) + (Cs.length ? `<div class="rhw">⚠ ${Cs.length} congé(s) sans décision RH</div>` : ""), nj.length || Cs.length)
@@ -3726,7 +3732,7 @@ const vueChaine = () => { const p = new Proxy(function () { }, { get: (t, k) => 
 const vueAutorise = () => (ME0 ? UID0 : UID) == VUE_UID;
 function vueRaz() {
   Object.keys(VC).forEach(k => delete VC[k]); Object.keys(SXC).forEach(k => delete SXC[k]); SHOWN = ""; SXA = null;
-  const ok = ACC[ME.role] || ["shift"]; if (!ok.includes(NAV)) NAV = ok[0];
+  const ok = accSite(ACC[ME.role] || ["shift"]); if (!ok.includes(NAV)) NAV = ok[0];
   const un = $("#un"); if (un) un.textContent = ME.nom;
   let b = $("#vuebar"); if (VUE && !b) { b = document.createElement("div"); b.id = "vuebar"; $("#pg").insertBefore(b, $("#mn")); } if (!VUE && b) b.remove();
   if (VUE) b.innerHTML = `<span>👁 Vue du compte de <b>${E(VUE.nom)}</b> · ${E(RL[VUE.role] || VUE.role)} · lecture seule</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn" data-a="vuechoix">🔁 Changer de compte</button><button type="button" class="btn" data-a="vuequit">Revenir à mon compte</button></span>`;
@@ -3795,14 +3801,14 @@ Object.assign(ACT, {
 /* m : rien = page entière ou seulement la carte concernée par la dernière action ; 1 = tout recharger ; 2 = page hôte seule (cartes depuis le cache) */
 async function draw(m) {
   try { if (ME) { if (NAV == "msg" && MSGO) { MSGO = false; $("#mpan")?.classList.remove("on"); } msgBulle(); } } catch (e) { }
-  const ok = ACC[ME.role] || ["shift"];
+  const ok = accSite(ACC[ME.role] || ["shift"]);
   if (!ok.includes(NAV)) NAV = ok[0];
   if (!m && SXA && SXH[SXA] == NAV && SHOWN == NAV && $("#sx-" + SXA)) {
     const k = SXA, el = $("#sx-" + k), sec = el.parentElement;
     if (!sec.classList.contains("on")) { sec.classList.add("on"); el.innerHTML = SXC[k] || LDG; post(el); }
     document.body.classList.add("ldg"); const h = await sxLoad(k); document.body.classList.remove("ldg"); sxPut(k, h); sxScroll(); return;
   }
-  const okN = rhNav(ok.filter(p => !sxHost(p) || p == "veille"));
+  const okN = rhNav(ok.filter(p => !sxHost(p) || p == "veille" || (p == "tach" && !ok.includes("shift"))));
   $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"><b>OPÉRATIONS</b></div>` + okN.map(p => `<button data-p="${p}" class="nb ${p == NAV || (p == "rh" && RH_P.includes(NAV)) ? "on" : ""}">${ic(p)}<span>${PL(p)}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E((ME.poste || RL[ME.role]) || "")}</small><button class="nb" id="rgn">${ic("gear")}<span>Réglages</span></button><button class="nb" id="ins" style="display:none">⬇️<span>Télécharger l’app</span></button></div>`;
   const hn = $("#ht"); if (hn) hn.textContent = PL(NAV); navClose();
   $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
