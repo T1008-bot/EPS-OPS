@@ -704,3 +704,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   (≈600 ms → quelques ms) ; lier_rapports_vols limitée aux 4 derniers jours.
 
 -- v104 (2026-11-26) : Discipline en 3 cartes (DE, lettres d’avertissement, mises à pied) avec étapes en attente ; page par type (← Retour · Discipline, ＋ Nouvelle…, filtres En attente / Toutes) ; nouvelle lettre / MAP à partir d’une DE signée ou refusée (objet repris), MAP manuelle conservée.
+
+-- v105 (2026-11-26) : formulaire « Nouvelle recrue / Modifier »
+-- Site « Aéroport AINO (global) » : services Nettoyage, Manutention, Transport, Cuisine / restauration, Désinfection ;
+-- ASECNA et sites de la ville : Nettoyage uniquement (équipe « <site> Nettoyage »). Affectation / sous-service et zone : nettoyage
+-- aéroport uniquement. Rôles par service (agent / chef d'équipe / superviseur ; désinfection : agent / chef ; transport : chauffeur ;
+-- cuisine : cuisinier / aide-cuisinier). Case « Sans badge ». Référence : agents.reference_nom, agents.reference_tel
+-- (agent_ajouter / agent_modifier mis à jour).

@@ -919,39 +919,59 @@ function clsDepart(wb, a, date, motif) { let f = []; wb.worksheets.forEach(ws =>
 async function agForm(m) {
   const a = m ? AG.find(x => x.matricule == m) : null, nni = NNIR.includes(ME.role) && m ? (NNI[m]?.nni || "") : "";
   if (!AGSITES) { const { data } = await sb.from("sites").select("code,nom").eq("actif", true).order("ordre"); AGSITES = data || []; }
-  const sv0 = a ? (/^Manut/.test(a.equipe || "") ? "M" : /^ASECNA/.test(a.equipe || "") ? "ASECNA" : "N") : "N", svs = [...new Set(AG.map(x => x.service).filter(Boolean))].sort(), opt = (L, v) => L.map(x => `<option ${x == v ? "selected" : ""}>${E(x)}</option>`).join("");
+  const sv0 = a ? (/^Manut/.test(a.equipe || "") ? "M" : /^Chauff/.test(a.equipe || "") ? "T" : /^Cuisine/.test(a.equipe || "") ? "C" : /sinfection/i.test((a.equipe || "") + " " + (a.service || "")) ? "D" : "N") : "N";
+  const svs = [...new Set(AG.filter(x => !/^Manut|^Chauff|^ASECNA/.test(x.equipe || "") && !/^Encadrement|^Chauffeurs|^Manutention|sinfection/i.test(x.service || "")).map(x => x.service).filter(Boolean))].sort(), opt = (L, v) => L.map(x => `<option ${x == v ? "selected" : ""}>${E(x)}</option>`).join("");
+  const SVL = { N: "Nettoyage", M: "Manutention", T: "Transport", C: "Cuisine / restauration", D: "Désinfection" };
+  const FNL = { N: ["Agent de nettoyage", "Chef d’équipe nettoyage", "Superviseur nettoyage"], M: ["Agent de manutention", "Chef d’équipe manutention", "Superviseur manutention"], T: ["Chauffeur"], C: ["Cuisinier / cuisinière", "Aide-cuisinier"], D: ["Agent de désinfection", "Chef d’équipe désinfection"], A: AG_FN };
+  const SCOURT = { surete: "DGSN", chn: "CHN", enajm: "ENAJM", mif: "MIF", petrole: "Pétrole", unpm: "UNPM", asecna: "ASECNA" };
   mdOpen(`<div class="row"><h2>${a ? "✏️ Modifier — " + E(a.nom) : "➕ Nouvelle recrue"}</h2><button type="button" class="btn" id="no">✕</button></div>
 <div class="m">${a ? `Matricule <b>${E(a.matricule)}</b>. ` : ""}Les modifications sont enregistrées dans le dossier de l’agent et reportées sur le classeur Drive du service (nouvelle version datée du jour).</div>
 <div class="svt" style="margin-top:6px">Affectation</div>
-<div class="fc"><div><label>Site</label><select id="agS">${AGSITES.filter(x => !/^aino_(manut|cabine)$/.test(x.code)).map(x => `<option value="${E(x.code)}" ${(a?.site || "aino_nett") == x.code || (!a?.site && x.code == "aino_nett") ? "selected" : ""}>${E(x.code == "aino_nett" ? "AINO (aéroport)" : x.nom)}</option>`).join("")}</select></div>
-<div><label>Service</label><select id="agV"><option value="N" ${sv0 == "N" ? "selected" : ""}>Nettoyage</option><option value="M" ${sv0 == "M" ? "selected" : ""}>Manutention</option><option value="ASECNA" ${sv0 == "ASECNA" ? "selected" : ""}>ASECNA</option></select></div></div>
-<div class="fc"><div><label>Équipe</label><select id="agE"></select></div><div><label>Affectation / sous-service</label><select id="agSS"><option value="">—</option>${opt(svs, a?.service)}</select></div></div>
-<div class="fc"><div><label>Rôle / fonction</label><select id="agF">${opt(AG_FN, a?.fonction || "")}${a?.fonction && !AG_FN.includes(a.fonction) ? `<option selected>${E(a.fonction)}</option>` : ""}</select></div><div><label>Zone (MOSQ, FRET, B. ADMIN…)</label><input id="agZ" value="${E(a?.zone || "")}"></div></div>
+<div class="fc"><div><label>Site</label><select id="agS">${AGSITES.filter(x => !/^aino_(manut|cabine)$/.test(x.code)).map(x => `<option value="${E(x.code)}" ${(a?.site || "aino_nett") == x.code || (!a?.site && x.code == "aino_nett") ? "selected" : ""}>${E(x.code == "aino_nett" ? "Aéroport AINO (global)" : x.nom)}</option>`).join("")}</select></div>
+<div><label>Service</label><select id="agV"></select></div></div>
+<div class="fc"><div><label>Équipe</label><select id="agE"></select></div><div id="agSSw"><label>Affectation / sous-service</label><select id="agSS"><option value="">—</option>${opt(svs, a?.service)}${a?.service && !svs.includes(a.service) ? `<option selected>${E(a.service)}</option>` : ""}</select></div></div>
+<div class="fc"><div><label>Rôle / fonction</label><select id="agF"></select></div><div id="agZw"><label>Zone (MOSQ, FRET, B. ADMIN…)</label><input id="agZ" value="${E(a?.zone || "")}"></div></div>
 <div class="fc"><div><label>Date d’embauche (première prise de service)</label><input id="agD" type="date" value="${E(a?.date_embauche || today())}"></div><div><label>Matricule</label><input id="agM" value="${E(a?.matricule || "")}" ${a ? "disabled" : ""} placeholder="attribué automatiquement"><div class="m" id="agMm"></div></div></div>
 <div class="svt" style="margin-top:6px">Informations personnelles</div>
 <div class="fc"><div><label>Civilité</label><select id="agC"><option value="">—</option>${opt(["M.", "Mme"], a?.civilite)}</select></div><div><label>Nom complet</label><input id="agN" value="${E(a?.nom || "")}" placeholder="Prénom(s) et nom"></div></div>
 <div class="fc"><div><label>NNI (10 chiffres)</label><input id="agI" inputmode="numeric" value="${E(nni)}" ${NNIR.includes(ME.role) ? "" : "disabled placeholder=\"réservé aux RH\""}></div><div><label>Téléphone</label><input id="agT" inputmode="tel" value="${E(a?.tel || "")}"></div></div>
-<div class="fc"><div id="agBw"><label>N° de badge</label><input id="agB" inputmode="numeric" value="${E(a?.badge || "")}"></div><div><label>Date de naissance</label><input id="agDN" type="date" value="${E(a?.date_naissance || "")}"></div></div>
-<label>Contact d’urgence (nom et téléphone)</label><input id="agU" value="${E(a?.contact_urgence || "")}">
+<div class="fc"><div id="agBw"><label>N° de badge</label><input id="agB" inputmode="numeric" value="${E(a?.badge && !/^sans/i.test(a.badge) ? a.badge : "")}" placeholder="Ex. : 2431"><label style="display:flex;gap:8px;align-items:center;font-weight:600;margin-top:6px"><input type="checkbox" id="agBs" style="width:20px;height:20px" ${a && (!a.badge || /^sans/i.test(a.badge)) ? "checked" : ""}> Sans badge</label></div><div><label>Date de naissance</label><input id="agDN" type="date" value="${E(a?.date_naissance || "")}"></div></div>
+<label>Contact d’urgence (nom et téléphone)</label><input id="agU" value="${E(a?.contact_urgence || "")}" placeholder="Ex. : Aminata Ba (épouse) — 36 00 00 00">
+<div class="svt" style="margin-top:6px">Référence</div>
+<div class="m">Personne qui a recommandé l’agent pour ce poste (différente du contact d’urgence).</div>
+<div class="fc"><div><label>Recommandé par (nom, fonction)</label><input id="agRN" value="${E(a?.reference_nom || "")}" placeholder="Ex. : Moussa Diallo, chef d’équipe N2"></div><div><label>Téléphone de cette personne</label><input id="agRT" inputmode="tel" value="${E(a?.reference_tel || "")}" placeholder="Ex. : 46 12 34 56"></div></div>
 <div class="row" style="justify-content:flex-end;gap:6px"><button type="button" class="btn" id="no2">Annuler</button><button type="button" class="btn p" id="agOk">${a ? "Enregistrer" : "Ajouter la recrue"}</button></div>`);
   $("#no").onclick = $("#no2").onclick = mdClose;
-  const eqs = () => { const v = $("#agV").value, L = AG_EQ[v] || []; $("#agE").innerHTML = L.map(x => `<option ${x == a?.equipe ? "selected" : ""}>${E(x)}</option>`).join(""); matr(); };
+  const aero = () => $("#agS").value == "aino_nett", dirn = () => $("#agS").value == "direction";
+  /* services : aéroport → Nettoyage, Manutention, Transport, Cuisine / restauration, Désinfection ; autres sites → Nettoyage uniquement */
+  const svcs = () => { const L = dirn() ? [["A", "Administration"]] : aero() ? Object.entries(SVL) : [["N", "Nettoyage"]], cur = $("#agV").value || sv0;
+    $("#agV").innerHTML = L.map(([k, l]) => `<option value="${k}" ${k == cur ? "selected" : ""}>${l}</option>`).join(""); eqs(); };
+  const eqs = () => { const v = $("#agV").value, site = $("#agS").value;
+    const L = dirn() ? ["Direction"] : !aero() ? [(SCOURT[site] || (AGSITES.find(x => x.code == site)?.nom || site)) + " Nettoyage"] : v == "N" ? ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4"] : v == "M" ? AG_EQ.M : v == "T" ? ["Chauffeurs"] : v == "C" ? ["Cuisine / restauration"] : ["Désinfection"];
+    if (a?.equipe && !L.includes(a.equipe) && sv0 == v) L.push(a.equipe);
+    $("#agE").innerHTML = L.map(x => `<option ${x == a?.equipe ? "selected" : ""}>${E(x)}</option>`).join("");
+    const F = (FNL[dirn() ? "A" : v] || []).slice(); if (a?.fonction && !F.includes(a.fonction)) F.push(a.fonction);
+    const f0 = $("#agF").value; $("#agF").innerHTML = F.map(x => `<option ${x == (a?.fonction || f0) ? "selected" : ""}>${E(x)}</option>`).join("");
+    /* affectation / sous-service et zone : nettoyage de l'aéroport uniquement */
+    const nt = v == "N" && aero(); $("#agSSw").style.display = nt ? "" : "none"; $("#agZw").style.display = nt ? "" : "none"; if (!nt) { $("#agSS").value = ""; }
+    matr(); };
   const VPL = { surete: [1601, 1650, "DGSN"], enajm: [1651, 1680, "ENAJM"], mif: [1681, 1690, "MIF"], petrole: [1691, 1700, "Ministère du pétrole"] };
-  const matr = async () => { const site = $("#agS").value, v = $("#agV").value, chef = /chef/i.test($("#agF").value), bdg = site == "aino_nett" || site == "asecna" || v == "ASECNA";
-    $("#agBw").style.visibility = bdg ? "" : "hidden"; if (!bdg) $("#agB").value = ""; if (a) return;
+  const matr = async () => { const site = $("#agS").value, v = $("#agV").value, chef = /chef|superviseur/i.test($("#agF").value), bdg = site == "aino_nett" || site == "asecna";
+    $("#agBw").style.visibility = bdg ? "" : "hidden"; if (!bdg) $("#agB").value = ""; $("#agB").disabled = $("#agBs").checked; if (a) return;
     if (VPL[site]) { $("#agM").disabled = true; const { data } = await sb.rpc("agent_matricule_suivant", { p_service: site }); $("#agM").value = data || ""; $("#agMm").textContent = `Plage ${VPL[site][2]} ${VPL[site][0]}–${VPL[site][1]}`; return; }
-    if (site != "aino_nett" || v == "ASECNA") { $("#agM").disabled = false; $("#agMm").textContent = "Saisissez le matricule (aucune plage définie pour ce site)."; return; }
-    if (chef) { $("#agM").disabled = false; $("#agM").value = ""; $("#agMm").textContent = "Chefs d’équipe : plage 11xx en attente, saisissez le matricule."; return; }
+    if (!aero() || !["N", "M"].includes(v)) { $("#agM").disabled = false; $("#agMm").textContent = "Saisissez le matricule (aucune plage définie pour ce site / service)."; return; }
+    if (chef) { $("#agM").disabled = false; $("#agM").value = ""; $("#agMm").textContent = "Encadrement : plage 11xx, saisissez le matricule."; return; }
     $("#agM").disabled = true; const { data } = await sb.rpc("agent_matricule_suivant", { p_service: v == "M" ? "manutention" : "nettoyage" }); $("#agM").value = data || ""; $("#agMm").textContent = v == "M" ? "Plage manutention 1490–1600" : "Plage nettoyage AINO 1330–1399"; };
-  $("#agV").onchange = eqs; $("#agS").onchange = matr; $("#agF").onchange = matr; eqs();
-  $("#agOk").onclick = async () => { const P = { nom: $("#agN").value.replace(/\s+/g, " ").trim(), equipe: $("#agE").value, service: $("#agSS").value, fonction: $("#agF").value == "Autre" ? "" : $("#agF").value, zone: $("#agZ").value.trim(), date_embauche: $("#agD").value, site: $("#agS").value == "aino_nett" ? "" : $("#agS").value,
-      civilite: $("#agC").value, tel: $("#agT").value.replace(/\s+/g, " ").trim(), badge: $("#agBw").style.visibility == "hidden" ? "" : ($("#agB").value.trim() || ($("#agS").value == "aino_nett" && $("#agV").value != "ASECNA" ? "Sans Badge" : "")), date_naissance: $("#agDN").value, contact_urgence: $("#agU").value.trim(), nni: $("#agI").disabled ? "" : $("#agI").value.replace(/\D/g, ""), matricule: a ? a.matricule : $("#agM").value.trim() };
+  $("#agBs").onchange = () => { $("#agB").disabled = $("#agBs").checked; if ($("#agBs").checked) $("#agB").value = ""; };
+  $("#agV").onchange = eqs; $("#agS").onchange = svcs; $("#agF").onchange = matr; svcs();
+  $("#agOk").onclick = async () => { const vv = $("#agV").value, ssDef = { M: /superviseur|chef/i.test($("#agF").value) ? "Encadrement Manutention" : "Manutention", T: "Chauffeurs", C: "Cuisine / restauration", D: "Unité désinfection" }[vv] || "", P = { nom: $("#agN").value.replace(/\s+/g, " ").trim(), equipe: $("#agE").value, service: $("#agSSw").style.display == "none" ? (a && a.service && sv0 == vv ? a.service : ssDef) : $("#agSS").value, fonction: $("#agF").value == "Autre" ? "" : $("#agF").value, zone: $("#agZw").style.display == "none" ? (a && sv0 == vv ? a.zone || "" : "") : $("#agZ").value.trim(), date_embauche: $("#agD").value, site: $("#agS").value == "aino_nett" ? "" : $("#agS").value,
+      civilite: $("#agC").value, tel: $("#agT").value.replace(/\s+/g, " ").trim(), badge: $("#agBw").style.visibility == "hidden" ? "" : $("#agBs").checked ? "Sans Badge" : ($("#agB").value.trim() || "Sans Badge"), date_naissance: $("#agDN").value, contact_urgence: $("#agU").value.trim(), reference_nom: $("#agRN").value.trim(), reference_tel: $("#agRT").value.replace(/\s+/g, " ").trim(), nni: $("#agI").disabled ? "" : $("#agI").value.replace(/\D/g, ""), matricule: a ? a.matricule : $("#agM").value.trim() };
     if (!P.nom || !P.equipe) return toast("Nom complet et équipe sont obligatoires"); if (P.nni && P.nni.length != 10) return toast("Le NNI comporte 10 chiffres");
     const b = $("#agOk"); b.disabled = true; b.textContent = "Dossier…"; let mat = P.matricule;
     if (a) { const { error } = await sb.rpc("agent_modifier", { p_matricule: a.matricule, p: P }); if (error) { b.disabled = false; b.textContent = "Enregistrer"; return toast("Refusé : " + error.message); } }
     else { const { data, error } = await sb.rpc("agent_ajouter", { p: P }); if (error) { b.disabled = false; b.textContent = "Ajouter la recrue"; return toast("Refusé : " + error.message); } mat = data; }
     b.textContent = "Classeur Drive…"; let msg = a ? "Fiche enregistrée" : "Recrue ajoutée : matricule " + mat; const kind = /^Manut/.test(P.equipe) ? "M" : "N";
-    if (!/^ASECNA/.test(P.equipe) && !P.site) { try { const ch = {}; if (a) { if (P.nom != a.nom) ch.nom = P.nom; if (P.tel != (a.tel || "")) ch.tel = P.tel; if (P.badge != (a.badge || "")) ch.badge = P.badge; if (P.equipe != a.equipe && (/^Manut/.test(P.equipe) == /^Manut/.test(a.equipe || ""))) ch.equipe = P.equipe; }
+    if (!/^ASECNA|^Cuisine|^Désinfection/.test(P.equipe) && !P.site) { try { const ch = {}; if (a) { if (P.nom != a.nom) ch.nom = P.nom; if (P.tel != (a.tel || "")) ch.tel = P.tel; if (P.badge != (a.badge || "")) ch.badge = P.badge; if (P.equipe != a.equipe && (/^Manut/.test(P.equipe) == /^Manut/.test(a.equipe || ""))) ch.equipe = P.equipe; }
       const r = a ? (Object.keys(ch).length ? await clsAppliquer(kind, wb => clsModif(wb, a, ch)) : { nom: null, faits: [] }) : await clsAppliquer(kind, wb => clsAjout(wb, { ...P, matricule: mat }));
       msg += r.nom ? ` · classeur enregistré : ${r.nom} (${r.faits.join(", ")})` : a && !Object.keys(ch).length ? "" : " · classeur non modifié (ligne ou feuille introuvable)"; } catch (x) { msg += " · classeur NON mis à jour : " + x.message; } }
     mdClose(); await loadAG(); toast(msg); draw(1); }; }
