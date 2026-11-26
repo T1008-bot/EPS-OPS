@@ -672,3 +672,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Cartes Vols, Zones, Signalements, Rapport Ops, Demandes d'achat : ouvrent une page (plus de dépliage dans l'accueil).
 -- Historique de navigation (navGo/navBack + history.pushState) : bouton « ← Retour · page précédente » sur toute page ouverte
 -- depuis une autre (cartes, liens internes, notifications) ; le bouton retour du téléphone revient aussi en arrière.
+
+-- v98 (2026-11-26) : cartes d'effectif de l'accueil
+-- Tant que la présence n'est pas renseignée (ni rapport de situation, ni appel fait, ni absence saisie) : « — / effectif »,
+-- barre vide et « Présence pas encore renseignée » au lieu de « 31 / 31 (100 %) ». Badge rapport : « ⏳ Rapport en attente ».
