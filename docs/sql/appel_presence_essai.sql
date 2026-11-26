@@ -661,3 +661,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   liens « Revenir au texte dicté » et « Ré-améliorer », zones de texte auto-extensibles, objet « ✨ déduit par l'IA »).
 -- Expressions de besoin : fiche détaillée ouvrable (clic sur la demande ou sur la notification), besoin_modifier (quantité, unité,
 --   observation ; motif obligatoire si approuvé ; notification au demandeur ; trace modifie_nom/modifie_le/modif_note).
+
+-- v96 (2026-11-26) : traitement des retards — un seul bouton « Traiter »
+-- Choix : Présent (erreur d'appel) · Retard autorisé (heure + permission + motif) · Absent · Retard non justifié (heure).
+-- statuts_jour : statut 'p' autorisé ; retard_traiter : present/justifie/retard → statut 'p' (plus de retenue « absence »),
+-- absent → 'nj' ; présent clôt la suite (aucune mesure) ; heure obligatoire pour retard autorisé et non justifié.
