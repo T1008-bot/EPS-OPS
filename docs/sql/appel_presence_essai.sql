@@ -724,3 +724,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v108 (2026-11-26) : expressions de besoin servies consultables — filtres En cours / Servies-clôturées / Toutes (400 dernières lignes) ; fiche : état, vue, approbation, service, délais (demande→approbation, approbation→service, total) ; « Suivi détaillé » par article (qui, quand, rupture, partiel, remarques). besoins.servi_nom renseigné par besoin_decider / besoin_suivi.
 
 -- v110 (2026-11-26) : carte « Appels d’offres (veille) » sur l’accueil (direction, resp. ops, coordinateur), ouvre la page veille.
+
+-- v111 (2026-11-26) : veille multi-sites — beta.mr + TendersInfo (Mauritanie : tous, services, eau-assainissement) + GlobalTenders (Mauritanie) ; mots-clés FR/EN ; titre et résumé en français par l’IA ; source affichée. Sites testés non lisibles par le serveur : ARMP, marchespublics.gov.mr, CNCMP, dgMarket, TendersOnTime, Devex, UNGM, AMI, Cridem (bloqués, introuvables ou trop lents).

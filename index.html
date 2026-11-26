@@ -3757,7 +3757,7 @@ Object.assign(ACT, {
 });
 
 /* Onglets intégrés comme cartes dépliables dans une page hôte */
-const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "shift", veille: "shift", cmd: "mag" }, SXL = { sig: "Signalements · Help Desk", shr: "Rapport du shift Ops (manutention)", veille: "Appels d’offres (veille beta.mr)" };
+const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "shift", veille: "shift", cmd: "mag" }, SXL = { sig: "Signalements · Help Desk", shr: "Rapport du shift Ops (manutention)", veille: "Appels d’offres (veille)" };
 let BOOT = Promise.resolve(), DG = 0, SHOWN = "", SXA = null, SXS = null;
 const VC = {}, SXC = {}, LDG = `<div class="ld"><i></i>Chargement…</div>`;
 const SXOPEN = new Set((() => { try { return JSON.parse(localStorage.getItem("sxo") || "[]"); } catch (e) { return []; } })());
@@ -4777,9 +4777,9 @@ let VAF = "ouverts";
 V.veille = async () => { const { data, error } = await sb.from("veille_ao").select("*").order("created_at", { ascending: false }).limit(300); if (error) throw error;
   const t = today(), L = (data || []).filter(x => VAF == "tous" ? true : VAF == "autres" ? !x.pertinent : x.pertinent && (!x.date_limite || x.date_limite >= t)), nO = (data || []).filter(x => x.pertinent && (!x.date_limite || x.date_limite >= t)).length;
   const j = d => { if (!d) return ""; const n = Math.round((Date.parse(d) - Date.parse(t)) / 864e5); return n < 0 ? '<span class="bd">clos</span>' : `<span class="bd ${n <= 3 ? "bad" : n <= 7 ? "warn" : "info"}">J-${n}</span>`; };
-  return head("📢 Appels d’offres", `Veille quotidienne beta.mr · nettoyage professionnel et lutte anti-parasitaire · ${nO} ouvert(s)`)
+  return head("📢 Appels d’offres", `Veille quotidienne beta.mr, TendersInfo, GlobalTenders · nettoyage professionnel et lutte anti-parasitaire · ${nO} ouvert(s)`)
     + `<div class="row" style="justify-content:flex-start;gap:6px;margin:6px 0">${[["ouverts", "Pertinents ouverts"], ["tous", "Tout l’historique"], ["autres", "Écartés par l’IA"]].map(([k, l]) => `<button class="btn ${VAF == k ? "p" : ""}" data-a="vaf" data-v="${k}">${l}</button>`).join("")}</div>`
-    + (L.map(x => `<div class="card"><div class="row" style="align-items:flex-start"><div style="flex:1;min-width:0"><b>${E(x.titre)}</b><div class="m">${E(x.organisme || "")}${x.categorie ? " · " + E(x.categorie) : ""}${x.domaine ? " · " + E(x.domaine) : ""}${x.nouakchott === false ? " · hors Nouakchott" : ""}</div></div>${j(x.date_limite)}</div>
+    + (L.map(x => `<div class="card"><div class="row" style="align-items:flex-start"><div style="flex:1;min-width:0"><b>${E(x.titre)}</b><div class="m"><span class="bd info">${E(x.source || "")}</span> ${E(x.organisme || "")}${x.categorie ? " · " + E(x.categorie) : ""}${x.domaine ? " · " + E(x.domaine) : ""}${x.nouakchott === false ? " · hors Nouakchott" : ""}</div></div>${j(x.date_limite)}</div>
 ${x.date_limite_txt ? `<div class="m" style="margin-top:4px">📅 Date limite : <b>${E(x.date_limite_txt)}</b></div>` : ""}${x.resume ? `<div style="margin-top:6px;font-size:13.5px">${E(x.resume)}</div>` : ""}
 <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Repéré le ${fd(String(x.created_at).slice(0, 10))}</span><a class="btn" href="${E(x.url)}" target="_blank" rel="noopener">Voir l’annonce ↗</a></div></div>`).join("") || `<div class="card m">${VAF == "ouverts" ? "Aucun appel d’offres pertinent ouvert pour le moment. La veille passe chaque matin." : "Aucune annonce."}</div>`);
 };
