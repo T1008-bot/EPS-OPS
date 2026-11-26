@@ -693,3 +693,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- element_supprimer(type, id) : suppression définitive réservée à El Moustapha Ahmed Dedda (signalement + événements/PJ/corrections BDM,
 --   rapport d'incident, document disciplinaire + décisions liées + jours de MAP, tâche). element_test(type, id, val).
 -- SIG/2026/003 « Fiite deau » marqué test.
+
+-- 2026-11-26 : paie_periode et recap_paie ignorent les jours de MAP d’un document marqué test ; la suppression d’une MAP (element_supprimer) efface ses jours « mp » → retirés de la paie.
