@@ -666,3 +666,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Choix : Présent (erreur d'appel) · Retard autorisé (heure + permission + motif) · Absent · Retard non justifié (heure).
 -- statuts_jour : statut 'p' autorisé ; retard_traiter : present/justifie/retard → statut 'p' (plus de retenue « absence »),
 -- absent → 'nj' ; présent clôt la suite (aucune mesure) ; heure obligatoire pour retard autorisé et non justifié.
+
+-- v97 (2026-11-26) : navigation
+-- Accueil : cartes « Tâches du shift / Tâches de vol / Missions assignées » (compteurs seuls) ; clic → page dédiée.
+-- Cartes Vols, Zones, Signalements, Rapport Ops, Demandes d'achat : ouvrent une page (plus de dépliage dans l'accueil).
+-- Historique de navigation (navGo/navBack + history.pushState) : bouton « ← Retour · page précédente » sur toute page ouverte
+-- depuis une autre (cartes, liens internes, notifications) ; le bouton retour du téléphone revient aussi en arrière.

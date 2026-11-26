@@ -10,3 +10,4 @@
 - Déploiement : vérifier la syntaxe, incrémenter `eps-ops-vN` dans sw.js, ajouter une note dans docs/sql/appel_presence_essai.sql, pousser la branche puis main.
 - Comptes : identifiant = n° de téléphone (`<tel>@eps-ops.mr`) et mot de passe initial = même numéro (changement forcé à la 1re connexion).
   Si on corrige le numéro d'une personne qui ne s'est jamais connectée, mettre à jour l'identifiant ET le mot de passe initial.
+- Navigation : toute page ouverte depuis une autre page affiche un bouton « ← Retour » (navGo / navback, bouton retour du téléphone géré). Les cartes de l’accueil ouvrent une page séparée, elles ne se déplient pas.

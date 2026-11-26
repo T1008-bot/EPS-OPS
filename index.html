@@ -426,7 +426,9 @@ function shLab(o, s) { return o == 0 ? "Shift en cours" : o == 1 ? "Shift d’hi
 function shStrip() { const r = []; for (let o = SHV + 7; o >= SHV - 7; o--) { const d = new Date(shiftStart().getTime() - o * 24 * H); r.push(`<button class="dy ${o == SHV ? "on" : ""} ${o == 0 ? "td" : ""} ${o < 0 ? "fut" : ""}" data-a="shv" data-i="${o}">${o == 0 ? "Auj." : WD[d.getUTCDay()]}<b>${p2(d.getUTCDate())}</b><small>Éq. ${garde(d)}</small></button>`); } return r.join(""); }
 function shGo(o) { SHV = o; SHO = o; VD = -o; const s = new Date(shiftStart().getTime() - o * 24 * H), t = Math.round((Date.parse(ymd(s)) - Date.parse(ymd(shiftStart()))) / 864e5); if (t >= -1 && t <= 6) TD = t; draw(); }
 document.addEventListener("change", e => { if (e.target.id != "shd" || !e.target.value) return; shGo(Math.round((shiftStart().getTime() - Date.parse(e.target.value + "T08:00:00Z")) / 864e5)); });
+let TBAND = false;
 V.shift = async () => {
+  let TBH = ""; if (sxHost("tach")) { TBAND = true; try { TBH = await V.tach(); } catch (e) { } TBAND = false; }
   if (SHV) SHO = SHV; const s = new Date(shiftStart().getTime() - SHV * 24 * H), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = SHV ? true : h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
   const fq = d => d.toISOString().slice(0, 19).replace("T", " "), since = fq(new Date(s.getTime() - 3 * H));
   let q = sb.from("rapports_detail").select("*").gte("cree_le", since); if (SHV) q = q.lt("cree_le", fq(new Date(en.getTime() + 3 * H)));
@@ -449,7 +451,8 @@ ${svcRole() == "M" ? "" : `<div class="svl"><div class="svt">Nettoyage · N${g}<
 ${apc}
 ${sxCards("shift", ["vols"])}
 ${SHV ? "" : interditsCard()}
-${sxCards("shift", null, ["vols"])}
+${TBH}
+${sxCards("shift", null, ["vols", "tach"])}
 ${SHV ? "" : RA.filter(x => pourMoi(x.t)).map(raCard).join("")}<div class="g">${svcRole() == "M" ? "" : teams.map(card).join("")}${svcRole() == "N" ? "" : effCard("Manutention " + g, "Manutention · M" + g, "24 h", rb)}</div>
 ${SHV ? "" : `<div class="card"><div class="row"><h2>Alertes en cours</h2><button class="btn" data-p="alertes">Tout voir</button></div>${open.slice(0, 4).map(a => `<div class="li"><div><b>${E(libSvc(a.titre))}</b><div class="m">Shift du ${dmy(a.shift_debut)} · ${SA[a.statut]}</div></div><span class="bd ${a.niveau == "prioritaire" ? "bad" : "warn"}">${a.type == "veille" ? "Veille" : "Effectif"}</span></div>`).join("") || `<div class="m" style="padding-top:8px">Aucune alerte en cours.</div>`}</div>`}
 ${ME.role == "responsable_ops" && !SHV ? `<div class="card m">Modules à migrer prochainement : lieux, observations du shift.</div>` : ""}`;
@@ -1467,20 +1470,21 @@ V.tach = async () => { await BOOT; await apLoad().catch(() => { });
 <div class="sc"><table class="ft"><tr><th>Heure</th><th>Équipe</th><th>Action / alerte</th><th>État</th></tr>${it.map(x => { const st = x.btn ? (x.done ? `<button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-u="1">${x.done.etat == "indisponible" ? "Indisponible (annuler)" : "✓ Fait " + hm(new Date(x.done.fait_le))}</button>` : `<button class="btn ${x.late ? "w" : "p"}" data-a="chk" data-v="${v.id}" data-k="${x.k}">${x.late ? "En retard — valider" : "Valider"}</button>${x.un ? ` <button class="btn" data-a="chk" data-v="${v.id}" data-k="${x.k}" data-e="indisponible">Indisponible</button>` : ""}`) : x.rep ? `<span class="bd ok">Reçu ${hm(new Date(x.rep.envoye_le || x.rep.recu_le))}</span> ${x.rep.pdf_url ? `<a class="lk" href="${E(x.rep.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}` : x.cc ? `<a class="btn ${x.t.getTime() < now ? "w" : "p"}" href="${E(x.cc)}" target="_blank" rel="noopener">${x.t.getTime() < now ? "En retard — remplir" : "Remplir la fiche"}</a>` : x.info ? `<span class="bd info">Pas encore</span>` : x.opt ? `<span class="m">non reçu (à vérifier si PMR)</span>` : x.t.getTime() < now ? `<span class="bd bad">Non reçu — en retard</span>` : `<span class="bd info">À venir</span>`; return `<tr><td><b>${hm(x.t)}</b></td><td><span class="bd ${x.sv == "N" ? "info" : "warn"}">${x.sv == "N" ? "Nettoyage" : "Manutention"}</span></td><td style="white-space:pre-line">${E(x.l)}</td><td>${st}</td></tr>`; }).join("")}</table></div></div>`;
   };
   const nShift = all.filter(t => t.statut != "fait").length, nLateS = all.filter(t => t.statut != "fait" && t.echeance && new Date(t.echeance).getTime() < now).length, nMiss = myOpen.length + (MGRV ? ASGL.filter(t => t.assigne_uid != UID && t.statut != "fait").length : 0), nLateM = myLate.length;
-  const cardB = (k, ic, l, sub, n, late) => `<button type="button" class="card tcd ${TC == k ? "on" : ""}" data-a="tcard" data-k="${k}"><div class="tci">${ic}</div><b>${l}</b><div class="m">${sub}</div><div class="tcn">${n}${late ? ` <span class="bd bad">${late} en retard</span>` : ""}</div></button>`;
+  const cardB = (k, ic, l, sub, n, late) => `<button type="button" class="card tcd ${TC == k && !TBAND ? "on" : ""}" data-a="tcard" data-k="${k}"><div class="tci">${ic}</div><b>${l}</b><div class="m">${sub}</div><div class="tcn">${n}${late ? ` <span class="bd bad">${late} en retard</span>` : ""}</div></button>`;
   const band = `<style>.tcg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.tcd{text-align:left;cursor:pointer;font:inherit;color:inherit;padding:10px;margin:0;display:flex;flex-direction:column;gap:2px;border:2px solid transparent}.tcd.on{border-color:var(--p);background:var(--pl)}.tcd b{font-size:14px}.tcd .m{font-size:11px;line-height:1.25}.tci{font-size:20px}.tcn{font-weight:800;font-size:18px;margin-top:2px}@media(max-width:520px){.tcd .m{display:none}.tcd{padding:8px}}</style><div class="row" style="margin:12px 2px 0"><h2 style="margin:0;font-size:17px">Planning du jour : tâches &amp; missions</h2><span class="m">${fd(sel)}</span></div><div class="tcg">${cardB("shift", "✅", "Tâches du shift", "Tâches régulières du service", nShift, nLateS)}${cardB("vol", "✈️", "Tâches de vol", "Préparation, appel et rapports par vol", VL.length, 0)}${cardB("miss", "🎯", "Missions assignées", "Signalements et missions confiées", nMiss, nLateM)}</div>`;
+  if (TBAND) return band;
   const svbar = fixe ? `<div class="m" style="margin:0 2px 6px">Service : <b>${fixe == "N" ? "Nettoyage" : "Manutention"}</b></div>` : `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${sb2("", "Tous services")}${sb2("N", "🧹 Nettoyage")}${sb2("M", "🧳 Manutention")}</div>`;
   const sty = `<style>.tkr{padding:10px 0;border-top:1px solid var(--b)}.tkr:first-of-type{border-top:0}.tkh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ft td,.ft th{vertical-align:top}</style>`;
-  const evN = await evAFaire().catch(() => 0), hd = head("Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} tâches faites · ${VL.length} vol(s)`, `${evN ? `<button class="btn" data-a="evopen">📊 ${evN} évaluation(s) à traiter</button> ` : ""}<button class="btn w" data-a="tnew">+ Tâche</button>`);
-  if (TC == "miss") return hd + sty + band + svbar + (MGRV && TV == "col" ? vtabs + grp(t => t.assigne_nom || t.cible || "Non assignée") : MGRV && TV == "cat" ? vtabs + grp(t => t.categorie || "Non catégorisée") : mesTaches + vtabs);
-  if (TC == "vol") return hd + sty + band + `<div class="dys">${dys}</div>` + svbar + (fsv ? await statsVolsCarte(sel, fsv, s0).catch(() => "") : "") + (() => { const P = TK.filter(t => t.jour == sel && /^psm:/.test(t.modele || "") && vis(t) && t.statut != "annule" && (fsv != "N")); return P.length ? `<div class="card"><h2>PSM · LDM à transmettre (${P.filter(t => t.statut != "fait").length} en attente)</h2>${P.sort((a, b) => String(a.heure || "").localeCompare(String(b.heure || ""))).map(row).join("")}</div>` : ""; })() + (() => { const sel2 = fsv, win = v => { const r = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue).getTime(), A = v.sens == "A"; return [r - (A ? 90 : 215) * 60000, r + 75 * 60000]; }, pend = v => chkItems(v).filter(i => (!sel2 || i.sv == sel2) && !CK[v.id + "|" + i.k] && i.d.getTime() < now).length + ((!sel2 || sel2 == "M") && !RP[v.id + "|flight_ops"] && now > win(v)[0] + 90 * 6e4 ? 1 : 0) + ((!sel2 || sel2 == "N") && !RP[v.id + "|cabin"] && now > new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue).getTime() + (v.sens == "A" ? 60 : 30) * 6e4 ? 1 : 0);
+  const evN = await evAFaire().catch(() => 0), hd = head({ shift: "✅ Tâches du shift", vol: "✈️ Tâches de vol", miss: "🎯 Missions assignées" }[TC] || "Tâches & planning", `${fd(sel)} · ${fait}/${all.filter(t => t.statut != "annule").length} tâches faites · ${VL.length} vol(s)`, `${evN ? `<button class="btn" data-a="evopen">📊 ${evN} évaluation(s) à traiter</button> ` : ""}<button class="btn w" data-a="tnew">+ Tâche</button>`);
+  if (TC == "miss") return hd + sty + svbar + (MGRV && TV == "col" ? vtabs + grp(t => t.assigne_nom || t.cible || "Non assignée") : MGRV && TV == "cat" ? vtabs + grp(t => t.categorie || "Non catégorisée") : mesTaches + vtabs);
+  if (TC == "vol") return hd + sty + `<div class="dys">${dys}</div>` + svbar + (fsv ? await statsVolsCarte(sel, fsv, s0).catch(() => "") : "") + (() => { const P = TK.filter(t => t.jour == sel && /^psm:/.test(t.modele || "") && vis(t) && t.statut != "annule" && (fsv != "N")); return P.length ? `<div class="card"><h2>PSM · LDM à transmettre (${P.filter(t => t.statut != "fait").length} en attente)</h2>${P.sort((a, b) => String(a.heure || "").localeCompare(String(b.heure || ""))).map(row).join("")}</div>` : ""; })() + (() => { const sel2 = fsv, win = v => { const r = new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue).getTime(), A = v.sens == "A"; return [r - (A ? 90 : 215) * 60000, r + 75 * 60000]; }, pend = v => chkItems(v).filter(i => (!sel2 || i.sv == sel2) && !CK[v.id + "|" + i.k] && i.d.getTime() < now).length + ((!sel2 || sel2 == "M") && !RP[v.id + "|flight_ops"] && now > win(v)[0] + 90 * 6e4 ? 1 : 0) + ((!sel2 || sel2 == "N") && !RP[v.id + "|cabin"] && now > new Date(v.heure_reelle || v.heure_estimee || v.heure_prevue).getTime() + (v.sens == "A" ? 60 : 30) * 6e4 ? 1 : 0);
     const cur = VL.filter(v => { const [a, b] = win(v); return now >= a && now <= b; }), past = VL.filter(v => win(v)[1] < now), fut = VL.filter(v => win(v)[0] > now), reg = past.filter(v => pend(v) > 0), done = past.filter(v => !reg.includes(v));
     const mini = (v, tx) => `<div class="li"><div><b>${E(vNum(v))}</b> <span class="bd ${v.sens == "A" ? "info" : "warn"}">${v.sens == "A" ? "Arrivée" : "Départ"}</span> <span class="m">${hm(new Date(v.heure_estimee || v.heure_prevue))}</span></div><div class="m">${tx}</div></div>`;
     return `<h2 style="margin:10px 2px 6px">Maintenant (${cur.length})</h2>${cur.map(flight).join("") || `<div class="card m">Aucun vol dans son créneau. Les tâches d’un vol apparaissent ~1h30 avant l’arrivée et ~3h35 avant le départ.</div>`}`
       + (reg.length ? `<h2 style="margin:10px 2px 6px;color:#e11d48">À régulariser (${reg.length})</h2>${reg.map(flight).join("")}` : "")
       + (fut.length ? `<details class="card"><summary><b>À venir (${fut.length})</b> <span class="m">— apparaissent à leur créneau, avec notification</span></summary>${fut.map(v => mini(v, "apparaît à " + hm(new Date(win(v)[0])))).join("")}</details>` : "")
       + (done.length ? `<details class="card"><summary><b>Terminés (${done.length})</b></summary>${done.map(v => mini(v, "✓ tout est fait")).join("")}</details>` : ""); })();
-  return hd + sty + band + `<div class="dys">${dys}</div>` + svbar + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}</div>`
+  return hd + sty + `<div class="dys">${dys}</div>` + svbar + `<div class="card row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${fb("", "Toutes")}${fb("a_faire", "À faire")}${fb("en_cours", "En cours")}${fb("fait", "Faites")}</div>`
     + `<div class="card"><div class="row"><h2>Tâches du shift</h2><span class="bd ${fait == all.length && all.length ? "ok" : "info"}" style="font-size:13px">${fait}/${all.length} faite${fait > 1 ? "s" : ""}</span></div>${L.map(row).join("") || `<div class="m">Aucune tâche ce jour-là.</div>`}</div>`
     + await shiftResume(sel, s0, all, VL).catch(() => "");
 };
@@ -2042,7 +2046,7 @@ const ACT = {
   },
   irset(b) { ask("Dernier numéro officiellement émis", [{ k: "p", l: "Période (AA_MM, ex. 26_11)", v: b.dataset.pe, r: 1 }, { k: "n", l: "Dernier numéro déjà émis sur cette période (0 si aucun)", t: "number", r: 1, v: "0" }], async v => { const { error } = await sb.rpc("ir_regler_compteur", { p_periode: v.p.trim(), p_dernier: +v.n }); toast(error ? "Refusé : " + error.message : "Séquence réglée : le prochain numéro sera " + (+v.n + 1)); }); },
   async pjdel(b) { if (!confirm("Supprimer cette pièce jointe ?")) return; const p = Object.values(SPJ).flat().find(x => x.id == b.dataset.i); if (!p) return; const d = await sb.from("signalement_pj").delete().eq("id", p.id); if (d.error) return toast("Refusé : " + d.error.message); await sb.storage.from("signalements-pj").remove([p.chemin]); await pjLoadAll(); if (SO) sigF(SO); toast("Supprimée"); },
-  async sig2ir(b) { const s = SG.find(x => x.id == b.dataset.i); if (!s) return; const { data } = await sb.from("incident_reports").select("numero,id").eq("signalement_id", s.id); if (data && data.length && !confirm("Ce signalement a déjà " + data.length + " rapport(s) d’incident. En créer un autre ?")) return; $("#md").classList.remove("on"); NAV = "ir"; const ph = await pjImages(s.id); await irCreate({ ...irFromSig(s), ...(ph.length ? { photos: ph } : {}) }); },
+  async sig2ir(b) { const s = SG.find(x => x.id == b.dataset.i); if (!s) return; const { data } = await sb.from("incident_reports").select("numero,id").eq("signalement_id", s.id); if (data && data.length && !confirm("Ce signalement a déjà " + data.length + " rapport(s) d’incident. En créer un autre ?")) return; $("#md").classList.remove("on"); NAVH.push(NAV); NAV = "ir"; const ph = await pjImages(s.id); await irCreate({ ...irFromSig(s), ...(ph.length ? { photos: ph } : {}) }); },
   sigo(b) { sigF(+b.dataset.i); },
   async signew() { SGN = { d: "", vols: await sgVols().catch(() => []), ph: [], t: "" }; sgEtape1(); },
   sgdest(b) { SGN.d = b.dataset.d; },
@@ -2094,7 +2098,7 @@ const ACT = {
   sgbdm() { SGF.bdm = "m"; SGF.st = ""; draw(); },
   fiche(b) { fiche(b.dataset.m); },
   fxk(b) { if (!FC) return; const k = b.dataset.k, on = b.classList.contains("on"); ficheDraw(on ? null : k); if (!on) $("#fx").scrollIntoView({ behavior: "smooth", block: "nearest" }); },
-  fgo(b) { $("#md").classList.remove("on"); if (!(ACC[ME.role] || []).includes("eff")) return toast("Annuaire non accessible à votre profil"); F = { q: "", eq: b.dataset.eq || "", sv: b.dataset.sv || "", st: "", bd: "" }; NAV = "eff"; draw(); },
+  fgo(b) { $("#md").classList.remove("on"); if (!(ACC[ME.role] || []).includes("eff")) return toast("Annuaire non accessible à votre profil"); F = { q: "", eq: b.dataset.eq || "", sv: b.dataset.sv || "", st: "", bd: "" }; navGo("eff"); },
   async telok(b) { const m = b.dataset.m; const { error } = await sb.from("agents").update({ tel_a_verifier: false }).eq("matricule", m); if (error) return toast("Refusé : " + error.message); const a = AG.find(x => x.matricule == m); if (a) a.tel_a_verifier = false; toast("Numéro confirmé"); mdClose(); draw(); },
   async embsave() { const v = $("#fxe").value || null, m = FC.a.matricule; const { error } = await sb.from("agents").update({ date_embauche: v }).eq("matricule", m); if (error) return toast("Refusé : " + error.message); FC.a.date_embauche = v; const x = AG.find(y => y.matricule == m); if (x) x.date_embauche = v; toast("Date d’embauche enregistrée"); ficheDraw("emb"); },
   async suisave() { const m = FC.a.matricule, o = { matricule: m, etat: $("#fxs").value, note: $("#fxn").value.trim() || null, maj: new Date().toISOString(), par_nom: ME.nom }; const { data, error } = await sb.from("suivi_absences").upsert(o).select().single(); if (error) return toast("Refusé : " + error.message); FC.sv = data; if (PSD) PSD.sui[m] = data; toast("Suivi enregistré"); ficheDraw("suivi"); if (NAV == "pres" && PM == "suivi") draw(); },
@@ -2177,7 +2181,7 @@ const ACT = {
   tclo(b) { tCloture(+b.dataset.i); },
   async tgo(b) { const id = +b.dataset.i, t = TK.find(x => x.id == id); const { error } = await sb.rpc("tache_statut", { p_id: id, p_statut: "en_cours", p_comm: null }); if (error) return toast("Refusé : " + error.message); if (t) { t.statut = "en_cours"; tEtapeOuvrir(t); } draw(); },
   tetape(b) { const t = TK.find(x => x.id == +b.dataset.i); if (t) tEtapeOuvrir(t); },
-  tgonav(b) { mdClose(); NAV = b.dataset.k; draw(); },
+  tgonav(b) { mdClose(); navGo(b.dataset.k); },
   tgoappel(b) { mdClose(); apOpen(b.dataset.e, b.dataset.m).catch(e => toast("Erreur : " + e.message)); },
   tremo(b) { tRemontee(+b.dataset.i); },
   async tras(b) { const id = +b.dataset.i, { count } = await sb.from("taches_remontees").select("id", { count: "exact", head: true }).eq("tache_id", id).neq("nature", "ras");
@@ -2197,7 +2201,7 @@ ${apTache(t)}${bilTache(t)}${besTache(t)}<div class="row" style="justify-content
 <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="no">Fermer</button></div>`;
     $("#no").onclick = () => $("#md").classList.remove("on"); $("#mf").onsubmit = ev => ev.preventDefault(); $("#md").classList.add("on"); },
   tnote(b) { const id = +b.dataset.i; ask("Ajouter un message sur la tâche", [{ k: "t", l: "Nature", o: [["info", "Information / avancement"], ["clarification", "Question : information manquante ou clarification"], ["justification", "Justification (retard ou obstacle)"]] }, { k: "x", l: "Message (dictée possible)", t: "ta", r: 1 }], async v => { const { error } = await sb.from("taches_notes").insert({ tache_id: id, type: v.t, texte: v.x.trim(), auteur_nom: ME.nom }); toast(error ? "Refusé : " + error.message : "Message enregistré"); await draw(); ACT.tfiche({ dataset: { i: id } }); }); },
-  tsv(b) { TSV = b.dataset.v; TVF = ""; draw(); }, tvf(b) { TVF = b.dataset.v; draw(); }, tcard(b) { TC = b.dataset.k; if (TC != "miss") TV = "jour"; draw(); },
+  tsv(b) { TSV = b.dataset.v; TVF = ""; draw(); }, tvf(b) { TVF = b.dataset.v; draw(); }, tcard(b) { TC = b.dataset.k; if (TC != "miss") TV = "jour"; NAV == "tach" ? draw() : navGo("tach"); },
   async chk(b) { const v = b.dataset.v, k = b.dataset.k, r = b.dataset.u ? await sb.from("alerte_checks").delete().eq("vol_id", v).eq("item", k) : await sb.from("alerte_checks").insert({ vol_id: v, item: k, fait_nom: ME.nom, fait_par: UID, etat: b.dataset.e || "fait" }); if (r.error) toast("Refusé : " + r.error.message); draw(); },
   async fichehtml(vid) {
     const { data: v } = await sb.from("vols").select("*").eq("id", vid).maybeSingle();
@@ -2644,7 +2648,7 @@ Object.assign(ACT, {
           const ch = "zone/" + data.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 7) + "-" + nom.replace(/[^\w.\-]+/g, "_"); const up = await sb.storage.from("signalements-pj").upload(ch, body, { contentType: mime }); if (!up.error) P.push(ch); } catch (x) { } }
         if (P.length) await sb.from("signalements_zone").update({ photos: P }).eq("id", data.id); }
       SGN = { d: "", vols: [], ph: [] };
-      $("#md").classList.remove("on"); toast("Créé : " + data.ref + (data.resp_nom ? " — responsable : " + data.resp_nom : "")); ZT = "sig"; if (NAV != "zon") NAV = "zon"; draw();
+      $("#md").classList.remove("on"); toast("Créé : " + data.ref + (data.resp_nom ? " — responsable : " + data.resp_nom : "")); ZT = "sig"; if (NAV != "zon") navGo("zon");
     };
   },
   zso(b) {
@@ -2687,7 +2691,7 @@ async function ntInit() {
   await ntCount();
   sb.channel("notif").on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ME.id }, p => { NTU++; setB(); toast((p.new.titre || "Nouvelle notification")); }).subscribe();
   try { if (pushOK() && Notification.permission == "granted") await pushSub(); } catch (e) { }
-  if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", async e => { const d = e.data || {}; if (d.id) { await sb.from("notifications").update({ lu: true }).eq("id", d.id); ntCount(); } if (d.nav && P[d.nav]) { NAV = d.nav; draw(); } });
+  if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", async e => { const d = e.data || {}; if (d.id) { await sb.from("notifications").update({ lu: true }).eq("id", d.id); ntCount(); } if (d.nav && P[d.nav]) { navGo(d.nav); } });
   const qn = new URLSearchParams(location.search).get("n"); if (qn) { await sb.from("notifications").update({ lu: true }).eq("id", +qn); ntCount(); }
   if (location.search) history.replaceState(null, "", "/");
   try { if (pushOK() && Notification.permission == "default" && !localStorage.getItem("ntp")) { localStorage.setItem("ntp", "1"); setTimeout(() => toast("Activez les notifications push : ⚙️ Réglages → Notifications"), 2500); } } catch (e) { }
@@ -2713,7 +2717,7 @@ ${rgB("rglo", "⎋ Se déconnecter", "d")}`);
   rgx() { mdClose(); },
   rgth(b) { TH.set(b.dataset.k); ACT.rgl(); },
   rgzm(b) { ZM.set(+b.dataset.k); ACT.rgl(); },
-  rgprof() { mdClose(); NAV = "prof"; draw(); },
+  rgprof() { mdClose(); navGo("prof"); },
   rgrel() { location.reload(); },
   async rgins() { if (!DIP) return; DIP.prompt(); await DIP.userChoice.catch(() => { }); DIP = null; ACT.rgl(); },
   async rglo() {
@@ -2737,7 +2741,7 @@ ${NTL.map(n => `<div class="li" data-a="ntgo" data-i="${n.id}" style="cursor:poi
 <div class="m">Les 100 dernières notifications sont conservées ici.</div>`);
   },
   async ntall() { await sb.from("notifications").update({ lu: true }).eq("lu", false); await ntCount(); ACT.nthist(); },
-  async ntgo(b) { const n = NTL.find(x => x.id == b.dataset.i); if (!n) return; if (!n.lu) { await sb.from("notifications").update({ lu: true }).eq("id", n.id); ntCount(); } mdClose(); if (n.lien && (ACC[ME.role] || []).includes(n.lien)) { NAV = n.lien; await draw(); if (n.lien == "mag" && n.ref) besoinOuvrir(n.ref); } if (/^cr:\d+$/.test(n.ref || "")) crOpen(+n.ref.slice(3)); },
+  async ntgo(b) { const n = NTL.find(x => x.id == b.dataset.i); if (!n) return; if (!n.lu) { await sb.from("notifications").update({ lu: true }).eq("id", n.id); ntCount(); } mdClose(); if (n.lien && (ACC[ME.role] || []).includes(n.lien)) { await navGo(n.lien); if (n.lien == "mag" && n.ref) besoinOuvrir(n.ref); } if (/^cr:\d+$/.test(n.ref || "")) crOpen(+n.ref.slice(3)); },
   async ntpar() {
     const { data } = await sb.from("notif_prefs").select("*").eq("user_id", ME.id).maybeSingle(), c = (data && data.categories) || {}, pu = data ? data.push : true;
     mdOpen(`<div class="row"><h2>🎛 Paramètres des notifications</h2><button type="button" class="btn" data-a="rgl">← Réglages</button></div>
@@ -2806,7 +2810,7 @@ ${EQC.length ? `<div><label>Équipement concerné (facultatif)</label>${sel("cme
       if (autre && !$("#cmsa").value.trim()) return toast("Précisez la sous-catégorie");
       const { data, error } = await sb.from("commandes").insert({ motif: $("#cmm").value, categorie: $("#cmc").value, sous_categorie: autre ? "Autre" : $("#cms").value, sous_categorie_autre: autre ? $("#cmsa").value.trim() : null, objet: $("#cmo").value.trim(), description: $("#cmd").value.trim() || null, quantite: $("#cmq").value.trim() || null, equipement_id: $("#cme") && $("#cme").value ? +$("#cme").value : null, urgence: $("#cmu").value, destinataire: $("#cmt").value }).select("ref").single();
       if (error) return toast("Refusé : " + error.message);
-      $("#md").classList.remove("on"); toast("Demande envoyée : " + data.ref); if (pre && pre.apres) { pre.apres(data.ref); return; } NAV = "cmd"; CMF = "actives"; draw();
+      $("#md").classList.remove("on"); toast("Demande envoyée : " + data.ref); if (pre && pre.apres) { pre.apres(data.ref); return; } CMF = "actives"; navGo("cmd");
     };
   },
   async cmo(b) {
@@ -3228,7 +3232,7 @@ function msgBind(t) {
   t.querySelectorAll("[data-mx]").forEach(b => b.onclick = msgFermer);
   t.querySelectorAll("[data-mgrp]").forEach(b => b.onclick = msgGroupeNouveau);
   t.querySelectorAll("[data-minfo]").forEach(b => b.onclick = () => msgGroupeInfo(MSGC));
-  t.querySelectorAll("[data-mexp]").forEach(b => b.onclick = () => { const c = MSGC; msgFermer(); MSGC = c; NAV = "msg"; draw(); });
+  t.querySelectorAll("[data-mexp]").forEach(b => b.onclick = () => { const c = MSGC; msgFermer(); MSGC = c; navGo("msg"); });
   t.querySelectorAll("[data-mu]").forEach(b => b.onclick = async () => { const { data, error } = await sb.rpc("msg_direct", { p_user: b.dataset.mu }); if (error) return toast(error.message); await msgLoad(); if (!MSGL.some(c => c.id == data)) MSGL.unshift({ id: data, type: "direct", nom: MSGCT.find(p => p.id == b.dataset.mu)?.nom, dernier_le: new Date().toISOString(), non_lus: 0, notif: true }); msgConv(data); });
   t.querySelectorAll("[data-mnotif]").forEach(b => b.onclick = async () => { const c = MSGL.find(x => x.id == MSGC); const v = c.notif === false; await sb.from("conv_membres").update({ notif: v }).eq("conv_id", MSGC).eq("user_id", UID); c.notif = v; toast(v ? "Notifications activées pour cette conversation" : "Notifications coupées pour cette conversation"); msgRender(); });
   const q = t.querySelector("#mcq"); if (q) q.oninput = () => { const v = N(q.value); t.querySelectorAll("#mcl [data-mu]").forEach(b => b.style.display = !v || b.dataset.n.includes(v) ? "" : "none"); };
@@ -3282,7 +3286,7 @@ function ntDemande() {
   $("#no").onclick = mdClose; $("#ntok").onclick = async () => { mdClose(); await ACT.nton(); mdClose(); };
 }
 let RHENC = "sup";
-Object.assign(ACT, { rhenc(b) { RHENC = b.dataset.v; draw(); }, rhsv(b) { RHF.sv = b.dataset.v; rhSave(); draw(); }, rhgo(b) { const k = b.dataset.k; if (k == "pres") { SF.dp = RHF.sv == "M" ? "Manutention" : RHF.sv == "N" ? "Nettoyage" : ""; SF.g = ""; SF.sv = ""; } NAV = k; draw(); } });
+Object.assign(ACT, { rhenc(b) { RHENC = b.dataset.v; draw(); }, rhsv(b) { RHF.sv = b.dataset.v; rhSave(); draw(); }, rhgo(b) { const k = b.dataset.k; if (k == "pres") { SF.dp = RHF.sv == "M" ? "Manutention" : RHF.sv == "N" ? "Nettoyage" : ""; SF.g = ""; SF.sv = ""; } navGo(k); } });
 document.addEventListener("change", e => { if (e.target.id == "rhsite") { RHF.site = e.target.value; if (RHF.site != "aino") RHF.sv = ""; rhSave(); draw(); } });
 const PL = p => p == "shift" && ["responsable_rh", "assistante_rh", "approvisionnement", "direction", "responsable_ops", "coordinateur_ops"].includes(ME.role) ? "Shift actuel" : P[p][1];
 /* ---------- Demande d'explication électronique ---------- */
@@ -3697,8 +3701,15 @@ SXOPEN.delete("vols"); /* les vols s'ouvrent uniquement au clic */
 const sxSave = () => { try { localStorage.setItem("sxo", JSON.stringify([...SXOPEN])); } catch (e) { } };
 const sxHost = k => { const h = SXH[k], ok = ACC[ME.role] || []; if (k == "shr") return ok.includes("shift") && SHRR.includes(ME.role) ? "shift" : null; return h && ok.includes(h) && ok.includes(k) ? h : null; };
 V.shr = async () => { SHO = SHV; return await shiftRep(); };
+/* navigation : une page ouverte depuis une autre page a toujours un bouton Retour */
+let NAVH = [];
+async function navGo(p) { if (p == NAV) return draw(); NAVH.push(NAV); if (NAVH.length > 30) NAVH.shift(); NAV = p; SXA = null; try { history.pushState({ eps: NAVH.length }, ""); } catch (e) { } return draw(); }
+function navBack() { if (!NAVH.length) return; NAV = NAVH.pop(); SXA = null; draw(); }
+addEventListener("popstate", () => { if ($("#md")?.classList.contains("on")) { mdClose(); return; } if (NAVH.length) navBack(); });
+const backBar = () => NAVH.length ? `<div class="row" style="justify-content:flex-start;margin:0 0 10px"><button type="button" class="btn" data-a="navback" style="font-weight:700">← Retour · ${E(PL(NAVH[NAVH.length - 1]))}</button></div>` : "";
+Object.assign(ACT, { sxgo(b) { navGo(b.dataset.k); }, navback() { if (history.state && history.state.eps) history.back(); else navBack(); } });
 function sxCards(h, only, sauf) {
-  return Object.keys(SXH).filter(k => sxHost(k) == h && (!only || only.includes(k)) && (!sauf || !sauf.includes(k))).map(k => { const o = SXOPEN.has(k); return `<section class="sx ${o ? "on" : ""}" data-sx="${k}"><button class="sxh" data-a="sxt" data-k="${k}" aria-expanded="${o}">${ic(IC[k] ? k : "ir")}<span>${SXL[k] || P[k][1]}</span><i class="nbd" data-b="${k}"></i><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><div class="sxb" id="sx-${k}">${o ? SXC[k] || LDG : ""}</div></section>`; }).join("");
+  return Object.keys(SXH).filter(k => sxHost(k) == h && (!only || only.includes(k)) && (!sauf || !sauf.includes(k))).map(k => { const o = SXOPEN.has(k); return `<section class="sx"><button class="sxh" data-a="sxgo" data-k="${k}">${ic(IC[k] ? k : "ir")}<span>${SXL[k] || P[k][1]}</span><i class="nbd" data-b="${k}"></i><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></section>`; }).join("");
 }
 function post(root) {
   lab(root); if (root.querySelector("#sl")) sigList(); if (root.querySelector("#irl")) irList();
@@ -3719,7 +3730,6 @@ Object.assign(ACT, {
 async function draw(m) {
   try { if (ME) { if (NAV == "msg" && MSGO) { MSGO = false; $("#mpan")?.classList.remove("on"); } msgBulle(); } } catch (e) { }
   const ok = ACC[ME.role] || ["shift"];
-  if (sxHost(NAV)) { const k = NAV; NAV = SXH[k]; SXA = k; SXS = k; if (!SXOPEN.has(k)) { SXOPEN.add(k); sxSave(); } }
   if (!ok.includes(NAV)) NAV = ok[0];
   if (!m && SXA && SXH[SXA] == NAV && SHOWN == NAV && $("#sx-" + SXA)) {
     const k = SXA, el = $("#sx-" + k), sec = el.parentElement;
@@ -3732,12 +3742,12 @@ async function draw(m) {
   $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
   const g = ++DG, ref = NAV, mn = $("#mn");
   /* affichage immédiat de la dernière version connue de la page, puis actualisation */
-  if (SHOWN != NAV) { mn.innerHTML = VC[NAV] || LDG; if (VC[NAV]) post(mn); mn.scrollTop = 0; SHOWN = NAV; }
-  const keys = m == 2 ? [] : Object.keys(SXH).filter(k => sxHost(k) == NAV && SXOPEN.has(k)), sp = keys.map(sxLoad);
+  if (SHOWN != NAV) { mn.innerHTML = backBar() + (VC[NAV] || LDG); if (VC[NAV]) post(mn); mn.scrollTop = 0; SHOWN = NAV; }
+  const keys = [], sp = [];
   document.body.classList.add("ldg");
   let h; try { h = await (NAV == "shift" ? V.shift() : BOOT.then(() => V[NAV]())); VC[ref] = h; } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
   if (g != DG) return;
-  mn.innerHTML = h; post(mn); sxScroll();
+  mn.innerHTML = backBar() + h; post(mn); sxScroll();
   await Promise.all(keys.map((k, i) => sp[i].then(x => { if (g == DG) sxPut(k, x); })));
   if (g == DG) document.body.classList.remove("ldg");
 }
@@ -3777,7 +3787,7 @@ Object.assign(ACT, {
     const { data, error } = await sb.rpc("relancer_chefs", { p_service: sv, p_motif: b.dataset.m || `Rapport de situation du staff ${nom} non reçu` });
     b.disabled = false; toast(error ? "Relance impossible : " + error.message : `Relance envoyée à ${data} chef(s) d’équipe ${nom}`);
   },
-  vreg() { VM = "reg"; NAV = "vols"; draw(); scrollTo(0, 0); },
+  vreg() { VM = "reg"; navGo("vols"); scrollTo(0, 0); },
   vprog() { VM = "prog"; draw(); scrollTo(0, 0); },
   virr() { VM = "irr"; draw(); scrollTo(0, 0); },
   vrj(b) { VRJ = +b.dataset.i; if (VRW == "passes" || /^sem/.test(VRW)) VRW = "shift"; draw(); },
@@ -4293,7 +4303,7 @@ Object.assign(ACT, {
     if (c == "piece_identite") return ask("Pièce d’identité", [{ k: "x", l: "Date d’expiration (facultatif)", t: "date" }], q => go(null, null, q.x));
     go(); },
   async fdoc(b) { const { data, error } = await DST2().createSignedUrl(b.dataset.c, 600); if (error || !data) return toast("Document inaccessible"); window.open(data.signedUrl, "_blank", "noopener"); },
-  fincompta() { mdClose(); NAV = "compta"; draw(); },
+  fincompta() { mdClose(); navGo("compta"); },
   demo(b) { demOpen(+b.dataset.i); },
   demsig(b) { demSigner(b.dataset.q); },
   dempdf() { demPDF().catch(e => toast(e.message)); },
@@ -4682,7 +4692,7 @@ Object.assign(ACT, {
   },
   async cgst(b) { const v = b.dataset.v; if (v == "annule" && !confirm("Annuler ce congé ?")) return; const { error } = await sb.from("conges").update(v == "valide" ? { statut: v, valide_par: UID, valide_nom: ME.nom, valide_le: new Date().toISOString() } : { statut: v }).eq("id", b.dataset.i); if (error) return toast("Refusé : " + error.message); draw(); }
 });
-document.addEventListener("click", e => { if (!e.target.closest("#md")) SXA = e.target.closest("[data-sx]")?.dataset.sx || null; const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { SXA = null; NAV = b.dataset.p; draw(); } else ACT[b.dataset.a](b); });
+document.addEventListener("click", e => { if (!e.target.closest("#md")) SXA = e.target.closest("[data-sx]")?.dataset.sx || null; const b = e.target.closest("[data-a],[data-p]"); if (!b) return; if (b.dataset.p) { SXA = null; if (b.closest("#nv")) { NAVH = []; NAV = b.dataset.p; draw(); } else navGo(b.dataset.p); } else ACT[b.dataset.a](b); });
 document.addEventListener("input", e => { if (e.target.id == "fq") { F.q = e.target.value; setEl(); } if (e.target.id == "sq") { SQ = e.target.value; sigList(); } if (e.target.id == "irq") { IRQ = e.target.value; irList(); } });
 (() => { let y0 = null, dy = 0, busy = false; const el = () => $("#mn"), ind = () => { let i = $("#ptr"); if (!i) { i = document.createElement("div"); i.id = "ptr"; document.body.appendChild(i); } return i; };
   document.addEventListener("touchstart", e => { const m = el(); y0 = (innerWidth <= 800 && m && m.contains(e.target) && m.scrollTop <= 0 && !busy && !document.querySelector("#md.on")) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
