@@ -11,3 +11,4 @@
 - Comptes : identifiant = n° de téléphone (`<tel>@eps-ops.mr`) et mot de passe initial = même numéro (changement forcé à la 1re connexion).
   Si on corrige le numéro d'une personne qui ne s'est jamais connectée, mettre à jour l'identifiant ET le mot de passe initial.
 - Navigation : toute page ouverte depuis une autre page affiche un bouton « ← Retour » (navGo / navback, bouton retour du téléphone géré). Les cartes de l’accueil ouvrent une page séparée, elles ne se déplient pas.
+- Vérifier après chaque déploiement que `const C="eps-ops-vN"` dans sw.js a bien changé (grep), sinon les téléphones ne reçoivent pas la mise à jour.

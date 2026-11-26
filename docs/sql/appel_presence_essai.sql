@@ -728,3 +728,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v111 (2026-11-26) : veille multi-sites — beta.mr + TendersInfo (Mauritanie : tous, services, eau-assainissement) + GlobalTenders (Mauritanie) ; mots-clés FR/EN ; titre et résumé en français par l’IA ; source affichée. Sites testés non lisibles par le serveur : ARMP, marchespublics.gov.mr, CNCMP, dgMarket, TendersOnTime, Devex, UNGM, AMI, Cridem (bloqués, introuvables ou trop lents).
 
 -- v112 (2026-11-26) : Magasins — accès complet pour responsable_comptabilite (Abderahmane) : tous les magasins, approbation / service / rupture / modification des besoins, bons de dotation (préparer, valider, expédier), quotas, mouvements. Fonctions besoin_* et dotation_* + politiques besoins (bs_r), mouvements_stock (mv_i), dotation_quotas (dq_w) mises à jour.
+
+-- v113 (2026-11-26) : correctif — sw.js était resté à eps-ops-v108 (mises à jour v109–v112 non distribuées aux téléphones) ; « Appels d’offres » aussi dans le menu.

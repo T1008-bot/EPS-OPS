@@ -3800,7 +3800,7 @@ async function draw(m) {
     if (!sec.classList.contains("on")) { sec.classList.add("on"); el.innerHTML = SXC[k] || LDG; post(el); }
     document.body.classList.add("ldg"); const h = await sxLoad(k); document.body.classList.remove("ldg"); sxPut(k, h); sxScroll(); return;
   }
-  const okN = rhNav(ok.filter(p => !sxHost(p)));
+  const okN = rhNav(ok.filter(p => !sxHost(p) || p == "veille"));
   $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"><b>OPÉRATIONS</b></div>` + okN.map(p => `<button data-p="${p}" class="nb ${p == NAV || (p == "rh" && RH_P.includes(NAV)) ? "on" : ""}">${ic(p)}<span>${PL(p)}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E((ME.poste || RL[ME.role]) || "")}</small><button class="nb" id="rgn">${ic("gear")}<span>Réglages</span></button><button class="nb" id="ins" style="display:none">⬇️<span>Télécharger l’app</span></button></div>`;
   const hn = $("#ht"); if (hn) hn.textContent = PL(NAV); navClose();
   $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
