@@ -3757,7 +3757,7 @@ Object.assign(ACT, {
 });
 
 /* Onglets intégrés comme cartes dépliables dans une page hôte */
-const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "shift", cmd: "mag" }, SXL = { sig: "Signalements · Help Desk", shr: "Rapport du shift Ops (manutention)" };
+const SXH = { tach: "shift", vols: "shift", zon: "shift", sig: "shift", shr: "shift", veille: "shift", cmd: "mag" }, SXL = { sig: "Signalements · Help Desk", shr: "Rapport du shift Ops (manutention)", veille: "Appels d’offres (veille beta.mr)" };
 let BOOT = Promise.resolve(), DG = 0, SHOWN = "", SXA = null, SXS = null;
 const VC = {}, SXC = {}, LDG = `<div class="ld"><i></i>Chargement…</div>`;
 const SXOPEN = new Set((() => { try { return JSON.parse(localStorage.getItem("sxo") || "[]"); } catch (e) { return []; } })());
