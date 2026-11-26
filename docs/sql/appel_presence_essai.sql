@@ -711,3 +711,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- aéroport uniquement. Rôles par service (agent / chef d'équipe / superviseur ; désinfection : agent / chef ; transport : chauffeur ;
 -- cuisine : cuisinier / aide-cuisinier). Case « Sans badge ». Référence : agents.reference_nom, agents.reference_tel
 -- (agent_ajouter / agent_modifier mis à jour).
+
+-- v106 (2026-11-26) : expression de besoin — liste d’articles intégrée (visible sur téléphone, filtrée à la frappe, nouvel article possible) au lieu de la liste native ; unité libre (liste de choix + « Autre… »), seulement proposée par le catalogue tant que l’utilisateur ne l’a pas changée.
