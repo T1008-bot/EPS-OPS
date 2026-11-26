@@ -730,3 +730,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v112 (2026-11-26) : Magasins — accès complet pour responsable_comptabilite (Abderahmane) : tous les magasins, approbation / service / rupture / modification des besoins, bons de dotation (préparer, valider, expédier), quotas, mouvements. Fonctions besoin_* et dotation_* + politiques besoins (bs_r), mouvements_stock (mv_i), dotation_quotas (dq_w) mises à jour.
 
 -- v113 (2026-11-26) : correctif — sw.js était resté à eps-ops-v108 (mises à jour v109–v112 non distribuées aux téléphones) ; « Appels d’offres » aussi dans le menu.
+
+-- v114 (2026-11-26) : fiche d’expression de besoin — cases à cocher par article, « Servir » et « Rupture → demande d’achat » sur la sélection (ou sur tous les articles en attente si rien n’est coché) ; demande d’achat unique préremplie (objet, quantité, détail des articles), articles liés à sa référence. Comptabilité : plus de droit de modifier une demande (besoin_modifier).
