@@ -695,3 +695,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- SIG/2026/003 « Fiite deau » marqué test.
 
 -- 2026-11-26 : paie_periode et recap_paie ignorent les jours de MAP d’un document marqué test ; la suppression d’une MAP (element_supprimer) efface ses jours « mp » → retirés de la paie.
+
+-- v103 (2026-11-26) : performance de l'accueil
+-- Client : bloc « Planning du jour » calculé en parallèle et sans données lourdes des vols ; apLoad en une vague et mutualisé (20 s) ;
+--   loadAL/loadRA en parallèle ; accueil affiché immédiatement depuis la dernière version (localStorage vc_shift_<uid>) puis actualisé.
+-- Serveur : index rapports_staff (jf_utc(brut)) partiel, (categorie, jf_utc(brut)), (form_id), (recu_le), partiels categorie null /
+--   numeros_vol null ; marquer_taches_auto bornée dans le temps (3,1 s → 0,06 s, toutes les 5 min) ; situation_staff filtrée par date
+--   (≈600 ms → quelques ms) ; lier_rapports_vols limitée aux 4 derniers jours.
