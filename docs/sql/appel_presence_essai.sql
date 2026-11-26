@@ -720,3 +720,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- articles.conditionnement (proposé dans l'observation). Articles ajoutés : Javel en grains (kg, 50 kg / barrique),
 -- Lave-sol Maxell (20 L) et Lave-mains Maxell (20 L) (litre, 20 L / bidon), Chaussures de sécurité (paire),
 -- Protections auditives (bouchons d'oreilles) (paire) — EPI / tenues.
+
+-- v108 (2026-11-26) : expressions de besoin servies consultables — filtres En cours / Servies-clôturées / Toutes (400 dernières lignes) ; fiche : état, vue, approbation, service, délais (demande→approbation, approbation→service, total) ; « Suivi détaillé » par article (qui, quand, rupture, partiel, remarques). besoins.servi_nom renseigné par besoin_decider / besoin_suivi.
