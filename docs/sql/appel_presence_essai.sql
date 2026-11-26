@@ -676,3 +676,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v98 (2026-11-26) : cartes d'effectif de l'accueil
 -- Tant que la présence n'est pas renseignée (ni rapport de situation, ni appel fait, ni absence saisie) : « — / effectif »,
 -- barre vide et « Présence pas encore renseignée » au lieu de « 31 / 31 (100 %) ». Badge rapport : « ⏳ Rapport en attente ».
+
+-- v99 (2026-11-26) : encadré superviseurs — « ⏳ En attente » pour Manutention et Nettoyage tant que leur rapport n’est pas reçu.
