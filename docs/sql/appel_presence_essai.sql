@@ -702,3 +702,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Serveur : index rapports_staff (jf_utc(brut)) partiel, (categorie, jf_utc(brut)), (form_id), (recu_le), partiels categorie null /
 --   numeros_vol null ; marquer_taches_auto bornée dans le temps (3,1 s → 0,06 s, toutes les 5 min) ; situation_staff filtrée par date
 --   (≈600 ms → quelques ms) ; lier_rapports_vols limitée aux 4 derniers jours.
+
+-- v104 (2026-11-26) : Discipline en 3 cartes (DE, lettres d’avertissement, mises à pied) avec étapes en attente ; page par type (← Retour · Discipline, ＋ Nouvelle…, filtres En attente / Toutes) ; nouvelle lettre / MAP à partir d’une DE signée ou refusée (objet repris), MAP manuelle conservée.

@@ -1212,16 +1212,50 @@ p{margin:0 0 10px;text-align:justify}.bx p{margin:6px 0 0}.bx{border:1px solid #
 <table class="in"><tr><td>À</td><td>${E(d.civilite)} ${E(a.nom)} - Matricule n° ${E(d.matricule)}</td></tr><tr><td>Fonction</td><td>${E(fonc)} - ${E(eq)}</td></tr><tr><td>Affectation</td><td>${E(d.affectation || a.service || "")}</td></tr><tr><td>Référence</td><td>${E(d.ref)}</td></tr></table>
 ${corps}${fin}<div class="ft">Document interne RH | Copie : dossier personnel &nbsp; ${E(d.ref)}${trace}</div></body></html>`;
 }
+let DSEC = "", DSF = "att";
+const DSECL = { DE: ["📝", "Demandes d’explication", "Nouvelle demande"], AVT: ["⚠️", "Lettres d’avertissement", "Nouvelle lettre"], MAP: ["⛔", "Mises à pied", "Nouvelle mise à pied"] };
+/* étape en attente d'un dossier : [libellé, couleur, en attente ?] */
+function dEtape(d) { const t = today();
+  if (d.type == "DE") {
+    if (d.de_etape == "redigee") return ["À remettre à l’agent", "warn", 1];
+    if (d.avis_mesure == "classement") return ["Classée sans suite", "ok", 0];
+    if (d.suite == "decide") return ["Décision prise", "ok", 0];
+    if (d.suite == "transmis") return ["Décision attendue (transmis)", "bad", 1];
+    if (["signee", "refus"].includes(d.de_etape) && !d.avis_mesure) return ["Avis de l’émetteur attendu", "warn", 1];
+    if (d.avis_mesure) return ["Décision attendue", "bad", 1];
+    return [DS[d.statut] || d.statut, "info", d.statut == "propose" ? 1 : 0]; }
+  if (d.de_etape == "redigee") return ["À remettre à l’agent", "warn", 1];
+  if (!d.de_etape && d.statut == "propose") return ["À valider", "warn", 1];
+  if (d.type == "MAP" && d.mp_debut) { if (t < d.mp_debut) return [`À venir : du ${fd(d.mp_debut)} au ${fd(d.mp_fin)}`, "info", 1]; if (t <= d.mp_fin) return [`En cours : du ${fd(d.mp_debut)} au ${fd(d.mp_fin)}`, "info", 1]; return ["Terminée", "ok", 0]; }
+  if (d.statut == "refuse") return ["Refusée", "bad", 0];
+  return [d.de_etape == "refus" ? "Notifiée (refus constaté)" : "Notifiée", "ok", 0]; }
+queueMicrotask(() => Object.assign(ACT, {
+  dsec(b) { NAVH.push("disc"); DSEC = b.dataset.k; DSF = "att"; try { history.pushState({ eps: NAVH.length }, ""); } catch (e) { } draw(); },
+  dsf(b) { DSF = b.dataset.v; draw(); },
+  async dnouv(b) { const k = b.dataset.k; if (k == "DE") return ACT.denew(b);
+    const L = DL.filter(d => d.type == "DE" && ["signee", "refus"].includes(d.de_etape) && d.suite != "decide" && d.avis_mesure != "classement");
+    const o = L.map(d => [String(d.id), (d.agents?.nom || d.matricule) + " — " + d.ref.replace("EPS/OPS/DISC/", "") + " — " + d.objet]);
+    if (k == "MAP") o.push(["__manuel", "➕ Sans demande d’explication (saisie manuelle)"]);
+    if (!o.length) return toast("Aucune demande d’explication signée ou refusée en attente de décision");
+    ask(DSECL[k][2] + " — à partir de quelle demande d’explication ?", [{ k: "d", l: "Demande d’explication concernée (l’objet est repris)", o }], v => { if (v.d == "__manuel") return ACT.dnew(); deDecider(+v.d, k); }); },
+}));
 V.disc = async () => {
+  if (DSEC && NAVH[NAVH.length - 1] != "disc") DSEC = "";
   const { data, error } = await sb.from("discipline").select("*, agents(nom,equipe,service,badge,zone,fonction)").order("created_at", { ascending: false });
   if (error) throw error;
   DL = data || [];
-  const L = DL.filter(d => (!DF.st || d.statut == DF.st) && (!DF.ty || d.type == DF.ty)), val = DV.includes(ME.role);
+  const L = DL.filter(d => d.type == DSEC && (DSF == "tout" || dEtape(d)[2])), val = DV.includes(ME.role);
   const fb = (k, v, l) => `<button class="btn ${DF[k] == v ? "p" : ""}" data-a="df" data-k="${k}" data-v="${v}">${l}</button>`;
   const avm = DL.filter(d => d.type == "DE" && ["signee", "refus"].includes(d.de_etape) && !d.avis_mesure && d.etabli_par == UID).length, dcm = DL.filter(d => d.suite == "transmis" && (d.transmis_a || []).includes(UID)).length;
-  return (avm || dcm ? `<div class="card" style="border-left:4px solid var(--red)"><b>${avm ? `🧭 ${avm} demande(s) d’explication attendent votre avis. ` : ""}${dcm ? `⚖️ ${dcm} dossier(s) vous sont transmis pour décision.` : ""}</b></div>` : "") + head("Discipline", `${DL.length} dossier(s) · ${DL.filter(d => d.statut == "propose").length} à valider`, `<div style="display:flex;gap:6px;flex-wrap:wrap">${DE_ETAB.includes(ME.role) ? `<button class="btn w" data-a="denew">+ Demande d’explication</button><button class="btn" data-a="msig">✍️ Ma signature</button>` : ""}${DV.includes(ME.role) || DE_ETAB.includes(ME.role) ? `<button class="btn" data-a="dnew">+ Mise à pied</button>` : ""}</div>`)
-    + `<div class="card row" style="justify-content:flex-start;gap:6px">${fb("st", "", "Tous")}${fb("st", "propose", "À valider")}${fb("st", "valide", "Validés")}${fb("st", "notifie", "Notifiés")}${fb("st", "refuse", "Refusés")} <span class="m">|</span> ${fb("ty", "", "Tous types")}${fb("ty", "DE", "Demandes d’explication")}${fb("ty", "AVT", "Avertissements")}${fb("ty", "MAP", "Mises à pied")}</div>`
-    + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><span class="lk" data-a="fiche" data-m="${E(d.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div><span class="bd info">${DTL[d.type] || d.type}</span> ${d.de_etape ? `<span class="bd ${DE_ET[d.de_etape][1]}">${DE_ET[d.de_etape][0]}</span>` : `<span class="bd ${DB[d.statut]}">${DS[d.statut]}</span>`}</div></div>
+  const alerte = avm || dcm ? `<div class="card" style="border-left:4px solid var(--red)"><b>${avm ? `🧭 ${avm} demande(s) d’explication attendent votre avis. ` : ""}${dcm ? `⚖️ ${dcm} dossier(s) vous sont transmis pour décision.` : ""}</b></div>` : "";
+  const peutCreer = k => k == "DE" ? DE_ETAB.includes(ME.role) : DV.includes(ME.role) || DE_ETAB.includes(ME.role) || DE_DEC.includes(ME.role);
+  if (!DSEC) return alerte + head("Discipline", `${DL.length} dossier(s)`, DE_ETAB.includes(ME.role) ? `<button class="btn" data-a="msig">✍️ Ma signature</button>` : "")
+    + Object.entries(DSECL).map(([k, [ic, l]]) => { const T = DL.filter(d => d.type == k), att = {}; T.forEach(d => { const e = dEtape(d); if (e[2]) { const key = e[0].replace(/ :.*$/, ""); att[key] = att[key] || [0, e[1]]; att[key][0]++; } });
+      return `<button type="button" class="card" data-a="dsec" data-k="${k}" style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:14px"><span style="font-size:26px">${ic}</span><span style="flex:1"><b style="font-size:15px">${l}</b><span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${Object.entries(att).map(([a, [n, c]]) => `<span class="bd ${c}">${n} ${a.charAt(0).toLowerCase() + a.slice(1)}</span>`).join("") || '<span class="m">Rien en attente</span>'}</span></span><b style="font-size:24px">${T.length}</b><span class="m" style="font-size:20px">›</span></button>`; }).join("");
+  const [ic, lab, nv] = DSECL[DSEC], nAtt = DL.filter(d => d.type == DSEC && dEtape(d)[2]).length, nTot = DL.filter(d => d.type == DSEC).length;
+  return alerte + head(ic + " " + lab, `${nTot} dossier(s) · ${nAtt} en attente`, peutCreer(DSEC) ? `<button class="btn p" data-a="dnouv" data-k="${DSEC}" style="background:#16a34a;border-color:#16a34a">＋ ${nv}</button>` : "")
+    + `<div class="row" style="justify-content:flex-start;gap:6px;margin:6px 0"><button class="btn ${DSF == "att" ? "p" : ""}" data-a="dsf" data-v="att">En attente (${nAtt})</button><button class="btn ${DSF == "tout" ? "p" : ""}" data-a="dsf" data-v="tout">Toutes (${nTot})</button></div>`
+    + (L.length ? "" : `<div class="card m">${DSF == "att" ? "Aucun dossier en attente." : "Aucun dossier."}</div>`) + (L.map(d => { const a = d.agents || {}; return `<div class="card"><div class="row"><div><span class="lk" data-a="fiche" data-m="${E(d.matricule)}">${E(a.nom)}</span> <span class="m">ID ${E(d.matricule)} · ${E(a.equipe)}</span><div class="m">${E(d.ref)}</div></div><div>${(() => { const e = dEtape(d); return `<span class="bd ${e[1]}">${e[2] ? "⏳ Étape : " : "✓ "}${e[0]}</span>`; })()}</div></div>
 <div style="margin-top:6px"><b>${E(d.objet)}</b>${tstB(d)}</div><div class="m">Faits du ${fd(d.date_faits)} · proposé par ${E(d.propose_nom)} le ${fd(String(d.created_at).slice(0, 10))}${d.decide_nom ? " · décision : " + E(d.decide_nom) : ""}${d.mp_debut ? " · MAP du " + fd(d.mp_debut) + " au " + fd(d.mp_fin) + " (" + d.mp_jours + " j), reprise le " + fd(d.reprise) : ""}${d.commentaire ? " · « " + E(d.commentaire) + " »" : ""}</div>
 ${d.de_etape ? `<div class="m">Établie par <b>${E(d.etabli_nom || "")}</b>${d.etabli_fonction ? " (" + E(d.etabli_fonction) + ")" : ""} le ${dmy(d.created_at)} ${hm(d.created_at)}${d.delegue_nom ? " · remise déléguée à " + E(d.delegue_nom) : ""}${d.consigne_delegation ? " (« " + E(d.consigne_delegation) + " »)" : ""}${d.signe_le ? " · remise le " + dmy(d.signe_le) + " " + hm(d.signe_le) + " par " + E(d.recueilli_nom) : ""}${d.de_ref && d.type != "DE" ? " · suite de " + E(d.de_ref) : ""}${d.doc_hash ? ` · <span title="Identifiant numérique du document signé (non imprimé)">🔐 identifiant ${E(d.doc_hash)}</span>` : ""}</div>${d.avis_mesure ? `<div class="m">Avis de ${E(d.avis_nom)} : <b>${E(MESL[d.avis_mesure])}${d.avis_jours ? " (" + d.avis_jours + " j)" : ""}</b>${d.suite == "transmis" ? " · transmis à " + E(d.transmis_noms || "") : d.suite == "decide" ? " · décision prise" : d.suite == "sans_suite" ? " · classé sans suite" : ""}</div>` : ""}` : ""}
 <div class="row" style="justify-content:flex-start;gap:6px;margin-top:8px">${admB("disc", d)}${d.de_etape ? (d.de_etape == "redigee" ? `<button class="btn" data-a="deprev" data-i="${d.id}">Aperçu</button>${[d.etabli_par, d.delegue_uid].includes(UID) || DE_ETAB.slice(0, 3).includes(ME.role) || (d.delegue_dir && ["direction", "responsable_ops", "coordinateur_ops", ...DE_DIRN].includes(ME.role)) ? `<button class="btn p" data-a="deremise" data-i="${d.id}">Remettre à l’agent</button>` : ""}` : `<button class="btn p" data-a="depdf" data-i="${d.id}">📄 PDF signé</button><button class="btn" data-a="deshare" data-i="${d.id}">📤 Partager</button>${d.type == "DE" && !d.avis_mesure && (d.etabli_par == UID || DE_AV.includes(ME.role)) ? `<button class="btn w" data-a="deavis" data-i="${d.id}">🧭 Avis et suite</button>` : ""}${d.type == "DE" && ["avertissement", "map", "convocation", "licenciement"].includes(d.avis_mesure) && d.suite != "decide" && ((d.suite != "transmis" && d.etabli_par == UID && ["avertissement", "map"].includes(d.avis_mesure)) || (d.transmis_a || []).includes(UID) || DE_DEC.includes(ME.role)) ? `<button class="btn w" data-a="dedec" data-i="${d.id}">⚖️ Décider</button>` : ""}`) : `<button class="btn" data-a="ddoc" data-i="${d.id}">${d.statut == "propose" ? "Aperçu du document" : "Document / PDF"}</button>`}${!d.de_etape && val && d.statut == "propose" ? `<button class="btn p" data-a="dval" data-i="${d.id}">Valider</button><button class="btn d" data-a="dref" data-i="${d.id}">Refuser</button>` : ""}${!d.de_etape && val && d.statut == "valide" ? `<button class="btn p" data-a="dnot" data-i="${d.id}">Marquer comme remis à l’agent</button>` : ""}</div></div>`; }).join("") || `<div class="card m">Aucun dossier.</div>`)
@@ -3712,7 +3746,7 @@ V.shr = async () => { SHO = SHV; return await shiftRep(); };
 /* navigation : une page ouverte depuis une autre page a toujours un bouton Retour */
 let NAVH = [];
 async function navGo(p) { if (p == NAV) return draw(); NAVH.push(NAV); if (NAVH.length > 30) NAVH.shift(); NAV = p; SXA = null; try { history.pushState({ eps: NAVH.length }, ""); } catch (e) { } return draw(); }
-function navBack() { if (!NAVH.length) return; NAV = NAVH.pop(); SXA = null; draw(); }
+function navBack() { if (!NAVH.length) return; const p = NAVH.pop(); if (p == "disc" && NAV == "disc") DSEC = ""; NAV = p; SXA = null; draw(); }
 addEventListener("popstate", () => { if ($("#md")?.classList.contains("on")) { mdClose(); return; } if (NAVH.length) navBack(); });
 const backBar = () => NAVH.length ? `<div class="row" style="justify-content:flex-start;margin:0 0 10px"><button type="button" class="btn" data-a="navback" style="font-weight:700">← Retour · ${E(PL(NAVH[NAVH.length - 1]))}</button></div>` : "";
 Object.assign(ACT, { sxgo(b) { navGo(b.dataset.k); }, navback() { if (history.state && history.state.eps) history.back(); else navBack(); } });
