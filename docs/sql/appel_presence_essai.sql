@@ -736,3 +736,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v115 (2026-11-26) : modification des besoins — réservée à El Moustapha Ahmed Dedda, aux superviseurs principaux et au demandeur ; une modification faite par un autre est proposée (besoins.modif_attente) et appliquée seulement après validation par El Moustapha (besoin_modif_valider, notifications). Rupture / service partiel : date de disponibilité facultative, option « Date indéterminée ».
 
 -- v116 (2026-11-26) : superviseurs principaux et superviseurs — magasins de l’aéroport uniquement (extérieur, intérieur, ASECNA) : fonction magasin_visible() dans les politiques magasins, mouvements_stock, bilans_magasin, dotations, magasin_seuils, seuil_alertes (stock_actuel suit, security_invoker) ; filtre aussi à l’écran. Veille AO : superviseur principal retiré de la politique veille_ao_sel (onglet déjà absent pour eux).
+
+-- v117 (2026-11-26) : superviseurs principaux et superviseurs — RH limité à l’AINO : sélecteur de site réduit à « AINO (aéroport) », agents des autres sites retirés de leurs listes (annuaire, présence, discipline, anciens employés).

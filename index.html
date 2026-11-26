@@ -257,7 +257,8 @@ async function start() {
 /* ---------- Données ---------- */
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
 let NNI = {};
-async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = data || []; NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
+const SUPAINO = () => /^superviseur_/.test(ME?.role || "");
+async function loadAG() { const { data } = await sb.from("agents").select("*").eq("actif", true).order("matricule"); AG = (data || []).filter(a => !SUPAINO() || !a.site || /^aino/.test(a.site)); NNI = {}; if (NNIR.includes(ME.role)) { const r = await sb.from("agents_nni").select("matricule,nni,a_confirmer"); (r.data || []).forEach(x => NNI[x.matricule] = x); } }
 const BC = { alertes: 0, pres: 0, msg: 0 };
 function setB() { document.querySelectorAll(".nbd").forEach(el => { const n = BC[el.dataset.b] || 0; el.textContent = n > 99 ? "99+" : n || ""; }); const b = $("#bc"); if (b) b.textContent = (typeof NTU != "undefined" && NTU) ? (NTU > 99 ? "99+" : NTU) : ""; }
 async function loadST() { const { data } = await sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(shiftStart())); ST = {}; (data || []).forEach(r => ST[r.matricule] = r); await loadRA(); }
@@ -1001,7 +1002,7 @@ ${rest ? `<div class="al" style="margin-top:6px">💰 Prêt / avance en cours : 
     const { error } = await sb.rpc("agent_depart", { p_matricule: m, p_date: d, p_motif: mo }); if (error) { b.disabled = false; b.textContent = "Enregistrer le départ"; return toast("Refusé : " + error.message); }
     let msg = "Départ enregistré"; if (ag && !/^ASECNA/.test(ag.equipe || "") && !ag.site) { try { const r = await clsAppliquer(/^Manut/.test(ag.equipe || "") ? "M" : "N", wb => clsDepart(wb, ag, d, mo)); msg += r.nom ? ` · classeur enregistré : ${r.nom}` : " · agent absent du classeur"; } catch (x) { msg += " · classeur NON mis à jour : " + x.message; } }
     mdClose(); await loadAG(); toast(msg); draw(1); }; }
-async function exEmployes() { const { data } = await sb.from("agents").select("matricule,nom,equipe,date_depart,motif_depart,tel").eq("actif", false).order("date_depart", { ascending: false, nullsFirst: false });
+async function exEmployes() { let { data } = await sb.from("agents").select("matricule,nom,equipe,date_depart,motif_depart,tel,site").eq("actif", false).order("date_depart", { ascending: false, nullsFirst: false }); if (SUPAINO()) data = (data || []).filter(a => !a.site || /^aino/.test(a.site));
   mdOpen(`<div class="row"><h2>🗄 Anciens employés (${(data || []).length})</h2><button type="button" class="btn" id="no">✕</button></div>${(data || []).map(x => `<div class="li"><div><span class="lk" data-a="fiche" data-m="${E(x.matricule)}">${E(x.nom)}</span><div class="m">${E(x.matricule)} · ${E(x.equipe || "")}${x.tel ? " · " + E(x.tel) : ""}</div></div><div class="m" style="text-align:right">${x.date_depart ? "parti le " + fd(x.date_depart) : ""}${x.motif_depart ? "<br>" + E(x.motif_depart) : ""}</div></div>`).join("") || '<div class="m">Aucun.</div>'}`); $("#no").onclick = mdClose; }
 async function infComp(m) { const a = AG.find(x => x.matricule == m); if (!a) return; const nni = NNIR.includes(ME.role);
   mdOpen(`<div class="row"><h2>✏️ Compléter — ${E(a.nom)}</h2><button type="button" class="btn" id="no">✕</button></div><div class="m">Matricule ${E(a.matricule)} · ${E(a.equipe || "")}. L’enregistrement met à jour le dossier de l’agent et le classeur ${/^Manut/.test(a.equipe || "") ? "Manutention" : "Nettoyage"} sur Drive (nouvelle version datée du jour ; l’ancienne reste dans le dossier).</div>
@@ -2933,7 +2934,8 @@ V.rh = async () => {
   await BOOT; if (!AG.length) await loadAG(); if (!Object.keys(ST).length) await loadST().catch(() => {});
   const ok = ACC[ME.role] || [], A = AG.filter(rhAg), M = new Set(A.map(a => a.matricule)), sj = ymd(shiftStart());
   const [sites, csd, dis, dem] = await Promise.all([sb.from("sites").select("code,nom").eq("actif", true).order("ordre"), sb.rpc("conges_sans_decision_liste"), ok.includes("disc") ? sb.from("discipline").select("id,ref,type,matricule,statut,de_etape,avis_mesure,mp_debut,mp_fin,created_at,etabli_par") .order("created_at", { ascending: false }).limit(300) : { data: [] }, sb.from("demandes_agent").select("id,ref,matricule,agent_nom,type,statut,date_debut,date_fin,created_at").not("statut", "in", "(validee,refusee,annulee)").order("created_at", { ascending: false }).limit(100)]);
-  const S = (sites.data || []).filter(x => !/^aino_/.test(x.code)), st = k => A.filter(a => ST[a.matricule]?.statut == k);
+  if (SUPAINO()) RHF.site = "aino";
+  const S = SUPAINO() ? [] : (sites.data || []).filter(x => !/^aino_/.test(x.code)), st = k => A.filter(a => ST[a.matricule]?.statut == k);
   const nj = st("nj"), cj = st("j"), cg = st("c"), mp = st("mp"), Dd = (dis.data || []).filter(d => M.has(d.matricule)), Cs = (csd.data || []).filter(x => M.has(x.matricule)), Dm = (dem.data || []).filter(x => M.has(x.matricule));
   const deRem = Dd.filter(d => d.de_etape == "redigee"), deAv = Dd.filter(d => d.type == "DE" && ["signee", "refus"].includes(d.de_etape) && !d.avis_mesure), mpC = Dd.filter(d => d.mp_debut && d.mp_debut <= sj && d.mp_fin >= sj), mois = Dd.filter(d => String(d.created_at).slice(0, 7) == sj.slice(0, 7));
   const manq = A.filter(a => !a.date_embauche || !a.tel || (!a.badge && !a.zone && !/^Chauff/.test(a.equipe || "") && (!a.site || a.site == "asecna"))), dep = A.filter(a => a.depart_a_confirmer), chefs = A.filter(a => /chef|superviseur/i.test(a.fonction || ""));
