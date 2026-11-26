@@ -732,3 +732,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v113 (2026-11-26) : correctif — sw.js était resté à eps-ops-v108 (mises à jour v109–v112 non distribuées aux téléphones) ; « Appels d’offres » aussi dans le menu.
 
 -- v114 (2026-11-26) : fiche d’expression de besoin — cases à cocher par article, « Servir » et « Rupture → demande d’achat » sur la sélection (ou sur tous les articles en attente si rien n’est coché) ; demande d’achat unique préremplie (objet, quantité, détail des articles), articles liés à sa référence. Comptabilité : plus de droit de modifier une demande (besoin_modifier).
+
+-- v115 (2026-11-26) : modification des besoins — réservée à El Moustapha Ahmed Dedda, aux superviseurs principaux et au demandeur ; une modification faite par un autre est proposée (besoins.modif_attente) et appliquée seulement après validation par El Moustapha (besoin_modif_valider, notifications). Rupture / service partiel : date de disponibilité facultative, option « Date indéterminée ».
