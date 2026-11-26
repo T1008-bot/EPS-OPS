@@ -713,3 +713,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- (agent_ajouter / agent_modifier mis à jour).
 
 -- v106 (2026-11-26) : expression de besoin — liste d’articles intégrée (visible sur téléphone, filtrée à la frappe, nouvel article possible) au lieu de la liste native ; unité libre (liste de choix + « Autre… »), seulement proposée par le catalogue tant que l’utilisateur ne l’a pas changée.
+
+-- v107 (2026-11-26) : conditionnement lu par l'IA
+-- Fonction ia-conditionnement (source docs/functions/ia-conditionnement) : emballage, facteur, unité de base, total, interprétation.
+-- besoins.cond (jsonb) enregistré par besoin_creer ; repli local (12/carton, 4x12/colis, 50 kg / barrique, carton de 12…).
+-- articles.conditionnement (proposé dans l'observation). Articles ajoutés : Javel en grains (kg, 50 kg / barrique),
+-- Lave-sol Maxell (20 L) et Lave-mains Maxell (20 L) (litre, 20 L / bidon), Chaussures de sécurité (paire),
+-- Protections auditives (bouchons d'oreilles) (paire) — EPI / tenues.
