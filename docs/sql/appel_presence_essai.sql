@@ -678,3 +678,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- barre vide et « Présence pas encore renseignée » au lieu de « 31 / 31 (100 %) ». Badge rapport : « ⏳ Rapport en attente ».
 
 -- v99 (2026-11-26) : encadré superviseurs — « ⏳ En attente » pour Manutention et Nettoyage tant que leur rapport n’est pas reçu.
+
+-- v100 (2026-11-26) : cartes d’effectif — plus de source répétée après chaque nom (seuls les vrais motifs restent) ; une ligne discrète « Source : rapport Jotform hh:mm · appel de présence hh:mm ».
