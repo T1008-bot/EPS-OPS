@@ -816,3 +816,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v134 (2026-11-27) : relais Gmail — script pour archiveseps@gmail.com : complaintes reconnues aussi après transfert (BDM, complainte,
 --   complaint, help desk, rama@eps.mr), libellé « eps-ops » posé seulement si l'envoi a réussi (code < 300), journal des envois (Logger).
 --   Constat : aucun appel de Gmail vers msg-ingest / bdm-ingest depuis le 22/11 (seul le test du 26/11).
+
+-- v135 (2026-11-27) : messages de vol — 2 pastilles par vol (PSM, LDM/CPM), vert reçu / rouge non reçu, cliquables : message prêt à partager
+--   (PSM : résumé PMR ; LDM/CPM : interprété par l'IA, fonction ldm-ia). Notification à chaque PSM / LDM / CPM reçu (trigger nt_msg_vol →
+--   chefs et superviseurs Manutention, superviseurs principaux, responsable et coordinateur des opérations).
