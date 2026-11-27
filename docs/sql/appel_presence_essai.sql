@@ -793,3 +793,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   (Carburant, facture mensuelle, cycle du 20 au 20). Table bons_carburant (photo du bon lue par l'IA via la fonction bon-carburant,
 --   champs corrigés et cochés « vérifié » avant validation, n° de bon unique), bloc STAR par cycle, « Facture du cycle » (factures + facture_id),
 --   flotte : carburant du mois repris des bons. Création de fournisseur : catégorie en liste déroulante avec « Autre ».
+
+-- v128 (2026-11-27) : comptabilité — « 💰 Salaire et paie » regroupe Situation globale (filtres existants), Congés, Prêts et avances,
+--   Primes et bonus (primes_mois.type : Agent du mois, Gratification, Bonus mission, Autre…).
