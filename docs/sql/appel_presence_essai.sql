@@ -748,3 +748,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Complaintes BDM reçues par e-mail (rama@eps.mr) : table bdm_recus, fonction bdm-ingest (IA : n° BDM, objet, lieu, concerne EPS),
 --   bdm_recu_tache() → tâche « 🎫 Complainte BDM » pour l'équipe nettoyage en service (échéance 1 h) + notifications ;
 --   relais Gmail (Apps Script) à installer depuis Profil → « 📧 Relais Gmail » (relais_etat, relais_jeton réservé à El Moustapha).
+
+-- v120 (2026-11-27) : annuaire — filtre « Avec badge / Sans badge » corrigé : les agents marqués « Sans Badge »
+--   (119 agents) étaient comptés comme ayant un badge. Seul un vrai numéro compte désormais comme badge.
