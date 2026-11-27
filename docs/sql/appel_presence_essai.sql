@@ -807,3 +807,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v131 (2026-11-27) : accueil — les alertes « rapport de situation non reçu » (loadRA) sont recalculées à chaque affichage, au retour
 --   dans l'application et toutes les 3 minutes (elles n'étaient calculées qu'au démarrage, d'où des « non reçu » déjà reçus).
+
+-- v132 (2026-11-27) : message fauteuils roulants — plus de ligne « Observation » ; RAS / vide → rien ; sinon « NB: … » en fin de message.
+--   Vérification synchro Jotform : situations reçues en base 0 à 14 min après l'envoi (25/11 → 27/11) ; les « non reçue » venaient de l'affichage (corrigé v130-v131).

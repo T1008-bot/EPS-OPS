@@ -3347,7 +3347,7 @@ function fauMsg(f) {
   add(fauHS(f), "Chaise hors service"); add(f.cabine_service, "Chaise cabine en service"); add(f.cabine_hs, "Chaise cabine hors service");
   add(f.rep_envoyees, "Envoyée(s) en réparation aujourd'hui"); add(f.rep_en_cours, "En cours de réparation"); add(f.rep_retour, "Retour de réparation aujourd'hui");
   (f.problemes || []).map(x => String(x || "").trim()).filter(Boolean).forEach(p => L.push(`*Problème : ${p}`));
-  const o = String(f.observation || "").trim(); if (o) L.push(`*Observation:${o}`);
+  const o = String(f.observation || "").trim(); if (o && !/^(ras|r\.a\.s\.?|rien a signaler|rien à signaler|néant|neant|-)$/i.test(o)) L.push("", `NB: ${o}`);
   return L.join("\n");
 }
 /* préremplissage : la situation déjà saisie pour ce shift, sinon celle du shift précédent (les réparations envoyées passent « en cours ») */
