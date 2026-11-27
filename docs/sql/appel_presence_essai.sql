@@ -778,3 +778,12 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v125 (2026-11-27) : navigation — la page ouverte (et l'historique « Retour ») est mémorisée (localStorage navp, 6 h) :
 --   après actualisation ou retour dans l'application, on revient sur la même page et à la même position.
+
+-- v126 (2026-11-27) : accueil, appel, retards et absences non justifiées
+-- Accueil : shift compacté (début → fin · équipes ; Équipe 4 08h-16h en/hors service), « 👥 Encadrement présent » (dernière action
+--   « Je prends service ») + « 🕘 Historique » (prises_service par date), cartes d'effectifs juste après, carte appel déplacée sous les tâches
+--   et compactée (appel appli / situation Jotform par équipe, matin et 17h).
+-- Retards : 📞/💬 dans « Traiter » ; après Absent / Retard non justifié → décision (demande d'explication préremplie, convocation, sans suite) ;
+--   retard_suite_donner : suites 'conv' et 'sans', ouvert aux RH.
+-- Absences non justifiées : statuts_jour.cas_* (décision, clôture, DE liée, notification) ; RPC cas_absence_decider / cas_absence_clore ;
+--   cron 'absences-cas-retour' (cas_absences_notifier, cas à partir du 27/11) : notification urgente au retour de l'agent si le cas est ouvert.
