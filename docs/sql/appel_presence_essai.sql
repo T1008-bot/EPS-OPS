@@ -796,3 +796,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v128 (2026-11-27) : comptabilité — « 💰 Salaire et paie » regroupe Situation globale (filtres existants), Congés, Prêts et avances,
 --   Primes et bonus (primes_mois.type : Agent du mois, Gratification, Bonus mission, Autre…).
+
+-- v129 (2026-11-27) : accueil — un seul bouton « 📣 Signalement / Tâche » (ouvre la page Signalements, où se créent signalements,
+--   complaintes et tâches ; approvisionnement pour les chefs sans magasin) ; « Demander un approvisionnement » retiré de l'accueil ;
+--   « 📍 Arrivée / départ » : un bouton, puis choix « Je suis arrivé à l'aéroport » / « Je quitte l'aéroport » avec le dernier statut.
