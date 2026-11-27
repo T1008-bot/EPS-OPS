@@ -765,3 +765,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Edge function msg-helpdesk : message WhatsApp (constat + « Merci de nous lancer une complainte pour … » si nettoyage, sinon « Merci d'intervenir »),
 -- sans signature, langue fr/en/ar. Page : cartes Tout / Help Desk (Nettoyage, Autres) / EPS interne, états À faire / En cours / En attente / Fait,
 -- historique des BDM, regroupement par catégorie, accès au rapport d'incident.
+
+-- v123 (2026-11-27) : grand ménage et rapport d'incident
+-- Tâches de ménage (n_grand_menage, La Gardère, Duty Free, « ménage ») : « Démarrer » → zone, sous-zone, photos, option « Solliciter une complainte
+--   Help Desk » (signalement canal helpdesk, catégorie Nettoyage, photos jointes, message WhatsApp) ; N° BDM + heures saisis ensuite dans la fiche.
+-- Rapport d'incident : complainte ★ principale + complaintes liées (Breakdown history), suggestions automatiques de complaintes similaires et de
+--   rapports précédents (registre + table ir_archives) ; bouton « Rapport d'incident » dans chaque fiche ; import des anciens rapports PDF/Word
+--   (texte extrait dans le navigateur) réservé à El Moustapha (table ir_archives, indicateur retire).
