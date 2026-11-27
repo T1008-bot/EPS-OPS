@@ -772,3 +772,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- Rapport d'incident : complainte ★ principale + complaintes liées (Breakdown history), suggestions automatiques de complaintes similaires et de
 --   rapports précédents (registre + table ir_archives) ; bouton « Rapport d'incident » dans chaque fiche ; import des anciens rapports PDF/Word
 --   (texte extrait dans le navigateur) réservé à El Moustapha (table ir_archives, indicateur retire).
+
+-- v124 (2026-11-27) : rapport d'incident — libellé « IR No.: » ; seules les complaintes Help Desk (NKC-BDM-…) sont proposées ;
+--   consigne à l'IA : rédaction en anglais, destinataire AFROPORT FM (Facility Management) ; import : référence = nom du fichier tel quel.
