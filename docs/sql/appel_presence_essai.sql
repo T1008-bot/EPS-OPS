@@ -751,3 +751,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v120 (2026-11-27) : annuaire — filtre « Avec badge / Sans badge » corrigé : les agents marqués « Sans Badge »
 --   (119 agents) étaient comptés comme ayant un badge. Seul un vrai numéro compte désormais comme badge.
+
+-- v121 (2026-11-27) : ♿ Situation des fauteuils roulants (une par shift)
+-- Table fauteuils_situations (jour unique, nombres, réparations en quantités, problemes[], observation, message, historique des corrections),
+-- fauteuils_lecteur()/fauteuils_saisisseur(), RPC fauteuils_enregistrer(p) (upsert + tâche du jour marquée « fait »),
+-- modèle de tâche 'fauteuils' (Manutention M<garde>, 09:00 → 12:00). Page « ♿ Fauteuils roulants » (saisie + historique),
+-- message WhatsApp sans les lignes à zéro ou vides ; note « numérotation des chaises planifiée ».
