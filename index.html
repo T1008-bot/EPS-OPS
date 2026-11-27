@@ -201,7 +201,9 @@ const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Cl�
 /* page ouverte conservée : après actualisation ou retour dans l’application (moins de 6 h), on revient sur la même page */
 function navLu() { try { const o = JSON.parse(localStorage.getItem("navp") || "{}"); return o.t && Date.now() - o.t < 6 * 3600e3 && typeof o.p == "string" ? o : {}; } catch (e) { return {}; } }
 function navEcrit() { try { localStorage.setItem("navp", JSON.stringify({ p: NAV, h: NAVH.slice(-10), y: scrollY, t: Date.now() })); } catch (e) { } }
-addEventListener("visibilitychange", () => { if (document.visibilityState == "hidden") navEcrit(); }); addEventListener("pagehide", navEcrit);
+addEventListener("visibilitychange", () => { if (document.visibilityState == "hidden") navEcrit(); else if (typeof NAV != "undefined" && NAV == "shift" && ME && !document.querySelector("#md.on")) draw(1); });
+/* accueil : rapports, appels et alertes recalculés toutes les 3 minutes (sans fenêtre ouverte ni saisie en cours) */
+setInterval(() => { try { if (document.visibilityState == "visible" && NAV == "shift" && ME && !document.querySelector("#md.on") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) draw(1); } catch (e) { } }, 180000); addEventListener("pagehide", navEcrit);
 let UID = null, ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || navLu().p || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
 
 function lab(root = document) { root.querySelectorAll(".sc table").forEach(t => { const hs = [...t.querySelectorAll("tr:first-child th")].map(x => x.textContent); t.querySelectorAll("tr").forEach(r => { if (r.querySelector("th")) return; [...r.children].forEach((c, i) => { if (c.colSpan < 2 && hs[i]) c.dataset.l = hs[i]; }); }); }); }
@@ -448,7 +450,7 @@ V.shift = async () => {
   if (SHV) SHO = SHV; const s = new Date(shiftStart().getTime() - SHV * 24 * H), g = garde(s), n = new Date(), h = n.getUTCHours(), h4 = SHV ? true : h >= 8 && h < 16, en = new Date(s.getTime() + 24 * H);
   const fq = d => d.toISOString().slice(0, 19).replace("T", " "), since = fq(new Date(s.getTime() - 3 * H));
   let q = sb.from("rapports_detail").select("*").gte("cree_le", since); if (SHV) q = q.lt("cree_le", fq(new Date(en.getTime() + 3 * H)));
-  const [{ data: rp }, sjr] = await Promise.all([q.order("cree_le", { ascending: false }).limit(60), SHV ? sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(s)) : null, BOOT]);
+  const [{ data: rp }, sjr] = await Promise.all([q.order("cree_le", { ascending: false }).limit(60), SHV ? sb.from("statuts_jour").select("matricule,statut,justification").eq("jour", ymd(s)) : null, BOOT, SHV ? null : loadRA().catch(() => {})]);
   const ST0 = ST; if (SHV) { ST = {}; ((sjr && sjr.data) || []).forEach(r => ST[r.matricule] = r); }
   try {
   const last = (sv, gr) => (rp || []).find(r => r.service == sv && gnum(r.groupe) == String(gr).replace(/\D/g, ""));

@@ -804,3 +804,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v130 (2026-11-27) : accueil — carte « Appel & situation du staff » réellement compacte (grille 3 colonnes, une ligne par équipe et par appel de 17h)
 --   et correction de la détection des situations Jotform (comparaison de dates) ; « Rapport du shift Ops » et « Appels d'offres » retirés de l'accueil
 --   (rapport via la tâche du shift, veille via son onglet).
+
+-- v131 (2026-11-27) : accueil — les alertes « rapport de situation non reçu » (loadRA) sont recalculées à chaque affichage, au retour
+--   dans l'application et toutes les 3 minutes (elles n'étaient calculées qu'au démarrage, d'où des « non reçu » déjà reçus).
