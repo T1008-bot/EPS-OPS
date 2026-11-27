@@ -775,3 +775,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v124 (2026-11-27) : rapport d'incident — libellé « IR No.: » ; seules les complaintes Help Desk (NKC-BDM-…) sont proposées ;
 --   consigne à l'IA : rédaction en anglais, destinataire AFROPORT FM (Facility Management) ; import : référence = nom du fichier tel quel.
+
+-- v125 (2026-11-27) : navigation — la page ouverte (et l'historique « Retour ») est mémorisée (localStorage navp, 6 h) :
+--   après actualisation ou retour dans l'application, on revient sur la même page et à la même position.

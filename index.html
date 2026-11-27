@@ -198,7 +198,11 @@ const navClose = () => document.body.classList.remove("nvo"), navOpen = () => do
 const P = { veille: ["📢", "Appels d’offres"], shift: ["⏱", "Mon shift"], msg: ["💬", "Messages"], alertes: ["🔔", "Alertes"], vols: ["✈️", "Vols"], eff: ["🗂", "Effectifs & annuaire"], pres: ["📊", "Suivi présence"], disc: ["⚖️", "Discipline"], mag: ["📦", "Magasins"], tach: ["✅", "Tâches & planning"], sig: ["📣", "Help Desk"], ir: ["📄", "Rapports d’incident"], prof: ["👤", "Mon profil"], tech: ["🔧", "Technique"], zon: ["📍", "Zones & dispatching"], cmd: ["🛒", "Demandes d’achat"], compta: ["💼", "Comptabilité"], rh: ["👥", "Ressources humaines"] };
 const SL = { h: "Hors shift", p: "Présent", nj: "Abs. non justifiée", j: "Abs. justifiée", c: "Congé", mp: "Mise à pied" };
 const SA = { ouverte: "Ouverte", prise_en_charge: "Prise en charge", close: "Clôturée", remplacee: "Remplacée" };
-let UID = null, ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
+/* page ouverte conservée : après actualisation ou retour dans l’application (moins de 6 h), on revient sur la même page */
+function navLu() { try { const o = JSON.parse(localStorage.getItem("navp") || "{}"); return o.t && Date.now() - o.t < 6 * 3600e3 && typeof o.p == "string" ? o : {}; } catch (e) { return {}; } }
+function navEcrit() { try { localStorage.setItem("navp", JSON.stringify({ p: NAV, h: NAVH.slice(-10), y: scrollY, t: Date.now() })); } catch (e) { } }
+addEventListener("visibilitychange", () => { if (document.visibilityState == "hidden") navEcrit(); }); addEventListener("pagehide", navEcrit);
+let UID = null, ME, AG = [], ST = {}, AL = [], NAV = new URLSearchParams(location.search).get("p") || navLu().p || "shift", VD = 0, F = { q: "", eq: "", sv: "", st: "", bd: "" };
 
 function lab(root = document) { root.querySelectorAll(".sc table").forEach(t => { const hs = [...t.querySelectorAll("tr:first-child th")].map(x => x.textContent); t.querySelectorAll("tr").forEach(r => { if (r.querySelector("th")) return; [...r.children].forEach((c, i) => { if (c.colSpan < 2 && hs[i]) c.dataset.l = hs[i]; }); }); }); }
 const setEl = () => { $("#el").innerHTML = eT(); lab($("#el")); };
@@ -4018,7 +4022,7 @@ const sxSave = () => { try { localStorage.setItem("sxo", JSON.stringify([...SXOP
 const sxHost = k => { const h = SXH[k], ok = ACC[ME.role] || []; if (k == "shr") return ok.includes("shift") && SHRR.includes(ME.role) ? "shift" : null; return h && ok.includes(h) && ok.includes(k) ? h : null; };
 V.shr = async () => { SHO = SHV; return await shiftRep(); };
 /* navigation : une page ouverte depuis une autre page a toujours un bouton Retour */
-let NAVH = [];
+let NAVH = (() => { const o = navLu(); return !new URLSearchParams(location.search).get("p") && Array.isArray(o.h) && o.p == NAV ? o.h.filter(x => typeof x == "string") : []; })(), NAVY = navLu().p == NAV ? +navLu().y || 0 : 0;
 async function navGo(p) { if (p == NAV) return draw(); NAVH.push(NAV); if (NAVH.length > 30) NAVH.shift(); NAV = p; SXA = null; try { history.pushState({ eps: NAVH.length }, ""); } catch (e) { } return draw(); }
 function navBack() { if (!NAVH.length) return; const p = NAVH.pop(); if (p == "disc" && NAV == "disc") DSEC = ""; NAV = p; SXA = null; draw(); }
 addEventListener("popstate", () => { if ($("#md")?.classList.contains("on")) { mdClose(); return; } if (NAVH.length) navBack(); });
@@ -4029,6 +4033,7 @@ function sxCards(h, only, sauf) {
 }
 function post(root) {
   lab(root); if (root.querySelector("#sl")) sigList(); if (root.querySelector("#irl")) irList();
+  if (NAVY) { const y = NAVY; NAVY = 0; setTimeout(() => scrollTo(0, y), 60); }
   root.querySelectorAll(".shd .dy.on").forEach(b => { const p = b.parentElement; p.scrollLeft = b.offsetLeft - p.clientWidth / 2 + b.offsetWidth / 2; }); setB();
 }
 const sxLoad = k => BOOT.then(() => V[k]()).then(h => (SXC[k] = h), e => `<div class="al">Erreur : ${E(e.message)}</div>`);
@@ -4056,7 +4061,7 @@ async function draw(m) {
   $("#nv").innerHTML = `<div class="nl"><img src="${LG_EPS}" alt="EPS"><b>OPÉRATIONS</b></div>` + okN.map(p => `<button data-p="${p}" class="nb ${p == NAV || (p == "rh" && RH_P.includes(NAV)) ? "on" : ""}">${ic(p)}<span>${PL(p)}</span><i class="nbd" data-b="${p}"></i></button>`).join("") + `<div class="nu"><b>${E(ME.nom)}</b><small>${E((ME.poste || RL[ME.role]) || "")}</small><button class="nb" id="rgn">${ic("gear")}<span>Réglages</span></button><button class="nb" id="ins" style="display:none">⬇️<span>Télécharger l’app</span></button></div>`;
   const hn = $("#ht"); if (hn) hn.textContent = PL(NAV); navClose();
   $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
-  const g = ++DG, ref = NAV, mn = $("#mn");
+  const g = ++DG, ref = NAV, mn = $("#mn"); navEcrit();
   /* affichage immédiat de la dernière version connue de la page, puis actualisation */
   if (SHOWN != NAV) { mn.innerHTML = backBar() + (VC[NAV] || LDG); if (VC[NAV]) post(mn); mn.scrollTop = 0; SHOWN = NAV; }
   const keys = [], sp = [];
