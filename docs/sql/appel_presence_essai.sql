@@ -757,3 +757,11 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- fauteuils_lecteur()/fauteuils_saisisseur(), RPC fauteuils_enregistrer(p) (upsert + tâche du jour marquée « fait »),
 -- modèle de tâche 'fauteuils' (Manutention M<garde>, 09:00 → 12:00). Page « ♿ Fauteuils roulants » (saisie + historique),
 -- message WhatsApp sans les lignes à zéro ou vides ; note « numérotation des chaises planifiée ».
+
+-- v122 (2026-11-27) : Signalements réorganisés
+-- signalements : colonnes canal (helpdesk/interne, rétro-rempli), attente_motif/attente_le/attente_par ; RPC sig_maj (en cours / en attente avec motif /
+-- clôturée — clôture permise aux chefs pour les complaintes de nettoyage), sig_probleme (« J'ai un problème » + notification équipe opération).
+-- bdm_recu_tache : chaque complainte reçue par e-mail crée aussi un signalement Help Desk (bdm_recus.signalement_id) ; bdm-ingest v3 l'appelle toujours.
+-- Edge function msg-helpdesk : message WhatsApp (constat + « Merci de nous lancer une complainte pour … » si nettoyage, sinon « Merci d'intervenir »),
+-- sans signature, langue fr/en/ar. Page : cartes Tout / Help Desk (Nettoyage, Autres) / EPS interne, états À faire / En cours / En attente / Fait,
+-- historique des BDM, regroupement par catégorie, accès au rapport d'incident.

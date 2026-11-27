@@ -26,7 +26,8 @@ Deno.serve(async (req: Request) => {
     const bdm = String(a.bdm || (sujet + " " + corps).match(/\bBDM\s*[:#n°ºo.\- ]*\s*([A-Z0-9\-\/]{3,20})/i)?.[1] || "").trim().replace(/^BDM\s*[:#n°º.\- ]*/i, "") || null;
     const { data: row, error } = await sb.from("bdm_recus").insert({ message_id: mid, recu_le: recu.toISOString(), expediteur: String(b.from || "").slice(0, 200) || null, sujet, texte: corps, bdm, objet: String(a.objet || "").slice(0, 200) || null, lieu: String(a.lieu || "") || null, domaine: String(a.domaine || "") || null, concerne_eps: !!a.concerne_eps, priorite: String(a.priorite || "") || null }).select("id").single();
     if (error) return J({ erreur: error.message }, 500);
-    let tache = null; if (a.concerne_eps) { const r = await sb.rpc("bdm_recu_tache", { p_id: row.id }); tache = r.data; }
+    /* toujours : la complainte apparaît dans Signalements › Help Desk ; la tâche n’est créée que si EPS est concernée */
+    const r = await sb.rpc("bdm_recu_tache", { p_id: row.id }), tache = r.data;
     return J({ ok: true, id: row.id, bdm, concerne_eps: !!a.concerne_eps, tache });
   } catch (e) { return J({ erreur: "echec", detail: String(e).slice(0, 200) }, 500); }
 });
