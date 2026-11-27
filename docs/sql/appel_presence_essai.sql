@@ -812,3 +812,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   Vérification synchro Jotform : situations reçues en base 0 à 14 min après l'envoi (25/11 → 27/11) ; les « non reçue » venaient de l'affichage (corrigé v130-v131).
 
 -- v133 (2026-11-27) : accueil — bouton « Signalement / Tâche » sans icône et texte autorisé sur deux lignes (débordait sur téléphone).
+
+-- v134 (2026-11-27) : relais Gmail — script pour archiveseps@gmail.com : complaintes reconnues aussi après transfert (BDM, complainte,
+--   complaint, help desk, rama@eps.mr), libellé « eps-ops » posé seulement si l'envoi a réussi (code < 300), journal des envois (Logger).
+--   Constat : aucun appel de Gmail vers msg-ingest / bdm-ingest depuis le 22/11 (seul le test du 26/11).

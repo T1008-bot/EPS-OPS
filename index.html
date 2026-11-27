@@ -2752,24 +2752,26 @@ async function crListe() { if (!CR_ROLES.includes(ME.role)) return ""; let q = s
 ${(data || []).map(c => `<div class="li"><div style="min-width:0"><span class="bd ${CRT[c.type][1]}">${CRT[c.type][0]}</span> <b class="lk" data-a="cropen" data-i="${c.id}">${E(c.titre)}</b><div class="m" style="white-space:pre-line">${E(String(c.resume || "").split("\n").slice(0, 2).join("\n"))}</div></div><button class="btn" data-a="cropen" data-i="${c.id}" style="padding:4px 10px">Ouvrir</button></div>`).join("") || `<div class="m">Aucun compte rendu pour l’instant.</div>`}
 <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn" data-a="crgen" data-t="jour">↻ Établir le dernier shift</button><button class="btn" data-a="crgen" data-t="semaine">↻ Semaine</button><button class="btn" data-a="crgen" data-t="mois">↻ Mois précédent</button></div></div>`; }
 /* relais Gmail (PSM/LDM et complaintes BDM envoyées à rama@eps.mr) : script à installer dans Google Apps Script */
-const RELAIS_SCRIPT = `/* EPS OPS — relais Gmail : PSM / LDM / CPM et complaintes Help Desk (BDM) */
+const RELAIS_SCRIPT = `/* EPS OPS — relais Gmail (boîte archiveseps@gmail.com) : PSM / LDM / CPM et complaintes Help Desk (BDM) */
 const JETON = "COLLER_LE_JETON_ICI";
 const BASE = "https://gkvavxjwcdyicvqgqzut.supabase.co/functions/v1/";
 const FLUX = [
-  ["newer_than:3d (subject:PSM OR subject:LDM OR subject:CPM) -label:eps-ops", "msg-ingest"],
-  ["newer_than:3d (to:rama@eps.mr OR deliveredto:rama@eps.mr OR cc:rama@eps.mr) -label:eps-ops", "bdm-ingest"]
+  ["newer_than:3d -label:eps-ops (subject:PSM OR subject:LDM OR subject:CPM)", "msg-ingest"],
+  ["newer_than:3d -label:eps-ops -subject:PSM -subject:LDM -subject:CPM (BDM OR complainte OR complaint OR helpdesk OR \\"help desk\\" OR to:rama@eps.mr OR deliveredto:rama@eps.mr OR cc:rama@eps.mr)", "bdm-ingest"]
 ];
 function relais() {
   const lab = GmailApp.getUserLabelByName("eps-ops") || GmailApp.createLabel("eps-ops");
   FLUX.forEach(function (f) {
-    GmailApp.search(f[0], 0, 50).forEach(function (th) {
+    var th = GmailApp.search(f[0], 0, 50); Logger.log(f[1] + " : " + th.length + " fil(s) à transmettre");
+    th.forEach(function (t) {
       var ok = true;
-      th.getMessages().forEach(function (m) {
+      t.getMessages().forEach(function (m) {
         var r = UrlFetchApp.fetch(BASE + f[1], { method: "post", contentType: "application/json", headers: { "x-eps-secret": JETON }, muteHttpExceptions: true,
           payload: JSON.stringify({ message_id: m.getId(), subject: m.getSubject(), from: m.getFrom(), body: m.getPlainBody() || m.getBody(), received_at: m.getDate().toISOString() }) });
-        if (r.getResponseCode() >= 500) ok = false;
+        var c = r.getResponseCode(); Logger.log(f[1] + " " + c + " · " + m.getSubject());
+        if (c >= 300) ok = false;
       });
-      if (ok) th.addLabel(lab);
+      if (ok) t.addLabel(lab);
     });
   });
 }
@@ -2782,7 +2784,7 @@ async function relaisCarte() { if (UID != SUPPR_UID) return ""; const { data: e 
   return `<div class="card"><div class="row"><h2 style="margin:0">📧 Relais Gmail</h2><span class="bd ${e?.dernier_msg && Date.now() - Date.parse(e.dernier_msg) < 2 * 864e5 ? "ok" : "bad"}">${e?.dernier_msg && Date.now() - Date.parse(e.dernier_msg) < 2 * 864e5 ? "Actif" : "Arrêté"}</span></div>
 <div class="m">PSM / LDM : dernier e-mail reçu ${d(e?.dernier_msg)} · Complaintes BDM (rama@eps.mr) : dernière ${d(e?.dernier_bdm)} · ${e?.nb_bdm_7j || 0} sur 7 jours</div>
 <details style="margin-top:6px"><summary class="lk">Installer / réinstaller le relais (3 minutes)</summary><ol class="m" style="line-height:1.7;padding-left:18px">
-<li>Sur un ordinateur, connecté au compte Gmail qui reçoit rama@eps.mr, ouvrez <b>script.google.com</b> → « Nouveau projet ».</li>
+<li>Sur un ordinateur, connecté au compte <b>archiveseps@gmail.com</b> (qui reçoit les transferts de rama@eps.mr, des PDA et des messages de vol), ouvrez <b>script.google.com</b> → « Nouveau projet ».</li>
 <li>Touchez <b>Copier le script</b> ci-dessous et collez-le à la place du contenu existant.</li>
 <li>Touchez <b>Copier le jeton</b> et collez-le à la place de <code>COLLER_LE_JETON_ICI</code>.</li>
 <li>Enregistrez, choisissez la fonction <b>installer</b> puis <b>Exécuter</b> ; acceptez les autorisations demandées par Google.</li>
