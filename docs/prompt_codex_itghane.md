@@ -73,7 +73,7 @@ EPS OPS est l'application de pilotage opérationnel d'EPS. Ses écrans ont été
 
 **À faire** :
 - Utiliser `catalogue`, `structure` et `changements` pour **aligner les tables d'ITGHANE**.
-- Lister dans ton compte rendu les tables d'EPS OPS **absentes du catalogue** dont ITGHANE a besoin (voir § 6.3). Elles y seront ajoutées sur demande.
+- Toutes les données utiles sont déjà au catalogue (§ 6.3). Si une donnée manque encore, la signaler dans le compte rendu.
 
 ---
 
