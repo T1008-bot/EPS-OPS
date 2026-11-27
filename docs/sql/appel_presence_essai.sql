@@ -787,3 +787,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   retard_suite_donner : suites 'conv' et 'sans', ouvert aux RH.
 -- Absences non justifiées : statuts_jour.cas_* (décision, clôture, DE liée, notification) ; RPC cas_absence_decider / cas_absence_clore ;
 --   cron 'absences-cas-retour' (cas_absences_notifier, cas à partir du 27/11) : notification urgente au retour de l'agent si le cas est ouvert.
+
+-- v127 (2026-11-27) : comptabilité — carburant
+-- « Carburant » retiré des dépenses diverses ; fournisseurs.categorie / facturation / cycle_jour ; fournisseur « STAR (Station) »
+--   (Carburant, facture mensuelle, cycle du 20 au 20). Table bons_carburant (photo du bon lue par l'IA via la fonction bon-carburant,
+--   champs corrigés et cochés « vérifié » avant validation, n° de bon unique), bloc STAR par cycle, « Facture du cycle » (factures + facture_id),
+--   flotte : carburant du mois repris des bons. Création de fournisseur : catégorie en liste déroulante avec « Autre ».
