@@ -8,19 +8,19 @@
 
 ## 0. Ce que tu dois faire
 
-EPS OPS est l'application de pilotage opérationnel d'EPS. Ses écrans ont été affinés pendant des semaines avec ses utilisateurs (direction, opérations, RH, comptabilité, superviseurs, chefs d'équipe). Ergonomie, présentation et façon de travailler sont désormais validées.
+EPS OPS est l'application de pilotage opérationnel d'EPS. Ses écrans ont été affinés pendant des semaines avec ses utilisateurs (direction, opérations, RH, comptabilité, superviseurs, chefs d'équipe). Ergonomie, présentation et façon de travailler sont désormais validées. **ITGHANE doit suivre exactement le même modèle.**
 
-**ITGHANE doit suivre le même modèle.** La plupart des onglets existent déjà des deux côtés. Il faut donc :
+**Cette première demande porte sur une mise à jour complète du contenu d'ITGHANE**, conformément à EPS OPS : tous les onglets, toutes les données, tous les circuits (personnel, présence, discipline, magasins, comptabilité, signalements et Help Desk, rapports d'incident, tâches, fauteuils roulants, carburant). Étapes :
 
-1. **Faire l'inventaire** des onglets, écrans et tables d'ITGHANE.
-2. **Établir un tableau de correspondance** avec les onglets d'EPS OPS décrits au § 5. Pour chaque onglet, une colonne d'état :
+1. **Inventaire** des onglets, écrans et tables d'ITGHANE.
+2. **Tableau de correspondance** avec les onglets d'EPS OPS (§ 5). Pour chaque onglet, une colonne d'état :
    - ✅ conforme ;
    - 🔄 à mettre à jour (écarts listés) ;
    - ➕ à créer (n'existe pas dans ITGHANE) ;
-   - 🟣 propre à ITGHANE (à conserver, pas d'équivalent dans OPS).
-3. **Rapprocher les données** : personnel, présence, magasin, comptabilité, signalements. Elles doivent être **concordantes avec EPS OPS**, qui fait foi (§ 2).
-4. **Proposer des maquettes** pour tout changement de mise en page et **attendre leur validation** avant de coder (§ 1).
-5. **Mettre à jour onglet par onglet**, par petits lots livrables. Après chaque lot, livrer un compte rendu : ce qui a changé, ce qui reste, les écarts de données constatés.
+   - 🟣 propre à ITGHANE (à conserver).
+3. **Import et rapprochement complets des données** depuis EPS OPS, qui fait foi (§ 2 et § 6). Tous les jeux de données listés au § 6.3 sont **disponibles dès maintenant**.
+4. **Maquettes** pour tout changement de mise en page, à faire valider avant de coder (§ 1).
+5. **Mise à jour de tous les onglets**, lot par lot, jusqu'à ce que tout soit ✅ ou 🟣. Après chaque lot, un compte rendu : ce qui a changé, ce qui reste, les écarts de données constatés.
 
 **Ne rien inventer.** Si une règle n'est pas écrite ici ou n'apparaît pas dans les données d'EPS OPS, pose la question au lieu de deviner.
 
@@ -394,17 +394,20 @@ Veille quotidienne (beta.mr, tendersinfo, globaltenders), **uniquement des prest
 - Les montants de renfort ne s'affichent jamais aux chefs d'équipe.
 - Paie : période du 26 au 25 ; personnel administratif à salaire manuel (clé `adm:…`).
 
-### 6.3 Tables récentes absentes du catalogue (à demander si ITGHANE en a besoin)
-- `fauteuils_situations`
-- `bons_carburant`
-- `bdm_recus`
-- `ir_archives`
-- `depenses_diverses`
-- `vehicules`
-- `taches` et `taches_modeles`
-- `sig_bdm_corrections` (visible uniquement par l'équipe opération)
-- `veille_ao`
-- colonnes ajoutées : `signalements.canal` et `attente_*` ; `statuts_jour.cas_*` ; `fournisseurs.categorie`, `facturation` et `cycle_jour` ; `primes_mois.type` ; `articles.pour_manutention` ; `profiles.site`
+### 6.3 Jeux de données disponibles (catalogue de l'accès `itghane`, 75 jeux)
+Tous sont lisibles dès maintenant (`jeu=<nom>`). Leurs modifications passent toutes par le flux `jeu=changements` et par l'envoi en temps réel.
+
+| Domaine | Jeux |
+|---|---|
+| Personnel | `agents`, `nni`, `profils` (avec site, poste, e-mail), `horaires_individuels`, `parcours`, `documents_agents`, `demandes`, `interdits`, `import_classeurs`, `drive_journal` |
+| Présence | `statuts` (avec retards `retard_*` et cas d'absence `cas_*`), `conges`, `appels`, `situations`, `suivi_absences`, `renforts`, `prises_service` |
+| Discipline | `discipline` |
+| Magasin | `magasins`, `articles` (avec `pour_manutention`), `mouvements_stock`, `besoins`, `dotations`, `dotation_quotas`, `magasin_seuils`, `bilans_magasin`, `commandes`, `commande_events` |
+| Comptabilité | `recap_paie`, `paie_site`, `renforts_detail`, `grille_salaire`, `paie_ajustements`, `personnel_admin`, `sites`, `confirmations_essai`, `primes` (avec `type`), `prets_avances`, `fournisseurs` (avec `categorie`, `facturation`, `cycle_jour`), `factures`, `bons_carburant` (photo en lien temporaire), `depenses_diverses`, `vehicules` |
+| Opérations | `vols`, `allocation_vol`, `rapports`, `checklists_vols`, `zones`, `postes`, `lieux`, `dispatch`, `signalements_zone`, `taches`, `taches_modeles`, `taches_notes`, `fauteuils`, `veille_ao` |
+| Synthèse | `synthese_taches`, `synthese_alertes`, `evaluations`, `evaluations_agents` |
+| Help Desk | `signalements` (avec `canal`, `attente_*`), `signalement_events`, `signalement_pj`, `sig_bdm_corrections` (à réserver à l'équipe opération), `bdm_recus`, `rapports_incident`, `rapports_incident_versions`, `rapports_incident_numeros`, `ir_archives`, `equipements`, `interventions`, `equipement_historique` |
+| Traçabilité | `audit`, `acces` |
 
 ---
 
