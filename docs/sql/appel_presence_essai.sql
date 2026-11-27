@@ -810,3 +810,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v132 (2026-11-27) : message fauteuils roulants — plus de ligne « Observation » ; RAS / vide → rien ; sinon « NB: … » en fin de message.
 --   Vérification synchro Jotform : situations reçues en base 0 à 14 min après l'envoi (25/11 → 27/11) ; les « non reçue » venaient de l'affichage (corrigé v130-v131).
+
+-- v133 (2026-11-27) : accueil — bouton « Signalement / Tâche » sans icône et texte autorisé sur deux lignes (débordait sur téléphone).
