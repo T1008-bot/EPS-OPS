@@ -875,3 +875,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- magasin_seuils.unite / conditionnement : unité propre au magasin (l'aéroport garde paquets et rouleaux). Stocks non modifiés.
 -- Tâche « Revoir les unités et catégories » + alerte à Abderahmane ; tâches seuil_da:3:* (mouchoirs, ONI, gants manutention, sacs transparents).
 -- cron rappel-stock-central (lundi 08h) → rappel_stock_central(). Pluriel automatique des unités (uPl). Magasins : une seule carte « AINO » puis extérieur / intérieur.
+
+-- 28/11/2026 (données, sans changement de l'application) : seuils du magasin extérieur de l'aéroport (magasin 1) enregistrés selon El Moustapha :
+-- sacs bleus et transparents 400, gants latex 20 paires, gilets 20, café 4 paquets (unité Paquet), dégraissant / détachant / gels WC / inox / parfums FLEURS et OUD 12 bouteilles (1 carton),
+-- détergent ONI 12 boîtes, détergent en poudre 1 carton (unité Carton), détergent lave-sol 40 L, javel en grains 20 kg, lave-sol Maxell 20 L 40 L, savon liquide 40 L.
+-- Mouchoirs (1 carton) et gants jetables (2 cartons) en attente du nombre de paquets par carton. 7 alertes ouvertes + tâches besoin_seuil:1:* et revue_stock_aino à Ismail Niass.
