@@ -168,7 +168,8 @@ input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-hei
 </head>
 <body>
 <div id="app"></div>
-<script>/* écran de chargement : thème d'occasion mémorisé (appliqué avant le chargement des données) */
+<script>/* mesure de l’ouverture (journal perf_journal) */ window.__PM = {}; window.__mk = function (k) { try { if (!(k in __PM)) __PM[k] = Math.round(performance.now()); } catch (e) { } }; __mk("splash");
+/* écran de chargement : thème d'occasion mémorisé (appliqué avant le chargement des données) */
 (function () { var o = null, t = new Date().toISOString().slice(0, 10); try { var c = JSON.parse(localStorage.getItem("occ_cache") || "null"); if (c && c.du <= t && t <= c.au) o = c; } catch (e) { }
   var a = document.getElementById("app"), r = document.documentElement;
   if (o && o.palette == "mauritanie") { r.classList.add("occ-mauritanie"); r.style.setProperty("--n", "#00843d"); r.style.setProperty("--n2", "#00843d"); r.style.setProperty("--p", "#00843d");
@@ -199,7 +200,8 @@ html.occ-mauritanie header{box-shadow:inset 0 -3px 0 #c8102e}
 
 <div id="md"><form id="mf"></form></div><div id="ts" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>
+<script>window.__mk && __mk("lib");
+
 const sb = supabase.createClient("https://gkvavxjwcdyicvqgqzut.supabase.co", "sb_publishable_zrClb2fGhN8rmOp4w3a9kw_LN9t2eqU");
 const $ = s => document.querySelector(s);
 const E = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -279,15 +281,28 @@ function pageChange(err) {
   };
 }
 async function start() {
-  const { data: { session } } = await sb.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession(); __mk("session");
   if (!session) return pageLogin();
-  const { data: p } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+  const cle = "me_" + session.user.id, pp = sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle(); let pc = null;
+  try { pc = JSON.parse(localStorage.getItem(cle) || "null"); } catch (e) { }
+  const memo = p => { try { localStorage.setItem(cle, JSON.stringify(p)); } catch (e) { } };
+  /* ouverture immédiate avec le profil mémorisé ; le profil réel est vérifié en arrière-plan */
+  if (pc && pc.actif && !pc.must_change) {
+    ME = pc; UID = session.user.id; shell(); __mk("shell");
+    pp.then(({ data: p }) => { __mk("profil"); if (!p || !p.actif) { try { localStorage.removeItem(cle); } catch (e) { } sb.auth.signOut(); return pageLogin("Compte non autorisé."); }
+      memo(p); if (p.role != pc.role || (p.site || "") != (pc.site || "") || p.must_change) return location.reload(); if (!ME0) Object.assign(ME, p); }, () => { });
+    sb.rpc("marquer_connexion").then(() => { }, () => { }); return; }
+  const { data: p } = await pp; __mk("profil");
   if (!p || !p.actif) { await sb.auth.signOut(); return pageLogin("Compte non autorisé."); }
-  ME = p; UID = session.user.id;
+  ME = p; UID = session.user.id; memo(p);
   sb.rpc("marquer_connexion").then(() => { }, () => { });
   if (p.must_change) return pageChange();
-  shell();
+  shell(); __mk("shell");
 }
+/* envoi des mesures d’ouverture (une fois par ouverture) */
+function perfEnvoi() { if (window.__perfOk || !UID) return; window.__perfOk = 1; try { const n = performance.getEntriesByType("navigation")[0] || {};
+  const m = Object.assign({}, window.__PM, { nav_ttfb: Math.round(n.responseStart || 0), nav_html: Math.round(n.responseEnd || 0), nav_dom: Math.round(n.domInteractive || 0), html_ko: Math.round((n.transferSize || 0) / 1024), sw: !!(navigator.serviceWorker && navigator.serviceWorker.controller), reseau: (navigator.connection && navigator.connection.effectiveType) || "" });
+  sb.from("perf_journal").insert({ nom: ME && ME.nom, ua: navigator.userAgent.slice(0, 180), mesures: m }).then(() => { }, () => { }); } catch (e) { } }
 
 /* ---------- Données ---------- */
 const NNIR = ["direction", "responsable_ops", "responsable_rh", "assistante_rh", "approvisionnement"];
@@ -4207,12 +4222,12 @@ async function draw(m) { try { occApply(); } catch (e) { }
   $("#rgn").onclick = () => { navClose(); ACT.rgl(); };
   const g = ++DG, ref = NAV, mn = $("#mn"); navEcrit();
   /* affichage immédiat de la dernière version connue de la page, puis actualisation */
-  if (SHOWN != NAV) { mn.innerHTML = backBar() + (VC[NAV] || LDG); if (VC[NAV]) post(mn); mn.scrollTop = 0; SHOWN = NAV; }
+  if (SHOWN != NAV) { mn.innerHTML = backBar() + (VC[NAV] || LDG); if (VC[NAV]) { post(mn); __mk("cache_affiche"); } mn.scrollTop = 0; SHOWN = NAV; }
   const keys = [], sp = [];
   document.body.classList.add("ldg");
   let h; try { h = await (NAV == "shift" ? V.shift() : BOOT.then(() => V[NAV]())); VC[ref] = h; if (ref == "shift" && !SHV && h.length < 400000) try { localStorage.setItem("vc_shift_" + UID, h); } catch (e) { } } catch (e) { h = `<div class="al">Erreur : ${E(e.message)}</div>`; }
   if (g != DG) return;
-  mn.innerHTML = backBar() + h; post(mn); sxScroll();
+  mn.innerHTML = backBar() + h; post(mn); sxScroll(); if (!window.__perfOk) { __mk("page_" + ref); setTimeout(perfEnvoi, 300); }
   await Promise.all(keys.map((k, i) => sp[i].then(x => { if (g == DG) sxPut(k, x); })));
   if (g == DG) document.body.classList.remove("ldg");
 }

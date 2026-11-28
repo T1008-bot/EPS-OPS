@@ -846,3 +846,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- jotform-sync v7 : n'écrit plus que les soumissions nouvelles ou modifiées (updated_at) au lieu de réécrire 100 rapports par formulaire toutes les 15 min.
 -- lier_rapports_vols : ne réécrit plus en boucle les rapports sans numéro de vol ('{}') ni ceux sans vol correspondant (2,49 M réécritures cumulées).
 -- Application : rafraîchissements en temps réel (présences, alertes) regroupés (un seul rechargement 2,5 s après la dernière modification).
+
+-- v141 (2026-11-28) : ouverture — profil mémorisé (localStorage me_<uid>) : l'application s'ouvre aussitôt sur l'accueil mémorisé, le profil réel
+--   est vérifié en arrière-plan (rechargement si rôle / site changé, déconnexion si compte inactif). Mesures d'ouverture enregistrées
+--   dans perf_journal (splash, lib, session, shell, profil, cache_affiche, page_*, temps réseau du HTML) — lecture réservée à El Moustapha.
