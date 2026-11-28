@@ -869,3 +869,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- da_creer → commandes + commande_lignes, adressée automatiquement à l'approvisionnement (Mme Ndeye Diaty Ba) : alerte + tâche da:<id>.
 -- Ndeye : da_vu (« Vu et reçu ») puis da_planifier (date prévue de livraison par article, statut commandée, tâche close) ; da_ligne_livree par article.
 -- cmd_maj : vue → commandee permis pour les demandes adressées à l'approvisionnement. Priorité des tâches de seuil : 'haute' (la contrainte refuse 'urgente').
+
+-- v144 (28/11/2026) : magasin central — seuils corrigés (mouchoirs 4 cartons, papier de table (grand rouleau) 4 colis, papier hygiénique 20 colis,
+-- sacs transparents 500, gants jetables 5 cartons, gants manutention 40 paires, café 4 cartons ≈ 1920 sachets à confirmer, détergent ONI 60 boîtes = 5 cartons, savon liquide 60 L).
+-- magasin_seuils.unite / conditionnement : unité propre au magasin (l'aéroport garde paquets et rouleaux). Stocks non modifiés.
+-- Tâche « Revoir les unités et catégories » + alerte à Abderahmane ; tâches seuil_da:3:* (mouchoirs, ONI, gants manutention, sacs transparents).
+-- cron rappel-stock-central (lundi 08h) → rappel_stock_central(). Pluriel automatique des unités (uPl). Magasins : une seule carte « AINO » puis extérieur / intérieur.
