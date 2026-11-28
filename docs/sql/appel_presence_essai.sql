@@ -880,3 +880,7 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- sacs bleus et transparents 400, gants latex 20 paires, gilets 20, café 4 paquets (unité Paquet), dégraissant / détachant / gels WC / inox / parfums FLEURS et OUD 12 bouteilles (1 carton),
 -- détergent ONI 12 boîtes, détergent en poudre 1 carton (unité Carton), détergent lave-sol 40 L, javel en grains 20 kg, lave-sol Maxell 20 L 40 L, savon liquide 40 L.
 -- Mouchoirs (1 carton) et gants jetables (2 cartons) en attente du nombre de paquets par carton. 7 alertes ouvertes + tâches besoin_seuil:1:* et revue_stock_aino à Ismail Niass.
+
+-- 28/11/2026 (données) : seuils du magasin central complétés (dégraissant, détachant, gels WC, inox, parfums FLEURS/OUD 24 bouteilles = 2 cartons ;
+-- détergent en poudre 2 cartons ; détergent lave-sol, lave-mains et lave-sol Maxell 20 L : 100 L ; javel en grains 50 kg ; parfums FORSAN et bureaux 3 cartons ;
+-- protections auditives 10 caisses (aéroport : 3 paquets) ; sacs poubelle bleus et transparents 1000 ; gilets 40 ; chaussures de sécurité : pas de seuil).
