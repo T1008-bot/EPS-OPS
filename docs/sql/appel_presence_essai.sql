@@ -886,3 +886,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- protections auditives 10 caisses (aéroport : 3 paquets) ; sacs poubelle bleus et transparents 1000 ; gilets 40 ; chaussures de sécurité : pas de seuil).
 
 -- v145 (28/11/2026) : Zones & dispatching — délais lisibles (min / h / j), poste non pourvu précisé (poste + rôle), discret une fois le signalement clos, intervenant affiché.
+
+-- v146 (28/11/2026) : signalement de zone — si le poste n'est pas pourvu au dispatching, les agents désignés du poste dans l'équipe de garde
+-- (annuaire agents.zone = postes.agents_zone : FRET, Mosquée et Devanture) sont responsables s'ils sont présents (statuts_jour) ; absents listés (resp_absents).
+-- poste_agents_equipe(poste, jour, garde) ; sigz_avant complété ; rattrapage 2026/0002 → Issa Amadou Diallo / Sabar El Hadramy Aleyatt (équipe 3).
+-- Dispatching : sous « Non affecté », agents désignés de l'équipe avec présent / absent.

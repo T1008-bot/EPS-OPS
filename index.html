@@ -2586,7 +2586,7 @@ const ZN_DL = { urgente: 15, haute: 30, normale: 60, basse: 120 };
 const ZN_W = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "chef_nettoyage"];
 const ZN_ADM = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal"];
 const ZN_V = ["direction", "responsable_ops", "coordinateur_ops", "superviseur_principal", "superviseur_nettoyage", "superviseur_bagages", "chef_nettoyage", "chef_bagages"];
-let ZG = [], ZP = [], ZL = [], ZD = [], ZS = [], ZJR = [], ZT = "sig", ZJ = null, ZF = "";
+let ZPA = {}, ZG = [], ZP = [], ZL = [], ZD = [], ZS = [], ZJR = [], ZT = "sig", ZJ = null, ZF = "";
 const zjCur = () => shiftStart().toISOString().slice(0, 10);
 const zjOf = t => shiftStart(new Date(t)).toISOString().slice(0, 10);
 const zjAdd = (j, n) => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -2601,6 +2601,8 @@ async function zLoad() {
     sb.from("rapports_staff").select("recu_le,brut,pdf_url").eq("categorie", "dispatching").gte("recu_le", new Date(Date.parse(ZJ + "T08:00:00Z") - 2 * H).toISOString()).lt("recu_le", new Date(Date.parse(ZJ + "T08:00:00Z") + 24 * H).toISOString()).order("recu_le", { ascending: false })]);
   R.forEach(r => { if (r.error) throw r.error; });
   [ZG, ZP, ZL, ZD, ZS, ZJR] = R.map(r => r.data || []);
+  /* agents désignés de chaque poste dans l'équipe de garde (annuaire) et leur présence du jour */
+  ZPA = {}; await Promise.all(ZP.filter(p => p.agents_zone).map(async p => { const { data } = await sb.rpc("poste_agents_equipe", { p_poste: p.code, p_jour: ZJ, p_garde: zGarde(ZJ) }); ZPA[p.code] = data || []; }));
 }
 /* Même règle que la base : toilettes/ablutions → agent T, sinon agent S, sinon agent unique */
 function zRole(p, nat) { if (!p || !p.code || p.type != "fixe" || p.statut != "ouvert") return null; const R = p.roles || []; return ZN_WC.includes(nat) && R.includes("T") ? "T" : !ZN_WC.includes(nat) && R.includes("S") ? "S" : R.includes("A") ? "A" : R.includes("A1") ? "A1" : R[0]; }
@@ -2614,7 +2616,9 @@ function zDelai(s) {
 const zDur = m => { m = Math.max(0, Math.round(m)); if (m < 60) return m + " min"; const j = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60), r = m % 60; return (j ? j + " j " : "") + (h || j ? h + " h" : "") + (r ? " " + String(r).padStart(2, "0") : ""); };
 const zResp = s => { const fin = ["intervenu", "verifie", "annule"].includes(s.statut), po = (ZP.find(p => p.code == s.poste_code) || {}).libelle || s.poste_code || "", rl = ZN_RL[s.resp_role] || s.resp_role || "", ip = s.intervention_par ? `<div class="m">Intervention : ${E(s.intervention_par)}</div>` : "";
   if (s.resp_role == "equipe_service") return `Équipe en service (garde ${s.equipe_garde || "?"})${ip}`;
-  if (s.resp_nom) return `${E(s.resp_nom)} <span class="m">(${E(rl)})</span>${ip}`;
+  const ab = s.resp_absents ? `<div class="m" style="color:var(--red)">Absent(s) : ${E(s.resp_absents)}</div>` : "";
+  if (s.resp_nom) return `${E(s.resp_nom)} <span class="m">(${s.resp_source == "equipe" ? `agents désignés ${E(po)} · équipe ${s.equipe_garde || "?"}` : E(rl)})</span>${ab}${ip}`;
+  if (s.resp_source == "absents") return `<span class="bd bad">Agents désignés ${E(po)} absents</span>${ab}${ip}`;
   return (fin ? `<span class="m">Poste ${E(po)}${rl ? " (" + E(rl) + ")" : ""} non pourvu au dispatching</span>` : `<span class="bd warn">Poste ${E(po)}${rl ? " (" + E(rl) + ")" : ""} non pourvu au dispatching</span>`) + ip; };
 function zSig() {
   const L = ZS.filter(s => !ZF || s.statut == ZF);
@@ -2641,7 +2645,7 @@ function zDisp() {
     return p.roles.map((r, i) => {
       const d = ZD.find(x => x.poste_code == p.code && x.role == r); tot++; if (d) ok++;
       if (r == "T" || r == "A") { wc++; if (d) wcok++; }
-      return `<tr>${i == 0 ? `<td rowspan="${p.roles.length}"><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></td>` : ""}<td>${E(ZN_RL[r])}</td><td>${d ? `<b>${E(zNom(d.matricule))}</b> <span class="m">${E(d.matricule)}</span>${cnt[d.matricule] > 1 ? ' <span class="bd warn">double affectation</span>' : ""}${w ? ` <button class="btn" data-a="zaff" data-p="${p.code}" data-r="${r}">Changer</button> <button class="btn" data-a="zdel" data-i="${d.id}">Retirer</button>` : ""}` : `<span class="bd ${r == "T" || r == "A" ? "bad" : "warn"}">Non affecté</span>${w ? ` <button class="btn p" data-a="zaff" data-p="${p.code}" data-r="${r}">Affecter</button>` : ""}`}</td></tr>`;
+      return `<tr>${i == 0 ? `<td rowspan="${p.roles.length}"><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></td>` : ""}<td>${E(ZN_RL[r])}</td><td>${d ? `<b>${E(zNom(d.matricule))}</b> <span class="m">${E(d.matricule)}</span>${cnt[d.matricule] > 1 ? ' <span class="bd warn">double affectation</span>' : ""}${w ? ` <button class="btn" data-a="zaff" data-p="${p.code}" data-r="${r}">Changer</button> <button class="btn" data-a="zdel" data-i="${d.id}">Retirer</button>` : ""}` : `<span class="bd ${r == "T" || r == "A" ? "bad" : "warn"}">Non affecté</span>${i == 0 && (ZPA[p.code] || []).length ? `<div class="m">Désignés équipe ${g} : ${ZPA[p.code].map(x => `${E(x.nom)} ${x.absent ? `<span class="bd bad">absent (${E(x.statut)})</span>` : '<span class="bd ok">présent</span>'}`).join(" · ")}</div>` : ""}${w ? ` <button class="btn p" data-a="zaff" data-p="${p.code}" data-r="${r}">Affecter</button>` : ""}`}</td></tr>`;
     }).join("");
   }).join("");
   return `<div class="card row" style="gap:6px;flex-wrap:wrap"><div><b>Shift du ${fd(ZJ)} (8h → 8h)</b><div class="m">Équipe de garde : Équipe ${g} · ${ok}/${tot} postes pourvus · toilettes : ${wcok}/${wc}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-a="zjp" data-k="-1">◀ Shift précédent</button><button class="btn" data-a="zjp" data-k="0">Shift en cours</button><button class="btn" data-a="zjp" data-k="1">Shift suivant ▶</button>${w ? `<button class="btn w" data-a="zcopy">Reprendre le shift précédent</button>` : ""}</div></div>${wcok < wc ? `<div class="al">Présence permanente obligatoire sur les toilettes : ${wc - wcok} poste(s) toilettes sans agent.</div>` : ""}<div class="card sc"><table><tr><th>Poste</th><th>Rôle</th><th>Agent affecté</th></tr>${rows}</table></div><div class="card"><h2>Sans agent fixe (à la demande)</h2>${D.map(p => `<div class="li"><div><b>${E(p.libelle)}</b><div class="m">${E(p.couverture || "")}</div></div><span class="bd info">À la demande</span></div>`).join("")}<div class="m">Ces postes restent disponibles dans les signalements ; la responsabilité revient à l’équipe en service.</div></div>`;
