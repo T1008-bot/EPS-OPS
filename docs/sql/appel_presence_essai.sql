@@ -820,3 +820,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v135 (2026-11-27) : messages de vol — 2 pastilles par vol (PSM, LDM/CPM), vert reçu / rouge non reçu, cliquables : message prêt à partager
 --   (PSM : résumé PMR ; LDM/CPM : interprété par l'IA, fonction ldm-ia). Notification à chaque PSM / LDM / CPM reçu (trigger nt_msg_vol →
 --   chefs et superviseurs Manutention, superviseurs principaux, responsable et coordinateur des opérations).
+
+-- v136 (2026-11-28) : thèmes d'occasion (côté application) — le jour J : couleur de l'en-tête et des boutons principaux, bandeau en haut de
+--   l'accueil (✕ = masquer pour la journée), confettis une fois par jour pour les grandes fêtes. Indépendance (28/11) : variante A défilante,
+--   drapeau fixe, étoiles jaunes, « 28 Novembre ». Autres occasions : Nouvel an, Fête du travail, Journée de l'Afrique, toilettes, hygiène des mains,
+--   sécurité au travail, aviation civile ; Aïd al-Fitr, Aïd al-Adha, Mawlid, Nouvel an hégirien (calendrier islamic-umalqura). Page de gestion à venir.

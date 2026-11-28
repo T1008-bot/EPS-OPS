@@ -461,7 +461,7 @@ V.shift = async () => {
   const jfH = (e, soir) => { const sv = /^Manut/.test(e) ? "bagages" : "nettoyage", d = e.replace(/\D/g, ""), L = (rp || []).filter(r => r.service == sv && gnum(r.groupe) == d && Date.parse(T(r.cree_le)) >= s.getTime() && Date.parse(T(r.cree_le)) < en.getTime()).filter(r => (new Date(T(r.cree_le)).getUTCHours() >= 15) == !!soir); return L.length ? hm(new Date(T(L[0].cree_le))) : ""; };
   const [TBH, apc] = await Promise.all([TBP, SHV ? {} : apCard(jfH).catch(() => ({}))]);
   const PV = SHV ? { me: "", btns: "", all: "" } : psvCard(), AB = (SHV || !(ACC[ME.role] || []).includes("sig") ? "" : `<button class="btn w" data-a="sxgo" data-k="sig" style="white-space:normal;line-height:1.2;padding-left:6px;padding-right:6px">Signalement / Tâche</button>`) + PV.btns;
-  return `<div class="card"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${(ME.poste || RL[ME.role]) || ""}</div></div>${PV.me}${AB ? `<div class="acts">${AB}</div>` : ""}</div>
+  return (SHV ? "" : occBanniere()) + `<div class="card"><div><h2 style="font-size:18px">${E(ME.nom)}</h2><div class="m">${(ME.poste || RL[ME.role]) || ""}</div></div>${PV.me}${AB ? `<div class="acts">${AB}</div>` : ""}</div>
 <div class="card"><div class="row" style="flex-wrap:wrap;gap:6px"><div><h2>${shLab(SHV, s)}</h2>${SHV < 0 ? `<div class="m">Shift à venir : affichage prévisionnel</div>` : ""}</div><div class="shn"><button class="btn" data-a="shv" data-i="${SHV + 1}" aria-label="Shift précédent">‹</button><input type="date" id="shd" value="${ymd(s)}" aria-label="Choisir la date du shift"><button class="btn" data-a="shv" data-i="${SHV - 1}" aria-label="Shift suivant">›</button>${SHV ? `<button class="btn p" data-a="shv" data-i="0">Shift en cours</button>` : ""}</div></div><div class="dys shd">${shStrip()}</div><div style="margin-top:8px"><b>${dmy(s)} ${hm(s)} → ${dmy(en)} ${hm(en)}</b> · <b>${svcRole() == "M" ? "M" + g : "N" + g + (svcRole() == "N" ? "" : " + M" + g)}</b></div>${svcRole() == "M" ? "" : `<div class="m">${dmy(s)} 08h → 16h · Équipe 4 ${SHV ? "" : h4 ? '<span class="bd ok">en service</span>' : '<span class="bd bad">hors service</span>'}</div>`}
 <div class="li"><div><div class="m">Superviseur principal</div><b>${E(nl((rp || []).find(r => r.sup_principal)?.sup_principal)) || "—"}</b></div></div>
 ${svcRole() == "N" ? "" : `<div class="svl"><div class="svt">Manutention · M${g}</div><div class="svg"><div><div class="m">Superviseur(s)</div><b>${E(nl(rb?.superviseurs)) || "—"}</b></div><div><div class="m">Chef(s) d’équipe</div><b>${E(nl(rb?.chefs)) || "—"}</b></div></div></div>
@@ -4043,6 +4043,42 @@ SXOPEN.delete("vols"); /* les vols s'ouvrent uniquement au clic */
 const sxSave = () => { try { localStorage.setItem("sxo", JSON.stringify([...SXOPEN])); } catch (e) { } };
 const sxHost = k => { const h = SXH[k], ok = ACC[ME.role] || []; if (k == "shr") return ok.includes("shift") && SHRR.includes(ME.role) ? "shift" : null; return h && ok.includes(h) && ok.includes(k) ? h : null; };
 V.shr = async () => { SHO = SHV; return await shiftRep(); };
+/* ===== Thèmes d'occasion : bandeau en haut de l'accueil + couleur de l'en-tête et des boutons principaux, le jour J uniquement ===== */
+const OCC_FLAG = '<svg viewBox="0 0 30 20" style="width:30px;height:20px;border-radius:3px;box-shadow:0 1px 3px #0006;flex:none"><rect width="30" height="20" fill="#00843d"/><rect width="30" height="3" fill="#c8102e"/><rect y="17" width="30" height="3" fill="#c8102e"/><path d="M9.6 9.2a5.4 5.4 0 0 0 10.8 0a6 4.6 0 0 1-10.8 0z" fill="#f5c518"/><path d="M15 4.6l.7 2.1h2.2l-1.8 1.3.7 2.1-1.8-1.3-1.8 1.3.7-2.1-1.8-1.3h2.2z" fill="#f5c518"/></svg>';
+const OCCS = [
+  { k: "independance", d: "11-28", n: "#00843d", p: "#00843d", fond: "linear-gradient(90deg,#006b33,#00843d 50%,#006b33)", liseré: "#c8102e", ic: OCC_FLAG, txt: "Bonne fête de l’Indépendance à toutes les équipes", sous: "28 Novembre", defile: 1, conf: 1 },
+  { k: "nouvel_an", d: "01-01", n: "#2b2459", p: "#b8860b", fond: "linear-gradient(90deg,#3b2f6b,#b8860b)", ic: "🎆", txt: "Bonne année {Y} ! Merci à toutes les équipes", conf: 1 },
+  { k: "travail", d: "05-01", n: "#1e5aa8", fond: "linear-gradient(90deg,#1e5aa8,#2f6fd0)", ic: "👷", txt: "Bonne fête du travail à toutes les équipes" },
+  { k: "afrique", d: "05-25", n: "#0f7a3d", fond: "linear-gradient(90deg,#0f7a3d,#b8860b)", ic: "🌍", txt: "Bonne Journée de l’Afrique" },
+  { k: "toilettes", d: "11-19", n: "#0b6e99", fond: "linear-gradient(90deg,#1597c9,#0b6e99)", ic: "🧼", txt: "Journée mondiale des toilettes : merci aux équipes Nettoyage" },
+  { k: "mains", d: "05-05", n: "#0b6e99", fond: "linear-gradient(90deg,#1597c9,#0b6e99)", ic: "🧴", txt: "Journée mondiale de l’hygiène des mains" },
+  { k: "securite", d: "04-28", n: "#c2410c", fond: "linear-gradient(90deg,#ea580c,#c2410c)", ic: "🦺", txt: "Journée mondiale de la sécurité et de la santé au travail" },
+  { k: "aviation", d: "12-07", n: "#1e40af", fond: "linear-gradient(90deg,#2563eb,#1e40af)", ic: "✈️", txt: "Journée de l’aviation civile internationale" },
+  { k: "fitr", h: "10-1", n: "#1b7a4b", p: "#1b7a4b", fond: "linear-gradient(90deg,#1b7a4b,#0f5132)", ic: "🌙", txt: "Aïd Moubarak ! Bonne fête à toutes les équipes et à leurs familles", conf: 1 },
+  { k: "adha", h: "12-10", n: "#1b7a4b", p: "#1b7a4b", fond: "linear-gradient(90deg,#1b7a4b,#0f5132)", ic: "🐑", txt: "Aïd Moubarak ! Bonne fête de l’Aïd à toutes les équipes", conf: 1 },
+  { k: "mawlid", h: "3-12", n: "#1b7a4b", fond: "linear-gradient(90deg,#1b7a4b,#0f5132)", ic: "🕌", txt: "Bonne fête du Mawlid à toutes les équipes" },
+  { k: "hegire", h: "1-1", n: "#1b7a4b", fond: "linear-gradient(90deg,#1b7a4b,#0f5132)", ic: "🌙", txt: "Bonne année de l’Hégire à toutes les équipes" }];
+function occDuJour() { const t = new Date(), md = String(t.getUTCMonth() + 1).padStart(2, "0") + "-" + String(t.getUTCDate()).padStart(2, "0"); let hj = "";
+  try { const P = new Intl.DateTimeFormat("fr-u-ca-islamic-umalqura", { day: "numeric", month: "numeric", timeZone: "UTC" }).formatToParts(t); hj = +P.find(x => x.type == "month").value + "-" + +P.find(x => x.type == "day").value; } catch (e) { }
+  const f = new URLSearchParams(location.search).get("occ"); if (f) return OCCS.find(o => o.k == f) || null;
+  return OCCS.find(o => o.d ? o.d == md : o.h == hj) || null; }
+let OCCX = undefined;
+function occApply() { if (OCCX === undefined) OCCX = occDuJour(); const o = OCCX, r = document.documentElement.style;
+  if (!o) return; r.setProperty("--n", o.n); r.setProperty("--n2", o.n); if (o.p) r.setProperty("--p", o.p);
+  const cle = "occconf_" + o.k + "_" + today(); let vu = false; try { vu = !!localStorage.getItem(cle); localStorage.setItem(cle, "1"); } catch (e) { }
+  if (o.conf && !vu && !matchMedia("(prefers-reduced-motion: reduce)").matches) occConfettis(); }
+function occConfettis() { const c = document.createElement("div"); c.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+  const C = ["#f5c518", "#00a651", "#c8102e", "#ffd54a"]; c.innerHTML = Array.from({ length: 70 }, (_, i) => `<i style="position:absolute;left:${Math.random() * 100}%;top:-20px;width:${6 + Math.random() * 6}px;height:${8 + Math.random() * 8}px;background:${C[i % 4]};border-radius:${i % 3 ? 2 : 50}%;animation:occf ${2.2 + Math.random() * 2}s ${Math.random() * 1.2}s ease-in forwards;transform:rotate(${Math.random() * 360}deg)"></i>`).join("")
+    + "<style>@keyframes occf{to{top:105%;transform:translateX(" + "40px) rotate(540deg)}}</style>"; document.body.appendChild(c); setTimeout(() => c.remove(), 5200); }
+function occBanniere() { const o = OCCX; if (!o) return ""; let masque = false; try { masque = localStorage.getItem("occx_" + o.k + "_" + today()) == "1"; } catch (e) { }
+  if (masque) return ""; const t = o.txt.replace("{Y}", new Date().getUTCFullYear()), et = '<i style="font-style:normal;color:#f5c518;padding:0 10px">★</i>';
+  const seg = `<span style="padding-right:30px">${E(t)}${o.sous ? `${et}${E(o.sous)}${et}` : ""}</span>`;
+  return `<div class="occb" style="position:relative;overflow:hidden;border-radius:14px;background:${o.fond};${o["liseré"] ? `border-top:4px solid ${o["liseré"]};border-bottom:4px solid ${o["liseré"]};` : ""}color:#fff;height:42px;display:flex;align-items:center;margin-bottom:12px;box-shadow:0 2px 8px #0002">
+<div style="position:absolute;left:0;top:0;bottom:0;z-index:2;display:flex;align-items:center;padding:0 8px 0 10px;background:linear-gradient(90deg,${o.n} 70%,transparent);font-size:22px">${o.ic}</div>
+${o.defile ? `<div class="occm" style="display:flex;white-space:nowrap;width:max-content;margin-left:52px;font-weight:800;font-size:13.5px;animation:occmq 22s linear infinite">${seg}${seg}</div>` : `<div style="margin-left:52px;font-weight:800;font-size:13px;line-height:1.2;padding-right:30px">${E(t)}</div>`}
+<button type="button" data-a="occx" aria-label="Masquer pour aujourd’hui" style="position:absolute;right:0;top:0;bottom:0;z-index:3;background:linear-gradient(270deg,${o.n} 55%,transparent);border:0;color:#fff;font-size:14px;padding:0 10px 0 22px;cursor:pointer"><span style="opacity:.8">✕</span></button></div>
+<style>@keyframes occmq{from{transform:translateX(0)}to{transform:translateX(-50%)}}.occb:active .occm{animation-play-state:paused}@media (prefers-reduced-motion:reduce){.occm{animation:none!important}}</style>`; }
+queueMicrotask(() => Object.assign(ACT, { occx() { try { localStorage.setItem("occx_" + OCCX.k + "_" + today(), "1"); } catch (e) { } document.querySelector(".occb")?.remove(); } }));
 /* navigation : une page ouverte depuis une autre page a toujours un bouton Retour */
 let NAVH = (() => { const o = navLu(); return !new URLSearchParams(location.search).get("p") && Array.isArray(o.h) && o.p == NAV ? o.h.filter(x => typeof x == "string") : []; })(), NAVY = navLu().p == NAV ? +navLu().y || 0 : 0;
 async function navGo(p) { if (p == NAV) return draw(); NAVH.push(NAV); if (NAVH.length > 30) NAVH.shift(); NAV = p; SXA = null; try { history.pushState({ eps: NAVH.length }, ""); } catch (e) { } return draw(); }
@@ -4070,7 +4106,7 @@ Object.assign(ACT, {
   }
 });
 /* m : rien = page entière ou seulement la carte concernée par la dernière action ; 1 = tout recharger ; 2 = page hôte seule (cartes depuis le cache) */
-async function draw(m) {
+async function draw(m) { try { occApply(); } catch (e) { }
   try { if (ME) { if (NAV == "msg" && MSGO) { MSGO = false; $("#mpan")?.classList.remove("on"); } msgBulle(); } } catch (e) { }
   const ok = accSite(ACC[ME.role] || ["shift"]);
   if (!ok.includes(NAV)) NAV = ok[0];
