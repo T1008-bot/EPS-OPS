@@ -2607,10 +2607,15 @@ function zRole(p, nat) { if (!p || !p.code || p.type != "fixe" || p.statut != "o
 function zDelai(s) {
   if (s.statut == "annule") return "";
   const ech = new Date(s.echeance).getTime(), fin = s.intervention_le ? new Date(s.intervention_le).getTime() : Date.now(), m = Math.round((fin - ech) / 6e4);
-  if (s.intervention_le) return m > 0 ? `<span class="bd bad">Hors délai +${m} min</span>` : `<span class="bd ok">Dans les délais</span>`;
-  return m > 0 ? `<span class="bd bad">⏱ Dépassé de ${m} min</span>` : `<span class="bd warn">Reste ${-m} min</span>`;
+  if (s.intervention_le) return m > 0 ? `<span class="bd bad">Hors délai +${zDur(m)}</span>` : `<span class="bd ok">Dans les délais</span>`;
+  return m > 0 ? `<span class="bd bad">⏱ Dépassé de ${zDur(m)}</span>` : `<span class="bd warn">Reste ${zDur(-m)}</span>`;
 }
-const zResp = s => s.resp_role == "equipe_service" ? `Équipe en service (garde ${s.equipe_garde || "?"})` : s.resp_nom ? `${E(s.resp_nom)} <span class="m">(${E(ZN_RL[s.resp_role] || s.resp_role)})</span>` : `<span class="bd warn">Poste non pourvu au dispatching</span>`;
+/* durée lisible : 45 min · 3 h 20 · 1 j 23 h 55 */
+const zDur = m => { m = Math.max(0, Math.round(m)); if (m < 60) return m + " min"; const j = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60), r = m % 60; return (j ? j + " j " : "") + (h || j ? h + " h" : "") + (r ? " " + String(r).padStart(2, "0") : ""); };
+const zResp = s => { const fin = ["intervenu", "verifie", "annule"].includes(s.statut), po = (ZP.find(p => p.code == s.poste_code) || {}).libelle || s.poste_code || "", rl = ZN_RL[s.resp_role] || s.resp_role || "", ip = s.intervention_par ? `<div class="m">Intervention : ${E(s.intervention_par)}</div>` : "";
+  if (s.resp_role == "equipe_service") return `Équipe en service (garde ${s.equipe_garde || "?"})${ip}`;
+  if (s.resp_nom) return `${E(s.resp_nom)} <span class="m">(${E(rl)})</span>${ip}`;
+  return (fin ? `<span class="m">Poste ${E(po)}${rl ? " (" + E(rl) + ")" : ""} non pourvu au dispatching</span>` : `<span class="bd warn">Poste ${E(po)}${rl ? " (" + E(rl) + ")" : ""} non pourvu au dispatching</span>`) + ip; };
 function zSig() {
   const L = ZS.filter(s => !ZF || s.statut == ZF);
   const f = (k, l) => `<button class="btn ${ZF == k ? "p" : ""}" data-a="zsf" data-k="${k}">${l}</button>`;

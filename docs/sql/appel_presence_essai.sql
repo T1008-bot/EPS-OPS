@@ -884,3 +884,5 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- 28/11/2026 (données) : seuils du magasin central complétés (dégraissant, détachant, gels WC, inox, parfums FLEURS/OUD 24 bouteilles = 2 cartons ;
 -- détergent en poudre 2 cartons ; détergent lave-sol, lave-mains et lave-sol Maxell 20 L : 100 L ; javel en grains 50 kg ; parfums FORSAN et bureaux 3 cartons ;
 -- protections auditives 10 caisses (aéroport : 3 paquets) ; sacs poubelle bleus et transparents 1000 ; gilets 40 ; chaussures de sécurité : pas de seuil).
+
+-- v145 (28/11/2026) : Zones & dispatching — délais lisibles (min / h / j), poste non pourvu précisé (poste + rôle), discret une fois le signalement clos, intervenant affiché.
