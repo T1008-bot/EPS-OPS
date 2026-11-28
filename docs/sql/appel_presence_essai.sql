@@ -839,3 +839,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 
 -- v139 (2026-11-28) : thème Indépendance — étoile nichée dans le croissant comme sur le drapeau (bandeau, drapeaux, emblème),
 --   motifs croissant + étoile jaune or, plus serrés (écran d'ouverture et fond des pages).
+
+-- v140 (2026-11-28) : performance
+-- situation_staff / rapports_detail : vues désormais lues dans la table situation_cache (remplie par trigger sur rapports_staff),
+--   au lieu de relire et analyser le JSON des 6 637 rapports Jotform à chaque lecture (≈ 500 ms → < 1 ms ; contrôle : 986 lignes, 0 écart).
+-- jotform-sync v7 : n'écrit plus que les soumissions nouvelles ou modifiées (updated_at) au lieu de réécrire 100 rapports par formulaire toutes les 15 min.
+-- lier_rapports_vols : ne réécrit plus en boucle les rapports sans numéro de vol ('{}') ni ceux sans vol correspondant (2,49 M réécritures cumulées).
+-- Application : rafraîchissements en temps réel (présences, alertes) regroupés (un seul rechargement 2,5 s après la dernière modification).

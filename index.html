@@ -4225,8 +4225,8 @@ async function shell() {
   $("#rg").onclick = () => ACT.rgl();
   SHOWN = ""; try { const c = localStorage.getItem("vc_shift_" + UID); if (c && !VC.shift) VC.shift = c; } catch (e) { }
   BOOT = Promise.all([loadAG(), loadST(), loadAL(), loadCFG().catch(() => { })]); BOOT.catch(() => { }); setInterval(() => { loadST(); loadAL(); }, 60000);
-  sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, async p => { await loadAL(); if (p.eventType == "INSERT") toast("Nouvelle alerte"); if (NAV == "alertes" || NAV == "shift") draw(2); })
-    .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, async () => { await loadST(); if (["shift", "pres"].includes(NAV)) draw(2); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }).subscribe();
+  sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "alertes" }, p => { if (p.eventType == "INSERT") window.__alN = 1; clearTimeout(window.__alT); window.__alT = setTimeout(async () => { await loadAL(); if (window.__alN) { window.__alN = 0; toast("Nouvelle alerte"); } if ((NAV == "alertes" || NAV == "shift") && !document.querySelector("#md.on")) draw(2); }, 2500); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "statuts_jour" }, () => { /* plusieurs lignes modifiées d’un coup (synchronisation) : un seul rechargement, 2,5 s après la dernière */ clearTimeout(window.__stT); window.__stT = setTimeout(async () => { await loadST(); if (document.querySelector("#md.on")) return; if (["shift", "pres"].includes(NAV)) draw(2); else if (NAV == "eff" && $("#el") && !document.activeElement?.dataset?.s) setEl(); }, 2500); }).subscribe();
   draw(); ntInit(); msgInit().catch(() => { }); setTimeout(ntDemande, 1500);
 }
 Object.assign(ACT, {
