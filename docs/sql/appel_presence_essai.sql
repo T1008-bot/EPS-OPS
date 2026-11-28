@@ -850,3 +850,15 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 -- v141 (2026-11-28) : ouverture — profil mémorisé (localStorage me_<uid>) : l'application s'ouvre aussitôt sur l'accueil mémorisé, le profil réel
 --   est vérifié en arrière-plan (rechargement si rôle / site changé, déconnexion si compte inactif). Mesures d'ouverture enregistrées
 --   dans perf_journal (splash, lib, session, shell, profil, cache_affiche, page_*, temps réseau du HTML) — lecture réservée à El Moustapha.
+
+-- v142 (2026-11-28)
+-- Ouverture : sw.js sert la copie locale de l'app immédiatement (mise à jour en arrière-plan, prise en compte à l'ouverture suivante) ;
+--   toutes les pages mémorisées sur l'appareil (localStorage vc_<page>_<uid>). Mesures perf_journal : HTML 0,65–2,1 s, page compta 1,5–2 s.
+-- « Voir comme » : calculs en lecture seule autorisés (paie_periode, situation_paie, renforts_shifts, … vérifiés sans écriture) → Comptabilité visible.
+-- Tâches & planning : comptabilité, approvisionnement, technique ne voient que leurs tâches et celles de leur service (cible Comptabilité / Approvisionnement).
+-- Tâches quotidiennes (lun.–ven.) : comptabilité (paie à jour, DE non servies, DA et factures), approvisionnement (ruptures / sous seuil, DA en cours) ;
+--   generer_taches_manutention étendue ; contrainte de service de taches_modeles retirée (nouveaux services).
+-- Sous seuil : seuil_controle crée une demande d'achat (commandes.seuil_ref, magasin_id, article_id) adressée à l'approvisionnement + tâche à Ndeye
+--   (da_seuil:<id>:seuil:m:a), close à la réception / refus / annulation (cmd_seuil_cloture) ; cmd_voit : DA de réapprovisionnement visibles par
+--   superviseurs, comptabilité, approvisionnement, technique ; carte « Ruptures et articles sous seuil » (Magasins, Demandes d'achat).
+--   DA 0005 (Mouchoirs) et 0006 (Sacs poubelle transparents) créées pour les 2 alertes ouvertes ; anciennes tâches « Expression de besoin » annulées.
