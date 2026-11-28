@@ -825,3 +825,9 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   l'accueil (✕ = masquer pour la journée), confettis une fois par jour pour les grandes fêtes. Indépendance (28/11) : variante A défilante,
 --   drapeau fixe, étoiles jaunes, « 28 Novembre ». Autres occasions : Nouvel an, Fête du travail, Journée de l'Afrique, toilettes, hygiène des mains,
 --   sécurité au travail, aviation civile ; Aïd al-Fitr, Aïd al-Adha, Mawlid, Nouvel an hégirien (calendrier islamic-umalqura). Page de gestion à venir.
+
+-- v137 (2026-11-28) : occasions planifiables — table occasions (règle fixe / lunaire / date, durée, début avancé, date lunaire corrigée,
+--   palette, icône, défilement, confettis, visibilité, texte arabe + langue fr / ar / fr_ar, année de référence pour le compteur {ANS},
+--   active, maquette validée). Indépendance du 28 au 30/11 (FR + AR, « 66e anniversaire »). Ajouts : Anniversaire d'EPS (1er mars, depuis 2009),
+--   Mawlid Nabawi, Nouvel an hégirien. Page Profil › 🎉 Occasions et fêtes (réservée à El Moustapha) : liste, aperçu, modification,
+--   « ✨ Concevoir avec l'IA » (fonction occ-ia), validation de la maquette. Confettis à chaque ouverture de l'application pendant l'occasion.
