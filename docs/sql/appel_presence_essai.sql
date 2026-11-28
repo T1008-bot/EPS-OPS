@@ -862,3 +862,10 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   (da_seuil:<id>:seuil:m:a), close à la réception / refus / annulation (cmd_seuil_cloture) ; cmd_voit : DA de réapprovisionnement visibles par
 --   superviseurs, comptabilité, approvisionnement, technique ; carte « Ruptures et articles sous seuil » (Magasins, Demandes d'achat).
 --   DA 0005 (Mouchoirs) et 0006 (Sacs poubelle transparents) créées pour les 2 alertes ouvertes ; anciennes tâches « Expression de besoin » annulées.
+
+-- v143 (28/11/2026) : retrait des demandes d'achat automatiques (DA 0005 et 0006 annulées, tâches da_seuil annulées).
+-- Sous seuil : alerte + tâche « Demande d'achat » à la comptabilité (seuil_da:m:a) pour le central et les sites, expression de besoin pour l'aéroport.
+-- Bouton « 🛒 Approvisionnement / demande d'achat » (Magasins, Demandes d'achat, carte des ruptures, tâche) : formulaire par article et quantité (comme l'expression de besoin),
+-- da_creer → commandes + commande_lignes, adressée automatiquement à l'approvisionnement (Mme Ndeye Diaty Ba) : alerte + tâche da:<id>.
+-- Ndeye : da_vu (« Vu et reçu ») puis da_planifier (date prévue de livraison par article, statut commandée, tâche close) ; da_ligne_livree par article.
+-- cmd_maj : vue → commandee permis pour les demandes adressées à l'approvisionnement. Priorité des tâches de seuil : 'haute' (la contrainte refuse 'urgente').

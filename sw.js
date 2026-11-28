@@ -1,6 +1,6 @@
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
-const C="eps-ops-v142";
+const C="eps-ops-v143";
 const CDN="eps-cdn-1"; /* bibliothèques versionnées : conservées d'une version de l'app à l'autre */
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!=C&&k!=CDN).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
