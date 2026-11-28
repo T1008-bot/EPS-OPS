@@ -168,6 +168,35 @@ input,select,textarea{font-size:16px;padding:12px}.btn{padding:10px 12px;min-hei
 </head>
 <body>
 <div id="app"></div>
+<script>/* écran de chargement : thème d'occasion mémorisé (appliqué avant le chargement des données) */
+(function () { var o = null, t = new Date().toISOString().slice(0, 10); try { var c = JSON.parse(localStorage.getItem("occ_cache") || "null"); if (c && c.du <= t && t <= c.au) o = c; } catch (e) { }
+  var a = document.getElementById("app"), r = document.documentElement;
+  if (o && o.palette == "mauritanie") { r.classList.add("occ-mauritanie"); r.style.setProperty("--n", "#00843d"); r.style.setProperty("--n2", "#00843d"); r.style.setProperty("--p", "#00843d");
+    var fl = function (cl) { return '<svg class="' + cl + '" viewBox="0 0 120 80"><defs><linearGradient id="g' + cl + '" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient></defs><path d="M0 6 Q30 0 60 6 T120 6 V74 Q90 80 60 74 T0 74Z" fill="#00843d"/><path d="M0 6 Q30 0 60 6 T120 6 V17 Q90 11 60 17 T0 17Z" fill="#c8102e"/><path d="M0 63 Q30 57 60 63 T120 63 V74 Q90 80 60 74 T0 74Z" fill="#c8102e"/><path d="M42 37a18 18 0 0 0 36 0a20 15 0 0 1-36 0z" fill="#f5c518"/><path d="M60 21l2.4 7h7.4l-6 4.4 2.3 7-6.1-4.3-6 4.3 2.3-7-6-4.4h7.4z" fill="#f5c518"/><path d="M0 6 Q30 0 60 6 T120 6 V74 Q90 80 60 74 T0 74Z" fill="url(#g' + cl + ')"/></svg>'; };
+    a.innerHTML = '<div class="spl"><div class="spl-b"></div><div class="spl-b b2"></div>' + fl("spl-f1") + fl("spl-f2") + '<svg class="spl-e" viewBox="0 0 200 200"><defs><radialGradient id="sg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#d9a400"/></radialGradient></defs><path d="M40 92a60 60 0 0 0 120 0a66 50 0 0 1-120 0z" fill="url(#sg)"/><path d="M100 38l7.6 22.4h23.6l-19.1 13.9 7.3 22.4-19.4-13.8-19.3 13.8 7.3-22.4-19.1-13.9h23.6z" fill="url(#sg)"/></svg><div class="spl-t">EPS OPS</div><div class="spl-s">Fête de l’Indépendance <span>★</span> 28 Novembre</div><div class="spl-a" dir="rtl">عيد استقلال مجيد</div><div class="spl-l"><i></i></div></div>';
+  } else a.innerHTML = '<div class="spl spl0"><div class="spl-t">EPS OPS</div><div class="spl-l"><i></i></div></div>';
+})();</script>
+<style>
+.spl{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(ellipse at 50% 40%,#0aa452 0%,#00843d 38%,#005c2a 75%,#003d1c 100%)}
+.spl:before{content:"";position:absolute;inset:0;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 22l1.8 5.4h5.7l-4.6 3.3 1.8 5.4-4.7-3.3-4.6 3.3 1.7-5.4-4.6-3.3h5.7z' fill='%23f5c518'/%3E%3C/svg%3E")}
+.spl-b{position:absolute;left:0;right:0;top:0;height:5%;background:linear-gradient(180deg,#e0182f,#a50d24)}.spl-b.b2{top:auto;bottom:0}
+.spl-f1,.spl-f2{position:absolute;top:7%;width:min(26vw,170px);filter:drop-shadow(0 6px 14px #0006);animation:splw 4s ease-in-out infinite}
+.spl-f1{left:4%;transform:rotate(-8deg)}.spl-f2{right:4%;transform:rotate(8deg) scaleX(-1);animation-delay:-2s}
+@keyframes splw{50%{translate:0 -6px}}
+.spl-e{width:min(42vw,210px);filter:drop-shadow(0 0 24px #f5c51888) drop-shadow(0 4px 10px #0005);animation:sple 3s ease-in-out infinite}
+@keyframes sple{50%{filter:drop-shadow(0 0 40px #f5c518bb) drop-shadow(0 4px 10px #0005)}}
+.spl-t{font-weight:900;letter-spacing:.32em;font-size:clamp(22px,6vw,34px);text-shadow:0 2px 10px #0006;position:relative}
+.spl-s{font-weight:700;color:#ffe27a;font-size:clamp(13px,3.6vw,17px);position:relative}.spl-s span{color:#f5c518;padding:0 6px}
+.spl-a{font-size:clamp(15px,4vw,19px);font-weight:700;opacity:.92;position:relative}
+.spl-l{width:min(46vw,220px);height:4px;border-radius:4px;background:#ffffff33;overflow:hidden;margin-top:14px;position:relative}.spl-l i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#f5c518,#fff,#f5c518);animation:spll 1.2s ease-in-out infinite}
+@keyframes spll{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+.spl0{background:radial-gradient(ellipse at 50% 40%,#2f6fd0,#1b4890)}.spl0:before{display:none}
+html.occ-mauritanie #pg{background:linear-gradient(180deg,#00843d14,#f5c5180f 45%,#c8102e0d),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg fill='%2300843d' fill-opacity='.09'%3E%3Cpath d='M18 26a9 9 0 0 0 18 0a10 7.5 0 0 1-18 0z'/%3E%3Cpath d='M70 62l1.5 4.5h4.7l-3.8 2.8 1.4 4.5-3.8-2.8-3.8 2.8 1.4-4.5-3.8-2.8h4.7z'/%3E%3C/g%3E%3C/svg%3E"),#eef7f1!important}
+html.occ-mauritanie header{box-shadow:inset 0 -3px 0 #c8102e}
+@media (prefers-reduced-motion:reduce){.spl *{animation:none!important}}
+</style>
+
 <div id="md"><form id="mf"></form></div><div id="ts" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -4064,9 +4093,10 @@ const occFinDe = o => { const d = occProchaine(o); return d ? occFin(ymd(Date.pa
 const occT = (x, o) => String(x || "").replace(/\{Y\}/g, new Date().getUTCFullYear()).replace(/\{ANS\}/g, o.annee_base ? new Date().getUTCFullYear() - o.annee_base : "");
 function occStyle(o) { const P = OCCPAL[o.palette] || OCCPAL.bleu; return { n: P[1], p: P[2], fond: P[3], lis: P[4] }; }
 function occApply() {
-  if (OCCL === null) { OCCL = []; sb.from("occasions").select("*").order("ordre").then(({ data }) => { OCCL = data || []; OCCX = occPour(today()); if (OCCX && OCCX.visible == "encadrement" && !OCCENC.includes(ME?.role)) OCCX = null; if (OCCX) { occApply(); if (NAV == "shift") draw(1); } }, () => { }); return; }
-  const o = OCCAP || OCCX, r = document.documentElement.style; if (!o) { ["--n", "--n2", "--p"].forEach(k => r.removeProperty(k)); return; }
+  if (OCCL === null) { OCCL = []; sb.from("occasions").select("*").order("ordre").then(({ data }) => { OCCL = data || []; OCCX = occPour(today()); if (OCCX && OCCX.visible == "encadrement" && !OCCENC.includes(ME?.role)) OCCX = null; try { const d0 = OCCX ? occProchaine(OCCX) : null; localStorage.setItem("occ_cache", JSON.stringify(OCCX && d0 ? { k: OCCX.k, palette: OCCX.palette, du: d0 <= today() ? d0 : today(), au: occFinDe(OCCX) || today() } : { du: "9999", au: "0000" })); } catch (e) { } if (OCCX) { occApply(); if (NAV == "shift") draw(1); } }, () => { }); return; }
+  const o = OCCAP || OCCX, r = document.documentElement.style; if (!o) { ["--n", "--n2", "--p"].forEach(k => r.removeProperty(k)); document.documentElement.className = document.documentElement.className.replace(/\bocc-\S+/g, "").trim(); return; }
   const s = occStyle(o); r.setProperty("--n", s.n); r.setProperty("--n2", s.n); if (s.p) r.setProperty("--p", s.p); else r.removeProperty("--p");
+  document.documentElement.className = document.documentElement.className.replace(/\bocc-\S+/g, "").trim(); document.documentElement.classList.add("occ-" + o.palette);
   if (OCCAP || OCCCONF) return; OCCCONF = true; /* confettis à chaque ouverture de l’application, tant que l’occasion est en cours */
   if (o.conf && !matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(occConfettis, 400); }
 addEventListener("visibilitychange", () => { if (document.visibilityState == "visible" && OCCX && OCCX.conf && !OCCAP && !matchMedia("(prefers-reduced-motion: reduce)").matches) occConfettis(); });

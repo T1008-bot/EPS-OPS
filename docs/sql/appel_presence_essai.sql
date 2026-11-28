@@ -831,3 +831,8 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   active, maquette validée). Indépendance du 28 au 30/11 (FR + AR, « 66e anniversaire »). Ajouts : Anniversaire d'EPS (1er mars, depuis 2009),
 --   Mawlid Nabawi, Nouvel an hégirien. Page Profil › 🎉 Occasions et fêtes (réservée à El Moustapha) : liste, aperçu, modification,
 --   « ✨ Concevoir avec l'IA » (fonction occ-ia), validation de la maquette. Confettis à chaque ouverture de l'application pendant l'occasion.
+
+-- v138 (2026-11-28) : chargement — écran d'ouverture aux couleurs de l'occasion (Indépendance : fond vert étoilé, bandes rouges,
+--   2 drapeaux flottants, croissant et étoile dorés lumineux, FR + AR, barre de progression) au lieu de la page bleue vide ; occasion du jour
+--   mémorisée (localStorage occ_cache) et appliquée dès l'ouverture ; fond des pages aux couleurs du drapeau (motif croissants / étoiles).
+--   sw.js : bibliothèques CDN dans un cache permanent (eps-cdn-1, plus re-téléchargées à chaque version), attente réseau 0,9 s au lieu de 2,5 s.
