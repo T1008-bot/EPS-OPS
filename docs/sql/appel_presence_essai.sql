@@ -836,3 +836,6 @@ create or replace function public.dem_manque(d public.demandes_agent) returns te
 --   2 drapeaux flottants, croissant et étoile dorés lumineux, FR + AR, barre de progression) au lieu de la page bleue vide ; occasion du jour
 --   mémorisée (localStorage occ_cache) et appliquée dès l'ouverture ; fond des pages aux couleurs du drapeau (motif croissants / étoiles).
 --   sw.js : bibliothèques CDN dans un cache permanent (eps-cdn-1, plus re-téléchargées à chaque version), attente réseau 0,9 s au lieu de 2,5 s.
+
+-- v139 (2026-11-28) : thème Indépendance — étoile nichée dans le croissant comme sur le drapeau (bandeau, drapeaux, emblème),
+--   motifs croissant + étoile jaune or, plus serrés (écran d'ouverture et fond des pages).
